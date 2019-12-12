@@ -1,0 +1,78 @@
+#!/bin/bash
+
+# Parse arguments
+pipeline="$1"
+shift
+while (( "$#" )); do
+  # Split --option=parameter into two variables
+  [[ "$1" == --*=* ]] && set -- "${1%%=*}" "${1#*=}" "${@:2}"
+  case "$1" in
+    # Parse output directory
+    --outdir)
+      if [[ -n "$2" && "$2" != -* ]]; then
+        outdir="$2"
+        shift
+      fi
+      shift
+      ;;
+    # Preserve other arguments
+    *)
+      args+=("$1")
+      shift
+      ;;
+  esac
+done
+
+if [[ -z "$pipeline" || -z "$outdir" ]]; then
+  echo "Usage: $0 <pipeline.nf> --outdir <directory> [pipeline arguments] [nextflow arguments]"
+  exit 1
+fi
+
+set -- "${args[@]}"
+args=()
+
+# Prepare nextflow temp folder
+mkdir -p "$outdir"/temp/input
+ln -sfr "$outdir"/temp .nextflow
+rm -rf "$outdir"/logs/nextflow.log
+
+# Parse pipeline arguments
+while (( "$#" )); do
+  case "$1" in
+    # Parse options and parameters
+    --?*)
+      args+=("$1")
+      params=""
+      while [[ -n "$2" && "$2" != -* ]]; do
+        if [[ -d "$2" || -f "$2" ]]; then
+          # Replace paths with spaceless symlinks for nextflow
+          value=$(basename "$2")
+          value="$outdir"/temp/input/"${value// /_}"
+          ln -sfr "$2" "$value"
+        else
+          value="$2"
+        fi
+        # Separate parameters with fake whitespace for nextflow
+        params+="$value"$'\u2800'
+        shift
+      done
+      args+=("${params%$'\u2800'}")
+      shift
+      ;;
+    # Preserve other arguments
+    *)
+      args+=("$1")
+      shift
+      ;;
+  esac
+done
+
+# Run nextflow pipeline
+# And remove temp folder once pipeline successfully completes
+nextflow \
+-log "$outdir"/logs/nextflow.log \
+run "$pipeline" \
+-work-dir "$outdir"/temp/work \
+--outdir "$outdir" \
+"${args[@]}" \
+&& rm -rf .nextflow "$outdir"/temp
