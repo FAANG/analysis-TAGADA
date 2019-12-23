@@ -9,7 +9,7 @@ if (!params.outdir || !params.reads || !params.genome || !params.annotation) {
 }
 
 Channel.fromPath(
-  params.reads.tokenize('\u2800'),
+  params.reads.tokenize(','),
   checkIfExists: true
 ).into {
   reads_to_control;

@@ -45,18 +45,20 @@ while (( "$#" )); do
       params=""
       while [[ -n "$2" && "$2" != -* ]]; do
         if [[ -d "$2" || -f "$2" ]]; then
-          # Replace paths with spaceless symlinks for nextflow
+          # Replace paths with spaceless commaless symlinks for nextflow
           value=$(basename "$2")
-          value="$outdir"/temp/input/"${value// /_}"
+          value="${value// /_}"
+          value="${value//,/_}"
+          value="$outdir"/temp/input/"$value"
           ln -sfr "$2" "$value"
         else
           value="$2"
         fi
-        # Separate parameters with fake whitespace for nextflow
-        params+="$value"$'\u2800'
+        # Separate parameters with commas for nextflow
+        params+="$value",
         shift
       done
-      args+=("${params%$'\u2800'}")
+      args+=("${params%,}")
       shift
       ;;
     # Preserve other arguments
