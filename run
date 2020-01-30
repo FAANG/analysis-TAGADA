@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Save command
+command="$0 $@"
+
 # Parse arguments
 pipeline="$1"
 shift
@@ -8,9 +11,9 @@ while (( "$#" )); do
   [[ "$1" == --*=* ]] && set -- "${1%%=*}" "${1#*=}" "${@:2}"
   case "$1" in
     # Parse output directory
-    --outdir)
+    --output)
       if [[ -n "$2" && "$2" != -* ]]; then
-        outdir="$2"
+        output="$2"
         shift
       fi
       shift
@@ -23,8 +26,8 @@ while (( "$#" )); do
   esac
 done
 
-if [[ -z "$pipeline" || -z "$outdir" ]]; then
-  echo "Usage: $0 <pipeline.nf> --outdir <directory> [pipeline arguments] [nextflow arguments]"
+if [[ -z "$pipeline" || -z "$output" ]]; then
+  echo "Usage: $0 <pipeline.nf> --output <directory> [pipeline arguments] [nextflow arguments]"
   exit 1
 fi
 
@@ -32,9 +35,14 @@ set -- "${args[@]}"
 args=()
 
 # Prepare nextflow temp folder
-mkdir -p "$outdir"/temp/input
-ln -sfr "$outdir"/temp .nextflow
-rm -rf "$outdir"/logs/nextflow.log
+mkdir -p "$output"/temp/input
+ln -sfr "$output"/temp .nextflow
+rm -rf "$output"/logs/nextflow.log
+
+# Write command to history
+mkdir -p "$output"/logs
+[ -f "$output"/logs/history ] && echo "" >> "$output"/logs/history
+echo $(date '+%Y/%m/%d %H:%M:%S')$'\t'$command >> "$output"/logs/history
 
 # Parse pipeline arguments
 while (( "$#" )); do
@@ -49,7 +57,7 @@ while (( "$#" )); do
           value=$(basename "$2")
           value="${value// /_}"
           value="${value//,/_}"
-          value="$outdir"/temp/input/"$value"
+          value="$output"/temp/input/"$value"
           ln -sfr "$2" "$value"
         else
           value="$2"
@@ -72,9 +80,9 @@ done
 # Run nextflow pipeline
 # And remove temp folder once pipeline successfully completes
 nextflow \
--log "$outdir"/logs/nextflow.log \
+-log "$output"/logs/nextflow.log \
 run "$pipeline" \
--work-dir "$outdir"/temp/work \
---outdir "$outdir" \
+-work-dir "$output"/temp/work \
+--output "$output" \
 "${args[@]}" \
-&& rm -rf .nextflow "$outdir"/temp
+&& rm -rf .nextflow "$output"/temp
