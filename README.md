@@ -16,18 +16,38 @@ The following dependencies are required:
 Execute this nextflow pipeline with:
 
 ```bash
-./run rnaseq.nf --outdir <output directory> \
-                --reads <reads1.fq> <reads2.fq> \
-                --genome <genome.fa> \
-                --annotation <annotation.gff> \
+./run rnaseq.nf --output <output directory> \
+                --paired-reads <paired reads 1.fq> <paired reads 2.fq> ... \
+                --single-reads <single reads.fq> ... \
+                --mapped-reads <mapped reads.bam> ... \
+                --reference <genome reference.fa> \
+                --index <genome index directory> \
+                --annotation <genome annotation.gff> \
+                --threads <number of threads to use> \
                 [nextflow arguments]
 ```
 
-Using the `./run` wrapper script instead of the `nextflow run` command provides several benefits:
+The pipeline has the following requirements:
+- Both `--output` and `--annotation` must be provided.
+- At least one of `--paired-reads`, `--single-reads`, `--mapped-reads` must be provided.
+- One of `--index` or `--reference` must be provided when `--paired-reads` or `--single-reads` are provided.
+
+The pipeline creates the following directories in the output directory:
+- `logs` contains a history file listing user commands, and log files from dependencies.
+- `genome` contains the computed indexed genome, if a genome reference and unmapped reads were provided.
+- `reads` contains computed trimmed reads and mapped reads, and quality control files.
+- `genes` contains all quantified genes in a tab separated matrix file, and annotation files.
+- `temp` contains temporary files that can be safely deleted.
+
+For the pipeline to correctly generate output file names, use the following input file names:
+- `name[_R{1,2}].{fq,fastq}[.gz]` for unmapped reads.
+- `name.{sam,bam}` for mapped reads.
+
+Using the `./run` wrapper script instead of the `nextflow run` command grants several benefits:
 - All results and temporary files are written to the output directory, keeping the execution directory clean.
 - All temporary files are deleted once the pipeline has successfully completed.
 - The pipeline can be resumed from any directory with nextflow's `-resume` option.
-- The pipeline's arguments are parsed in accordance with the GNU conventions.
+- The pipeline's arguments follow GNU conventions.
 
 ## About
 
