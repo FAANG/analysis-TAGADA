@@ -21,7 +21,7 @@ Execute this nextflow pipeline with:
                 --single-reads <single reads.fq> ... \
                 --mapped-reads <mapped reads.bam> ... \
                 --reference <genome reference.fa> \
-                --index <genome index directory> \
+                --index <genome index input directory> \
                 --annotation <genome annotation.gff> \
                 --threads <number of threads to use> \
                 [nextflow arguments]

@@ -200,28 +200,31 @@ if (paired_reads || single_reads) {
     reads_to_map
   }
 
-  // Index reference genome
-  process index {
-    tag 'STAR'
+  if (!index) {
 
-    publishDir "$output/genome", mode: 'copy'
+    // Index reference genome
+    process index {
+      tag 'STAR'
 
-    input:
-      path reference from reference_to_index
-      path annotation from annotation_to_index
+      publishDir "$output/genome", mode: 'copy'
 
-    output:
-      file 'index' into index_to_map
+      input:
+        path reference from reference_to_index
+        path annotation from annotation_to_index
 
-    script:
-      """
-      mkdir index
-      STAR --runThreadN $THREADS \\
-           --runMode genomeGenerate \\
-           --genomeDir index \\
-           --sjdbGTFfile $annotation \\
-           --genomeFastaFiles $reference
-      """
+      output:
+        file 'index' into index_to_map
+
+      script:
+        """
+        mkdir index
+        STAR --runThreadN $THREADS \\
+             --runMode genomeGenerate \\
+             --genomeDir index \\
+             --sjdbGTFfile $annotation \\
+             --genomeFastaFiles $reference
+        """
+    }
   }
 
   // Map reads to reference genome
