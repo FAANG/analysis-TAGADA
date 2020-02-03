@@ -34,7 +34,7 @@ if (error) {
   --single-reads <reads.fq> ...                 Single reads file(s)
   --mapped-reads <map.bam> ...                  Mapped reads file(s)
   --reference <reference.fa>                    Genome reference file
-  --index <directory>                           Genome index directory
+  --index <directory>                           Genome index input directory
   --annotation <annotation.gff>                 Genome annotation file
   --threads <number>                            Number of threads
   '''
@@ -234,7 +234,7 @@ if (paired_reads || single_reads) {
     publishDir "$output", mode: 'copy', saveAs: {
       filename ->
       if (filename.contains('Log.')) "logs/star/$filename"
-      else if (filename.endWith('.out.tab')) "logs/star/$filename"
+      else if (filename.endsWith('.out.tab')) "logs/star/$filename"
       else if (filename.endsWith('.bam')) "reads/mapped/$filename"
     }
 
