@@ -233,7 +233,7 @@ if (paired_reads || single_reads) {
 
     publishDir "$output", mode: 'copy', saveAs: {
       filename ->
-      if (filename.contains('Log.')) "logs/star/$filename"
+      if (filename.endsWith('.out')) "logs/star/$filename"
       else if (filename.endsWith('.out.tab')) "logs/star/$filename"
       else if (filename.endsWith('.bam')) "reads/mapped/$filename"
     }
@@ -242,23 +242,25 @@ if (paired_reads || single_reads) {
       tuple path(reads1), path(reads2), path(index) from reads_to_map.combine(index_to_map)
 
     output:
-      file 'Log.*'
+      file '*.out'
       file '*.out.tab'
       file '*.bam' into maps_to_assemble
       file '*.bam' into maps_to_quantify
 
     script:
       """
-      STAR --runThreadN $THREADS \\
-           --readFilesCommand zcat \\
-           --outSAMtype BAM SortedByCoordinate \\
-           --genomeDir $index \\
-           --readFilesIn $reads1 $reads2
-
       outfile=$reads1
       outfile="\${outfile%_paired}"
       outfile="\${outfile%_trimmed.fq.gz}"
       outfile="\${outfile%_R?}"
+
+      STAR --runThreadN $THREADS \\
+           --readFilesCommand zcat \\
+           --outSAMtype BAM SortedByCoordinate \\
+           --genomeDir $index \\
+           --readFilesIn $reads1 $reads2 \\
+           --outFileNamePrefix "\$outfile".
+
       mv *.bam "\$outfile".bam
       """
   }
