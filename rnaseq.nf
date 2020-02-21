@@ -310,7 +310,7 @@ process merge {
 
   script:
     """
-    stringtie --merge $assemblies -G $annotation -o merged.gff
+    stringtie --merge $assemblies -G $annotation -o merged_assemblies.gff
     """
 }
 
@@ -318,7 +318,7 @@ process merge {
 process quantify {
   tag 'StringTie'
 
-  publishDir "$output/genes", mode: 'copy', saveAs: {
+  publishDir "$output/counts", mode: 'copy', saveAs: {
     filename ->
     if (filename.endsWith('.gff')) "$filename"
   }
@@ -329,101 +329,51 @@ process quantify {
 
   output:
     file '*.gff'
-    file '*.tsv' into genes_to_format
+    file '*.genes.tsv' into genes_to_format
+    file '*.transcripts.tsv' into transcripts_to_format
 
   script:
     """
     outfile="$map"
     outfile="\${outfile%.*}"
-    stringtie $map -e \
+
+    stringtie $map -e -B \
               -p $THREADS \
               -G $annotation \
               -o "\$outfile".gff \
-              -A "\$outfile".tsv
+              -A "\$outfile".genes.tsv
+
+    mv t_data.ctab "\$outfile".transcripts.tsv
     """
+}
+
+number_of_files = genes_to_format.tap {
+  files_to_format
+}.count().get()
+
+files_to_format.concat(transcripts_to_format).set {
+  files_to_format
+}
+
+Channel.of('genes', 'transcripts').set {
+  output_prefixes
 }
 
 // Format results
 process format {
-  tag 'Bash'
+  tag 'Python'
 
-  publishDir "$output/genes", mode: 'copy'
+  publishDir "$output/counts", mode: 'copy'
 
   input:
-    path genes from genes_to_format.collect()
+    path files from files_to_format.buffer(size: number_of_files)
+    val prefix from output_prefixes
 
   output:
     file '*.tsv'
 
   script:
     """
-    files=( $genes )
-
-    echo "" > all_genes.tsv
-
-    # Rename columns, sort rows, join file
-    for (( f = \$(( \${#files[@]} -1 )); f >= 0; f-- )); do
-      awk '
-        BEGIN {
-          FS = "\\t"
-          OFS = FS
-        }
-        NR == 1 {
-          gsub(/.*\\//, "", FILENAME)
-          gsub(/\\.[^\\.]*\$/, "", FILENAME)
-          for (i = 1; i <= NF; i++) {
-            if (\$i == "Coverage") \$i = "Coverage " FILENAME
-            else if (\$i == "FPKM") \$i = "FPKM " FILENAME
-            else if (\$i == "TPM") \$i = "TPM " FILENAME
-          }
-          print
-          next
-        }
-        {
-          print | "sort -k 1,1"
-        }
-      ' "\${files[f]}" \\
-      | join --header -a 1 -a 2 -t \$'\\t' -o auto - all_genes.tsv > temp.tsv
-      mv temp.tsv all_genes.tsv
-    done
-
-    # Merge redundant columns
-    awk '
-      BEGIN {
-        FS = "\\t"
-        OFS = FS
-      }
-      NR == 1 {
-        for (i = 1; i <= NF; i++) {
-          if (!merge[i]) {
-            merge[i] = i
-            if (i == 1) printf "%s",\$i
-            else printf "%s%s",OFS,\$i
-
-            for (j = i+1; j <= NF; j++) {
-              if (\$j == \$i) merge[j] = i
-            }
-          }
-        }
-        print ""
-        next
-      }
-      {
-        for (i = 1; i <= NF; i++) {
-          if (merge[i] == i) {
-            for (j = i; j <= NF; j++) {
-              if (merge[j] == i && \$j != "") {
-                if (i == 1) printf "%s",\$j
-                else printf "%s%s",OFS,\$j
-                break
-              }
-              if (j == NF && i != 1) printf "%s",OFS
-            }
-          }
-        }
-        print ""
-      }
-    ' all_genes.tsv > temp.tsv
-    mv temp.tsv all_genes.tsv
+    merge.py $prefix $files
     """
 }
