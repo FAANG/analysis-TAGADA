@@ -293,7 +293,7 @@ process assemble {
 
   script:
     """
-    stringtie $map -p $THREADS -G $annotation -o "\$RANDOM".gff
+    stringtie $map -G $annotation -o "\$RANDOM".gff
     """
 }
 
@@ -338,7 +338,6 @@ process quantify {
     outfile="\${outfile%.*}"
 
     stringtie $map -e -B \
-              -p $THREADS \
               -G $annotation \
               -o "\$outfile".gff \
               -A "\$outfile".genes.tsv
