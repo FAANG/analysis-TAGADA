@@ -70,10 +70,10 @@ if (paired_reads || single_reads) {
 
   Channel.empty().concat(
     paired_reads ?
-      paired_reads_to_trim.buffer(size: 2).combine(Channel.from('--paired')) :
+      paired_reads_to_trim.buffer(size: 2).combine(Channel.of('--paired')) :
       Channel.empty(),
     single_reads ?
-      single_reads_to_trim.combine(Channel.from('')).combine(Channel.from('')) :
+      single_reads_to_trim.combine(Channel.of('')).combine(Channel.of('')) :
       Channel.empty()
   ).set {
     reads_to_trim
@@ -194,7 +194,7 @@ if (paired_reads || single_reads) {
       paired_reads_to_map.flatten().buffer(size: 2) :
       Channel.empty(),
     single_reads ?
-      single_reads_to_map.flatten().combine(Channel.from('')) :
+      single_reads_to_map.flatten().combine(Channel.of('')) :
       Channel.empty()
   ).set {
     reads_to_map
