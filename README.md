@@ -4,6 +4,7 @@
 
 The following dependencies are required:
 
+- Python with [Pandas](https://pandas.pydata.org/docs/getting_started/install.html#installing-using-your-linux-distribution-s-package-manager)
 - [Nextflow 19.10.0](https://www.nextflow.io/docs/latest/getstarted.html)
 - [FastQC 0.11.8](https://github.com/s-andrews/FastQC)
 - [Cutadapt 2.7](https://cutadapt.readthedocs.io/en/stable/installation.html)
@@ -36,7 +37,7 @@ The pipeline creates the following directories in the output directory:
 - `logs` contains a history file listing user commands, and log files from dependencies.
 - `genome` contains the computed indexed genome, if a genome reference and unmapped reads were provided.
 - `reads` contains computed trimmed reads and mapped reads, and quality control files.
-- `genes` contains all quantified genes in a tab separated matrix file, and annotation files.
+- `counts` contains all quantified genes and transcripts in tab separated matrix files, and annotation files.
 - `temp` contains temporary files that can be safely deleted.
 
 For the pipeline to correctly generate output file names, use the following input file names:
