@@ -21,6 +21,7 @@ Execute this nextflow pipeline with:
                 --paired-reads <paired reads 1.fq> <paired reads 2.fq> ... \
                 --single-reads <single reads.fq> ... \
                 --mapped-reads <mapped reads.bam> ... \
+                --direction <direction of reads: fr or rf> \
                 --reference <genome reference.fa> \
                 --index <genome index input directory> \
                 --annotation <genome annotation.gff> \

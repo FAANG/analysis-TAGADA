@@ -7,6 +7,7 @@ mapped_reads = params.containsKey('mapped-reads') ? params.'mapped-reads' : ''
 reference = params.containsKey('reference') ? params.'reference' : ''
 index = params.containsKey('index') ? params.'index' : ''
 annotation = params.containsKey('annotation') ? params.'annotation' : ''
+DIRECTION = params.containsKey('direction') ? params.'direction' : ''
 THREADS = params.containsKey('threads') ? params.'threads' : 1
 
 error = ''
@@ -27,12 +28,21 @@ if ((paired_reads || single_reads) && (!reference && !index)) {
   error += 'No genome reference or index given.\n'
 }
 
+if (DIRECTION == 'rf') {
+  DIRECTION = '--rf'
+} else if (DIRECTION == 'fr') {
+  DIRECTION = '--fr'
+} else if (DIRECTION != '') {
+  error += 'Invalid direction given. Expected "fr" or "rf".\n'
+}
+
 if (error) {
   exit 1, error + '\n' + '''Options:
   --output <directory>                          Output directory
   --paired-reads <reads1.fq> <reads2.fq> ...    Paired reads file(s)
   --single-reads <reads.fq> ...                 Single reads file(s)
   --mapped-reads <map.bam> ...                  Mapped reads file(s)
+  --direction <fr|rf>                           Direction of reads
   --reference <reference.fa>                    Genome reference file
   --index <directory>                           Genome index input directory
   --annotation <annotation.gff>                 Genome annotation file
@@ -293,7 +303,7 @@ process assemble {
 
   script:
     """
-    stringtie $map -G $annotation -o "\$RANDOM".gff
+    stringtie $map $DIRECTION -G $annotation -o "\$RANDOM".gff
     """
 }
 
@@ -337,7 +347,7 @@ process quantify {
     outfile="$map"
     outfile="\${outfile%.*}"
 
-    stringtie $map -e -B \
+    stringtie $map -e -B $DIRECTION \
               -G $annotation \
               -o "\$outfile".gff \
               -A "\$outfile".genes.tsv
