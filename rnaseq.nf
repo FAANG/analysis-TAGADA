@@ -138,7 +138,7 @@ if (paired_reads || single_reads) {
     publishDir "$output/reads/raw", mode: 'copy'
 
     input:
-      path reads from reads_to_control.collect()
+      path reads from reads_to_control
 
     output:
       file '*_fastqc.html'
