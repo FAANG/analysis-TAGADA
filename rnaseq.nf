@@ -1,388 +1,624 @@
-// ---------- PARAMETERS
-
-output = params.containsKey('output') ? params.'output' : ''
-paired_reads = params.containsKey('paired-reads') ? params.'paired-reads' : ''
-single_reads = params.containsKey('single-reads') ? params.'single-reads' : ''
-mapped_reads = params.containsKey('mapped-reads') ? params.'mapped-reads' : ''
-reference = params.containsKey('reference') ? params.'reference' : ''
-index = params.containsKey('index') ? params.'index' : ''
-annotation = params.containsKey('annotation') ? params.'annotation' : ''
-DIRECTION = params.containsKey('direction') ? params.'direction' : ''
-THREADS = params.containsKey('threads') ? params.'threads' : 1
+// Parse and check parameters
+// ##########################
+output = params.containsKey('output') ? params.output : ''
+reads = params.containsKey('reads') ? params.reads : ''
+direction = params.containsKey('direction') ? params.'direction' : ''
+genome = params.containsKey('genome') ? params.genome : ''
+index = params.containsKey('index') ? params.index : ''
+annotation = params.containsKey('annotation') ? params.annotation : ''
+merge = params.containsKey('merge') ? params.merge.tokenize(',') : ''
+metadata = params.containsKey('metadata') ? params.metadata : ''
+threads = params.containsKey('threads') ? params.threads : 1
 
 error = ''
 
-if (!output) {
-  error += 'No output given.\n'
+if (!output) error += 'No output given.\n'
+
+if (!annotation) error += 'No annotation given.\n'
+
+if (!reads) {
+  error += 'No reads given.\n'
+} else {
+  number_of_raw_reads = Channel.fromPath(reads).filter { path ->
+    filename = path.getName()
+    return filename =~ /\.(fastq|fq)(\.gz)?$/
+  }.count().get()
+
+  if (number_of_raw_reads > 0 && !genome && !index) {
+    error += 'No genome sequence or index given.\n'
+  }
 }
 
-if (!annotation) {
-  error += 'No annotation given.\n'
-}
-
-if (!paired_reads && !single_reads && !mapped_reads) {
-  error += 'No reads or mapped reads given.\n'
-}
-
-if ((paired_reads || single_reads) && (!reference && !index)) {
-  error += 'No genome reference or index given.\n'
-}
-
-if (DIRECTION == 'rf') {
-  DIRECTION = '--rf'
-} else if (DIRECTION == 'fr') {
-  DIRECTION = '--fr'
-} else if (DIRECTION != '') {
+if (direction == 'rf') {
+  direction = '--rf'
+} else if (direction == 'fr') {
+  direction = '--fr'
+} else if (direction != '') {
   error += 'Invalid direction given. Expected "fr" or "rf".\n'
+}
+
+if (merge && !metadata) {
+  error += 'No metadata given to execute merge.\n'
 }
 
 if (error) {
   exit 1, error + '\n' + '''Options:
-  --output <directory>                          Output directory
-  --paired-reads <reads1.fq> <reads2.fq> ...    Paired reads file(s)
-  --single-reads <reads.fq> ...                 Single reads file(s)
-  --mapped-reads <map.bam> ...                  Mapped reads file(s)
-  --direction <fr|rf>                           Direction of reads
-  --reference <reference.fa>                    Genome reference file
-  --index <directory>                           Genome index input directory
-  --annotation <annotation.gff>                 Genome annotation file
-  --threads <number>                            Number of threads
+  --output <directory>                Output directory
+  --reads <'*.{fq,bam}'>              Input reads glob pattern
+  --genome <genome.fa>                Input genome sequence file
+  --index <directory>                 Input genome index directory
+  --annotation <annotation.gff>       Input reference annotation file
+  --metadata <metadata.tsv>           Input metadata file
+  --merge <factor1,factor2>           Factor(s) to merge mapped reads
+  --direction <rf|fr>                 Direction of reads
+  --threads <number>                  Number of threads
   '''
 }
 
-if (paired_reads) {
-  Channel.fromPath(
-    paired_reads.tokenize(','),
-    checkIfExists: true
-  ).into {
-    paired_reads_to_control
-    paired_reads_to_trim
-  }
-}
-
-if (single_reads) {
-  Channel.fromPath(
-    single_reads.tokenize(','),
-    checkIfExists: true
-  ).into {
-    single_reads_to_control
-    single_reads_to_trim
-  }
-}
-
-if (paired_reads || single_reads) {
-  Channel.empty().concat(
-    paired_reads ? paired_reads_to_control : Channel.empty(),
-    single_reads ? single_reads_to_control : Channel.empty()
-  ).set {
-    reads_to_control
-  }
-
-  Channel.empty().concat(
-    paired_reads ?
-      paired_reads_to_trim.buffer(size: 2).combine(Channel.of('--paired')) :
-      Channel.empty(),
-    single_reads ?
-      single_reads_to_trim.combine(Channel.of('')).combine(Channel.of('')) :
-      Channel.empty()
-  ).set {
-    reads_to_trim
-  }
-}
-
-if (mapped_reads) {
-  Channel.fromPath(
-    mapped_reads.tokenize(','),
-    checkIfExists: true
-  ).into {
-    mapped_reads_to_assemble
-    mapped_reads_to_quantify
-  }
-}
-
+// Check index, genome, annotation, metadata
+// #########################################
 if (index) {
-  Channel.fromPath(
-    index,
-    checkIfExists: true
-  ).set {
+  Channel.fromPath(index, checkIfExists: true).set {
     index_to_map
   }
 }
 
-if (reference) {
-  Channel.fromPath(
-    reference,
-    checkIfExists: true
-  ).set {
-    reference_to_index
+if (genome) {
+  Channel.fromPath(genome, checkIfExists: true).set {
+    genome_to_index
   }
 }
 
-Channel.fromPath(
-  annotation,
-  checkIfExists: true
-).into {
-  annotation_to_index
-  annotation_to_assemble
-  annotation_to_merge
+Channel.fromPath(annotation, checkIfExists: true).into {
+  reference_annotation_to_index
+  reference_annotation_to_assemble
+  reference_annotation_to_combine
+  reference_annotation_to_count
 }
 
-// ---------- WORKFLOW
+if (metadata) {
+  Channel.fromPath(
+    metadata,
+    checkIfExists: true
+  ).splitCsv(header: true, sep: '\t').into {
+    metadata_to_check
+    metadata_to_merge
+  }
+}
 
-if (paired_reads || single_reads) {
+// Split reads into R1/R2/single/mapped
+// ####################################
+Channel.fromPath(reads, checkIfExists: true).map { path ->
+
+  filename = path.getName()
+
+  return (
+    filename =~ /^(.+?)(?:[\._ ][Rr]([12]))?(?:\.(fastq|fq|gz|bam))+$/
+  ).with {
+    matches() ? [
+      'prefix': it[0][1],
+      'R': it[0][2] ? it[0][2].toInteger() : null,
+      'mapped': it[0][3] == 'bam',
+      'path': path,
+      'filename': filename
+    ] : filename
+  }
+
+}.branch {
+  invalid: it instanceof String
+  mapped: it['mapped']
+  R1: it['R'] == 1
+  R2: it['R'] == 2
+  single: true
+}.set {
+  reads
+}
+
+reads.R1.into {
+  r1_reads_to_check
+  r1_reads_to_pair
+  r1_reads_to_control
+}
+
+reads.R2.into {
+  r2_reads_to_check
+  r2_reads_to_pair
+  r2_reads_to_control
+}
+
+reads.single.into {
+  single_reads_to_check
+  single_reads_to_append
+  single_reads_to_control
+}
+
+reads.mapped.into {
+  mapped_reads_to_check
+  mapped_reads_to_merge
+}
+
+error = ''
+warning = ''
+
+// Check file names
+// ################
+invalid = reads.invalid.toList().get()
+
+if (invalid.size() > 0) {
+  s = invalid.size() > 1 ? 's' : ''
+  error += "Wrong format for file name$s:\n  "
+  error += invalid.join('\n  ') + '\n\n'
+}
+
+// Check pairing
+// #############
+r1 = r1_reads_to_check.map {
+  ['prefix': it['prefix'], 'filename': it['filename']]
+}.toList().get()
+
+r2 = r2_reads_to_check.map {
+  ['prefix': it['prefix'], 'filename': it['filename']]
+}.toList().get()
+
+unpaired = r1.findAll {
+  !(it['prefix'] in r2.collect{it['prefix']})
+} + r2.findAll {
+  !(it['prefix'] in r1.collect{it['prefix']})
+}
+
+if (unpaired.size() > 0) {
+  s = unpaired.size() > 1 ? 's' : ''
+  error += "No pair$s found for file$s:\n  "
+  error += unpaired.collect{it['filename']}.join('\n  ') + '\n\n'
+}
+
+// Check duplicates
+// ################
+paired = r1 + r2
+
+single = single_reads_to_check.map {
+  ['prefix': it['prefix'], 'filename': it['filename']]
+}.toList().get()
+
+mapped = mapped_reads_to_check.map {
+  ['prefix': it['prefix'], 'filename': it['filename']]
+}.toList().get()
+
+duplicated = (
+  paired.intersect(single, { a, b -> a['prefix'] <=> b['prefix'] })
+  + paired.intersect(mapped, { a, b -> a['prefix'] <=> b['prefix'] })
+  + single.intersect(paired, { a, b -> a['prefix'] <=> b['prefix'] })
+  + single.intersect(mapped, { a, b -> a['prefix'] <=> b['prefix'] })
+  + mapped.intersect(paired, { a, b -> a['prefix'] <=> b['prefix'] })
+  + mapped.intersect(single, { a, b -> a['prefix'] <=> b['prefix'] })
+).groupBy {
+  it['prefix']
+}.collect {
+  it.value.collect{it['filename']}
+}
+
+if (duplicated.size() > 0) {
+  error += "Duplicates detected:\n"
+  duplicated.each {
+    error += '  ' + it.join('  ') + '\n'
+  }
+  error += '\n'
+}
+
+// Check metadata
+// ##############
+if (merge && metadata) {
+
+  metadata_to_check = metadata_to_check.toList().get()
+
+  // Check missing metadata rows
+  // ###########################
+  metadata_rows = metadata_to_check.collect {
+    it.values()[0]
+  }
+
+  inputs = paired + single + mapped
+
+  missing_rows = inputs.findAll {
+    !(it['prefix'] in metadata_rows)
+  }
+
+  if (missing_rows.size() > 0) {
+    s = missing_rows.size() > 1 ? 's' : ''
+    error += "No metadata row$s found for file$s:\n  "
+    error += missing_rows.collect{it['filename']}.join('\n  ') + '\n\n'
+  }
+
+  // Check missing metadata columns
+  // ##############################
+  metadata_columns = metadata_to_check[0].keySet()
+
+  missing_columns = merge.findAll {
+    !(it in metadata_columns)
+  }
+
+  if (missing_columns.size() > 0) {
+    s = missing_columns.size() > 1 ? 's' : ''
+    error += "No metadata column$s found for merge factor$s:\n  "
+    error += missing_columns.join('\n  ') + '\n\n'
+  }
+
+  // Check missing metadata values
+  // #############################
+  missing_values = metadata_to_check.findAll {
+    it.values()[0] in inputs.collect { it['prefix'] }
+  }.inject([], { result, row ->
+    factors = []
+    merge.each { factor ->
+      if (!row[factor]) factors += factor
+    }
+    if (factors) {
+      result += [[row.values()[0]] + factors]
+    }
+    return result
+  })
+
+  if (missing_values.size() > 0) {
+    s = missing_values.size() > 1 ? 's' : ''
+    ss = missing_values.inject([], {result, next ->
+      next[1..-1].each {
+        if (!(it in result)) result += it
+      }
+      return result
+    }).size() > 1 ? 's' : ''
+    warning += "Metadata row$s with missing factor$ss will not be merged:\n"
+    missing_values.each {
+      warning += '  ' + it.join('  ') + '\n'
+    }
+    warning += '\n'
+  }
+}
+
+if (error) {
+  exit 1, error
+}
+
+if (warning) {
+  log.warn '\n' + warning
+}
+
+// Pair R1/R2 and format reads
+// ###########################
+r1_reads_to_pair.map {
+  [it['prefix'], it['path']]
+}.set {
+  r1_reads_to_pair
+}
+
+r2_reads_to_pair.map {
+  [it['prefix'], it['path']]
+}.set {
+  r2_reads_to_pair
+}
+
+single_reads_to_append.map {
+  [it['prefix'], '', it['path']]
+}.set {
+  single_reads_to_append
+}
+
+r1_reads_to_pair.join(r2_reads_to_pair).map { it ->
+  [it[0], '--paired', [it[1], it[2]]]
+}.concat(single_reads_to_append).set {
+  reads_to_trim
+}
+
+single_reads_to_control.concat(r1_reads_to_control, r2_reads_to_control).map {
+  [it['prefix'], it['R'] ? '_R' + it['R'] : '', it['path']]
+}.set {
+  reads_to_control
+}
+
+// Process raw reads
+// #################
+if (number_of_raw_reads > 0) {
 
   // Control reads quality
+  // #####################
   process control {
     tag 'FastQC'
 
-    publishDir "$output/reads/raw", mode: 'copy'
+    publishDir "$output/quality/raw", mode: 'copy'
 
     input:
-      path reads from reads_to_control
+      tuple val(prefix), val(R), path(read) from reads_to_control
 
     output:
-      file '*_fastqc.html'
+      path '*_fastqc.html'
 
     script:
       """
-      fastqc $reads
+      fastqc $read
+      mv *_fastqc.html "$prefix""$R"_raw_fastqc.html
       """
   }
 
-  // Trim adaptators from reads
+  // Trim adaptators
+  // ###############
   process trim {
     tag 'Trim Galore'
 
-    publishDir "$output", mode: 'copy', saveAs: {
-      filename ->
-      if (filename.endsWith('_trimming_report.txt')) "logs/trim_galore/$filename"
-      else if (filename.endsWith('_fastqc.html')) "reads/trimmed/$filename"
-      else if (filename.endsWith('.fq.gz')) {
-        filename = filename.minus(~/_paired$/)
-        "reads/trimmed/$filename"
-      }
+    publishDir "$output", mode: 'copy', saveAs: { filename ->
+      if (filename.endsWith('trimming_report.txt')) "logs/trim_galore/$filename"
+      else if (filename.endsWith('fastqc.html')) "quality/trimmed/$filename"
     }
 
     input:
-      tuple path(reads1), path(reads2), val(paired) from reads_to_trim
+      tuple val(prefix), val(paired), path(reads) from reads_to_trim
 
     output:
-      file '*_trimming_report.txt'
-      file '*_fastqc.html'
-      file '*_trimmed.fq.gz_paired' optional true into paired_reads_to_map
-      file '*_trimmed.fq.gz' optional true into single_reads_to_map
+      path '*_trimming_report.txt'
+      path '*_fastqc.html'
+      tuple val(prefix), path('*.fq.gz') into reads_to_map
 
     script:
       """
-      trim_galore $reads1 $reads2 $paired --cores $THREADS --fastqc --gzip
+      trim_galore $reads \
+                  $paired \
+                  --cores $threads \
+                  --fastqc \
+                  --gzip \
+                  --basename "$prefix"
 
       for f in *_val_?.fq.gz; do
         [ -f "\$f" ] || break
-        outfile="\${f%_val_?.fq.gz}"
-        mv "\$f" "\$outfile"_trimmed.fq.gz_paired
+        R="\${f%.fq.gz}"
+        R=_R"\${R: -1}"
+        prefix="\${f%_val_?.fq.gz}"
+        mv "\$f" "\$prefix""\$R"_trimmed.fq.gz
       done
 
       for f in *_val_?_fastqc.html; do
         [ -f "\$f" ] || break
-        outfile="\${f%_val_?_fastqc.html}"
-        mv "\$f" "\$outfile"_trimmed_fastqc.html
+        R="\${f%_fastqc.html}"
+        R=_R"\${R: -1}"
+        prefix="\${f%_val_?_fastqc.html}"
+        mv "\$f" "\$prefix""\$R"_trimmed_fastqc.html
       done
 
       for f in *_trimming_report.txt; do
         [ -f "\$f" ] || break
-        outfile="\${f%_trimming_report.txt}"
-        outfile="\${outfile%.gz}"
-        outfile="\${outfile%.fq}"
-        outfile="\${outfile%.fastq}"
-        mv "\$f" "\$outfile"_trimming_report.txt
+        prefix="\${f%_trimming_report.txt}"
+        while [[ "\$prefix" =~ \\.(fastq|fq|gz|bam)\$ ]]; do
+          prefix="\${prefix%.gz}"
+          prefix="\${prefix%.fq}"
+          prefix="\${prefix%.fastq}"
+          prefix="\${prefix%.bam}"
+        done
+        R=""
+        [[ "\$prefix" =~ ([\\._]|[[:blank:]])[Rr][12]\$ ]] && R=_R"\${prefix: -1}"
+        mv "\$f" "$prefix""\$R"_trimming_report.txt
       done
       """
   }
 
-  Channel.empty().concat(
-    paired_reads ?
-      paired_reads_to_map.flatten().buffer(size: 2) :
-      Channel.empty(),
-    single_reads ?
-      single_reads_to_map.flatten().combine(Channel.of('')) :
-      Channel.empty()
-  ).set {
-    reads_to_map
-  }
-
+  // Index genome
+  // ############
   if (!index) {
 
-    // Index reference genome
     process index {
       tag 'STAR'
 
-      publishDir "$output/genome", mode: 'copy'
+      publishDir "$output", mode: 'copy'
 
       input:
-        path reference from reference_to_index
-        path annotation from annotation_to_index
+        path genome from genome_to_index
+        path annotation from reference_annotation_to_index
 
       output:
-        file 'index' into index_to_map
+        path 'index' into index_to_map
 
       script:
         """
         mkdir index
-        STAR --runThreadN $THREADS \\
+        STAR --runThreadN $threads \\
              --runMode genomeGenerate \\
              --genomeDir index \\
              --sjdbGTFfile $annotation \\
-             --genomeFastaFiles $reference
+             --genomeFastaFiles $genome
         """
     }
   }
 
-  // Map reads to reference genome
+  // Map reads to genome
+  // ###################
+  index_to_map.combine(reads_to_map).set {
+    reads_to_map
+  }
+
   process map {
     tag 'STAR'
 
-    publishDir "$output", mode: 'copy', saveAs: {
-      filename ->
+    publishDir "$output", mode: 'copy', saveAs: { filename ->
       if (filename.endsWith('.out')) "logs/star/$filename"
       else if (filename.endsWith('.out.tab')) "logs/star/$filename"
-      else if (filename.endsWith('.bam')) "reads/mapped/$filename"
+      else if (filename.endsWith('.bam')) "maps/$filename"
     }
 
     input:
-      tuple path(reads1), path(reads2), path(index) from reads_to_map.combine(index_to_map)
+      tuple path(index), val(prefix), path(reads) from reads_to_map
 
     output:
-      file '*.out'
-      file '*.out.tab'
-      file '*.bam' into maps_to_assemble
-      file '*.bam' into maps_to_quantify
+      path '*.out'
+      path '*.out.tab'
+      tuple val(prefix), path('*.bam') into maps_to_merge
 
     script:
       """
-      outfile=$reads1
-      outfile="\${outfile%_paired}"
-      outfile="\${outfile%_trimmed.fq.gz}"
-      outfile="\${outfile%_R?}"
-
-      STAR --runThreadN $THREADS \\
+      STAR --runThreadN $threads \\
            --readFilesCommand zcat \\
            --outSAMtype BAM SortedByCoordinate \\
            --genomeDir $index \\
-           --readFilesIn $reads1 $reads2 \\
-           --outFileNamePrefix "\$outfile".
+           --readFilesIn $reads \\
+           --outFileNamePrefix "$prefix".
 
-      mv *.bam "\$outfile".bam
+      mv *.bam "$prefix".bam
       """
+  }
+
+  mapped_reads_to_merge.map {
+    [it['prefix'], it['path']]
+  }.concat(maps_to_merge).set {
+    maps_to_merge
+  }
+
+} else {
+  mapped_reads_to_merge.map {
+    [it['prefix'], it['path']]
+  }.set {
+    maps_to_merge
   }
 }
 
-Channel.empty().concat(
-  (single_reads || paired_reads) ? maps_to_assemble : Channel.empty(),
-  mapped_reads ? mapped_reads_to_assemble : Channel.empty()
-).set {
-  maps_to_assemble
-}
+// Merge maps using metadata
+// #########################
+if (merge && metadata) {
 
-Channel.empty().concat(
-  (single_reads || paired_reads) ? maps_to_quantify : Channel.empty(),
-  mapped_reads ? mapped_reads_to_quantify : Channel.empty()
-).set {
-  maps_to_quantify
+  metadata_to_merge.cross(maps_to_merge).map {
+    missing_values = false
+    id = it[0].collectMany { k, v ->
+      if (!merge.contains(k)) return []
+      else if (!v) missing_values = true
+      return [v]
+    }.join('_')
+    if (missing_values) id = "NA_" + it[1][0]
+    [id, it[1][1]]
+  }.groupTuple().set {
+    maps_to_merge
+  }
+
+  process merge {
+    tag 'Samtools'
+
+    input:
+      tuple val(prefix), path(maps) from maps_to_merge
+
+    output:
+      tuple val(prefix), path('*.bam') into maps_to_assemble
+      tuple val(prefix), path('*.bam') into maps_to_count
+
+    script:
+      """
+      samtools merge "$prefix".bam $maps
+      """
+  }
+
+} else {
+  maps_to_merge.into {
+    maps_to_assemble
+    maps_to_count
+  }
 }
 
 // Assemble transcripts
+// ####################
+reference_annotation_to_assemble.combine(maps_to_assemble).set {
+  maps_to_assemble
+}
+
 process assemble {
   tag 'StringTie'
 
   input:
-    path annotation from annotation_to_assemble
-    each path(map) from maps_to_assemble
+    tuple path(annotation), val(prefix), path(map) from maps_to_assemble
 
   output:
-    file '*.gff' into assemblies_to_merge
+    path '*.gff' into assemblies_to_combine
 
   script:
     """
-    stringtie $map $DIRECTION -G $annotation -o "\$RANDOM".gff
+    stringtie $map $direction -G $annotation -o "$prefix".gff
     """
 }
 
-// Merge assemblies
-process merge {
+// Combine assemblies
+// ##################
+process combine {
   tag 'StringTie'
 
+  publishDir "$output/annotation", mode: 'copy'
+
   input:
-    path annotation from annotation_to_merge
-    path assemblies from assemblies_to_merge.collect()
+    path annotation from reference_annotation_to_combine
+    path assemblies from assemblies_to_combine.collect()
 
   output:
-    file '*.gff' into annotation_to_quantify
+    path '*.gff' into assembly_annotation_to_count
 
   script:
     """
-    stringtie --merge $assemblies -G $annotation -o merged_assemblies.gff
+    stringtie --merge $assemblies -G $annotation -o assembly.gff
     """
 }
 
-// Quantify genes
-process quantify {
+// Count genes and transcripts
+// ###########################
+reference_annotation_to_count.combine(Channel.of('reference')).concat(
+  assembly_annotation_to_count.combine(Channel.of('assembly'))
+).combine(
+  maps_to_count
+).set {
+  maps_to_count
+}
+
+process count {
   tag 'StringTie'
 
-  publishDir "$output/counts", mode: 'copy', saveAs: {
-    filename ->
-    if (filename.endsWith('.gff')) "$filename"
-  }
-
   input:
-    path annotation from annotation_to_quantify
-    each path(map) from maps_to_quantify
+    tuple path(annotation), val(type), val(prefix), path(map) from maps_to_count
 
   output:
-    file '*.gff'
-    file '*.genes.tsv' into genes_to_format
-    file '*.transcripts.tsv' into transcripts_to_format
+    tuple path('*.reference_genes.tsv'), path('*.reference_transcripts.tsv') optional true into reference_counts_to_format
+    tuple path('*.assembly_genes.tsv'), path('*.assembly_transcripts.tsv') optional true into assembly_counts_to_format
 
   script:
     """
-    outfile="$map"
-    outfile="\${outfile%.*}"
-
-    stringtie $map -e -B $DIRECTION \
+    stringtie $map \
+              $direction \
+              -e \
+              -B \
               -G $annotation \
-              -o "\$outfile".gff \
-              -A "\$outfile".genes.tsv
+              -A "$prefix"."$type"_genes.tsv
 
-    mv t_data.ctab "\$outfile".transcripts.tsv
+    mv t_data.ctab "$prefix"."$type"_transcripts.tsv
     """
 }
 
-number_of_files = genes_to_format.tap {
-  files_to_format
-}.count().get()
-
-files_to_format.concat(transcripts_to_format).set {
-  files_to_format
+// Format count results
+// ####################
+reference_counts_to_format.tap {
+  buffer
+}.concat(assembly_counts_to_format).multiMap {
+  genes: it[0]
+  transcripts: it[1]
+}.set {
+  counts_to_format
 }
 
-Channel.of('genes', 'transcripts').set {
-  output_prefixes
+counts_to_format.genes.concat(counts_to_format.transcripts).set {
+  counts_to_format
 }
 
-// Format results
+buffer = buffer.count().get()
+
 process format {
   tag 'Python'
 
   publishDir "$output/counts", mode: 'copy'
 
   input:
-    path files from files_to_format.buffer(size: number_of_files)
-    val prefix from output_prefixes
+    path counts from counts_to_format.buffer(size: buffer)
 
   output:
-    file '*.tsv'
+    path '*.tsv'
 
   script:
     """
-    merge.py $prefix $files
+    merge.py $counts
     """
 }

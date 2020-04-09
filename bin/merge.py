@@ -5,15 +5,16 @@ import pandas as pd
 import re
 import sys
 
-prefix = sys.argv[1]
-files = sys.argv[2:]
+files = sys.argv[1:]
 
 dataframes = {
   'cov': [],
   'TPM': []
 }
 
+keys = []
 columns = []
+prefix = re.search('\.([^\.]+)\.tsv$', files[0]).group(1)
 
 for file in files:
 
@@ -23,34 +24,36 @@ for file in files:
     'Coverage': 'cov',
   })
 
-  if not columns:
+  if not keys:
     if 'transcript_id' in df.columns:
-      columns = ['transcript_id', 'gene_id']
+      keys = ['transcript_id', 'gene_id']
     else:
-      columns = ['gene_id']
+      keys = ['gene_id']
 
-  file =  re.sub(r'\.(genes|transcripts)\.tsv$', '', file)
+  id = re.sub(r'\.([^\.]+)\.tsv$', '', file)
+  columns += [id]
 
   if not 'TPM' in df.columns and 'FPKM' in df.columns:
+    sum_FPKM = df['FPKM'].sum()
     df['TPM'] = df['FPKM'].apply(
-      lambda x: x / df['FPKM'].sum() * 1e6
+      lambda FPKM: 1e6 * FPKM / sum_FPKM
     )
 
   if 'TPM' in df.columns:
-    dataframes['TPM'] += [df[columns + ['TPM']].rename(columns = {
-      'TPM': 'TPM_' + file
+    dataframes['TPM'] += [df[keys + ['TPM']].rename(columns = {
+      'TPM': id
     })]
 
   if 'cov' in df.columns:
-    dataframes['cov'] += [df[columns + ['cov']].rename(columns = {
-      'cov': 'cov_' + file
+    dataframes['cov'] += [df[keys + ['cov']].rename(columns = {
+      'cov': id
     })]
 
 cov, TPM = [
   reduce(lambda df1, df2:
     pd.merge(
       df1, df2,
-      on = columns,
+      on = keys,
       how = 'outer'
     ),
     dataframes
@@ -58,5 +61,14 @@ cov, TPM = [
   for dataframes in [dataframes['cov'], dataframes['TPM']]
 ]
 
-cov.sort_values(columns).to_csv(prefix+'_coverage.tsv', sep = '\t', index = False)
-TPM.sort_values(columns).to_csv(prefix+'_TPM.tsv', sep = '\t', index = False)
+cov.reindex(
+  columns = keys + sorted(columns, key = str.casefold)
+).sort_values(
+  keys
+).to_csv(prefix+'_coverage.tsv', sep='\t', index=False)
+
+TPM.reindex(
+  columns = keys + sorted(columns, key = str.casefold)
+).sort_values(
+  keys
+).to_csv(prefix+'_TPM.tsv', sep='\t', index=False)
