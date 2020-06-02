@@ -20,7 +20,19 @@ while (( "$#" )); do
       fi
       shift
       ;;
-    # Preserve other arguments
+    # Parse nextflow options passed as pipeline options
+    --ansi-log|--bucket-dir|--cache|--dump-channels|--dump-hashes|--e.?*|--entry|--help|--hub|--latest|--lib|--name|--offline|--params-file|--process.?*|--profile|--qs|--queue-size|--resume|--revision|--test|--user|--with-conda|--with-dag|--with-docker|--with-notification|--with-podman|--with-report|--with-singularity|--with-timeline|--with-tower|--with-trace|--with-weblog|--without-docker|--without-podman|--work-dir)
+      command+=("$1")
+      args+=("${1#-}")
+      shift
+      ;;
+    # Parse options
+    -?*)
+      command+=("$1")
+      args+=("$1")
+      shift
+      ;;
+    # Parse other arguments
     *)
       command+=("'${1//\'/$escape}'")
       args+=("$1")
@@ -29,8 +41,9 @@ while (( "$#" )); do
   esac
 done
 
+# Check required arguments
 if [[ -z "$pipeline" || -z "$output" ]]; then
-  echo "Usage: $0 <pipeline.nf> --output <directory> [pipeline arguments] [nextflow arguments]"
+  echo "Usage: $0 <pipeline.nf> --output <directory> [arguments]"
   exit 1
 fi
 
