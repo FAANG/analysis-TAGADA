@@ -338,45 +338,59 @@ if (number_of_raw_reads > 0) {
     output:
       path '*_trimming_report.txt'
       path '*_fastqc.html'
-      tuple val(prefix), path('*.fq.gz') into reads_to_map
+      tuple val(prefix), path('*_trimmed.fq.gz') into reads_to_map
 
     script:
       """
-      trim_galore $reads \\
+      for f in $reads; do
+        name=\$(basename "\$f")
+        symlink="\${name// /_}"
+        target=\$(readlink -m "\$f")
+        [[ "\$name" != "\$symlink" ]] && ln -sf "\$target" "\$symlink"
+        reads+=("\$symlink")
+      done
+
+      trim_galore "\${reads[@]}" \\
                   $paired \\
                   --cores $threads \\
                   --fastqc \\
                   --gzip \\
                   --basename "$prefix"
 
-      for f in *_val_?.fq.gz; do
+      for f in *_{val_1,val_2,trimmed}.fq.gz; do
         [ -f "\$f" ] || break
-        R="\${f%.fq.gz}"
-        R=_R"\${R: -1}"
-        prefix="\${f%_val_?.fq.gz}"
-        mv "\$f" "\$prefix""\$R"_trimmed.fq.gz
+        suffix="\${f%.fq.gz}"
+        R=""
+        [[ "\$suffix" =~ _val_[12]\$ ]] && R=_R"\${suffix: -1}"
+        name=\$(basename "\$f")
+        rename="$prefix""\$R"_trimmed.fq.gz
+        [[ "\$name" != "\$rename" ]] && mv "\$f" "\$rename"
       done
 
-      for f in *_val_?_fastqc.html; do
+      for f in *_fastqc.html; do
         [ -f "\$f" ] || break
-        R="\${f%_fastqc.html}"
-        R=_R"\${R: -1}"
-        prefix="\${f%_val_?_fastqc.html}"
-        mv "\$f" "\$prefix""\$R"_trimmed_fastqc.html
+        suffix="\${f%_fastqc.html}"
+        R=""
+        [[ "\$suffix" =~ _val_[12]\$ ]] && R=_R"\${suffix: -1}"
+        name=\$(basename "\$f")
+        rename="$prefix""\$R"_trimmed_fastqc.html
+        [[ "\$name" != "\$rename" ]] && mv "\$f" "\$rename"
       done
 
       for f in *_trimming_report.txt; do
         [ -f "\$f" ] || break
-        prefix="\${f%_trimming_report.txt}"
-        while [[ "\$prefix" =~ \\.(fastq|fq|gz|bam)\$ ]]; do
-          prefix="\${prefix%.gz}"
-          prefix="\${prefix%.fq}"
-          prefix="\${prefix%.fastq}"
-          prefix="\${prefix%.bam}"
+        suffix="\${f%_trimming_report.txt}"
+        while [[ "\$suffix" =~ \\.(fastq|fq|gz|bam)\$ ]]; do
+          suffix="\${suffix%.gz}"
+          suffix="\${suffix%.fq}"
+          suffix="\${suffix%.fastq}"
+          suffix="\${suffix%.bam}"
         done
         R=""
-        [[ "\$prefix" =~ ([\\._]|[[:blank:]])[Rr][12]\$ ]] && R=_R"\${prefix: -1}"
-        mv "\$f" "$prefix""\$R"_trimming_report.txt
+        [[ "\$suffix" =~ ([\\._]|[[:blank:]])[Rr][12]\$ ]] && R=_R"\${suffix: -1}"
+        name=\$(basename "\$f")
+        rename="$prefix""\$R"_trimming_report.txt
+        [[ "\$name" != "\$rename" ]] && mv "\$f" "\$rename"
       done
       """
   }
