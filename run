@@ -54,6 +54,8 @@ args=()
 mkdir -p "$output"/temp/input
 ln -sf "$output"/temp .nextflow
 rm -rf "$output"/logs/nextflow.log
+rm -rf "$output"/logs/report.html
+rm -rf "$output"/logs/timeline.html
 
 # Write command to history
 mkdir -p "$output"/logs
@@ -93,11 +95,13 @@ while (( "$#" )); do
   esac
 done
 
-# Run nextflow pipeline
-# And remove temp folder once pipeline successfully completes
+# Run nextflow pipeline and remove temp folder
+# after pipeline successfully completes
 nextflow \
 -log "$output"/logs/nextflow.log \
 run "$pipeline" \
+-with-report "$output"/logs/report.html \
+-with-timeline "$output"/logs/timeline.html \
 -work-dir "$output"/temp/work \
 --output "$output" \
 "${args[@]}" \
