@@ -2,22 +2,20 @@
 // ##########################
 output = params.containsKey('output') ? params.output : ''
 reads = params.containsKey('reads') ? params.reads : ''
-direction = params.containsKey('direction') ? params.'direction' : ''
 genome = params.containsKey('genome') ? params.genome : ''
 index = params.containsKey('index') ? params.index : ''
 annotation = params.containsKey('annotation') ? params.annotation : ''
-merge = params.containsKey('merge') ? params.merge.tokenize(',') : ''
 metadata = params.containsKey('metadata') ? params.metadata : ''
 threads = params.containsKey('threads') ? params.threads : 1
+merge = params.containsKey('merge') ? params.merge.tokenize(',') : ''
+direction = params.containsKey('direction') ? params.'direction' : ''
 
 error = ''
 
-if (!output) error += 'No output given.\n'
-
-if (!annotation) error += 'No annotation given.\n'
+if (!output) error += 'No --output provided.\n'
 
 if (!reads) {
-  error += 'No reads given.\n'
+  error += 'No --reads provided.\n'
 } else {
   number_of_raw_reads = Channel.fromPath(reads).filter { path ->
     filename = path.getName()
@@ -25,8 +23,14 @@ if (!reads) {
   }.count().get()
 
   if (number_of_raw_reads > 0 && !genome && !index) {
-    error += 'No genome sequence or index given.\n'
+    error += 'No --genome or --index provided.\n'
   }
+}
+
+if (!annotation) error += 'No --annotation provided.\n'
+
+if (merge && !metadata) {
+  error += 'No --metadata provided to execute --merge.\n'
 }
 
 if (direction == 'rf') {
@@ -34,26 +38,10 @@ if (direction == 'rf') {
 } else if (direction == 'fr') {
   direction = '--fr'
 } else if (direction != '') {
-  error += 'Invalid direction given. Expected "fr" or "rf".\n'
+  error += 'Invalid --direction. Expected "fr" or "rf".\n'
 }
 
-if (merge && !metadata) {
-  error += 'No metadata given to execute merge.\n'
-}
-
-if (error) {
-  exit 1, error + '\n' + '''Options:
-  --output <directory>                Output directory
-  --reads <'*.{fq,bam}'>              Input reads glob pattern
-  --genome <genome.fa>                Input genome sequence file
-  --index <directory>                 Input genome index directory
-  --annotation <annotation.gff>       Input reference annotation file
-  --metadata <metadata.tsv>           Input metadata file
-  --merge <factor1,factor2>           Factor(s) to merge mapped reads
-  --direction <rf|fr>                 Direction of reads
-  --threads <number>                  Number of threads
-  '''
-}
+if (error) exit 1, error
 
 // Check index, genome, annotation, metadata
 // #########################################
@@ -274,13 +262,9 @@ if (merge && metadata) {
   }
 }
 
-if (error) {
-  exit 1, error
-}
+if (error) exit 1, error
 
-if (warning) {
-  log.warn '\n' + warning
-}
+if (warning) log.warn '\n' + warning
 
 // Pair R1/R2 and format reads
 // ###########################
