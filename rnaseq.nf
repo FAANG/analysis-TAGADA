@@ -6,7 +6,6 @@ genome = params.containsKey('genome') ? params.genome : ''
 index = params.containsKey('index') ? params.index : ''
 annotation = params.containsKey('annotation') ? params.annotation : ''
 metadata = params.containsKey('metadata') ? params.metadata : ''
-threads = params.containsKey('threads') ? params.threads : 1
 merge = params.containsKey('merge') ? params.merge.tokenize(',') : ''
 direction = params.containsKey('direction') ? params.'direction' : ''
 
@@ -305,7 +304,6 @@ if (number_of_raw_reads > 0) {
   // Control reads quality
   // #####################
   process control {
-    tag 'FastQC'
 
     publishDir "$output/quality/raw", mode: 'copy'
 
@@ -325,7 +323,8 @@ if (number_of_raw_reads > 0) {
   // Trim adaptators
   // ###############
   process trim {
-    tag 'Trim Galore'
+
+    label 'high_cpu'
 
     publishDir "$output", mode: 'copy', saveAs: { filename ->
       if (filename.endsWith('trimming_report.txt')) "logs/trim_galore/$filename"
@@ -352,7 +351,7 @@ if (number_of_raw_reads > 0) {
 
       trim_galore "\${reads[@]}" \\
                   $paired \\
-                  --cores $threads \\
+                  --cores ${task.cpus} \\
                   --fastqc \\
                   --gzip \\
                   --basename "$prefix"
@@ -400,7 +399,9 @@ if (number_of_raw_reads > 0) {
   if (!index) {
 
     process index {
-      tag 'STAR'
+
+      label 'high_cpu'
+      label 'high_memory'
 
       publishDir "$output", mode: 'copy'
 
@@ -414,7 +415,7 @@ if (number_of_raw_reads > 0) {
       script:
         """
         mkdir index
-        STAR --runThreadN $threads \\
+        STAR --runThreadN ${task.cpus} \\
              --runMode genomeGenerate \\
              --genomeDir index \\
              --sjdbGTFfile $annotation \\
@@ -430,7 +431,9 @@ if (number_of_raw_reads > 0) {
   }
 
   process map {
-    tag 'STAR'
+
+    label 'high_cpu'
+    label 'high_memory'
 
     publishDir "$output", mode: 'copy', saveAs: { filename ->
       if (filename.endsWith('.out')) "logs/star/$filename"
@@ -448,7 +451,7 @@ if (number_of_raw_reads > 0) {
 
     script:
       """
-      STAR --runThreadN $threads \\
+      STAR --runThreadN ${task.cpus} \\
            --readFilesCommand zcat \\
            --outSAMtype BAM SortedByCoordinate \\
            --genomeDir $index \\
@@ -491,7 +494,6 @@ if (merge && metadata) {
   }
 
   process merge {
-    tag 'Samtools'
 
     input:
       tuple val(prefix), path(maps) from maps_to_merge
@@ -520,7 +522,6 @@ reference_annotation_to_assemble.combine(maps_to_assemble).set {
 }
 
 process assemble {
-  tag 'StringTie'
 
   input:
     tuple path(annotation), val(prefix), path(map) from maps_to_assemble
@@ -537,7 +538,6 @@ process assemble {
 // Combine assemblies
 // ##################
 process combine {
-  tag 'StringTie'
 
   publishDir "$output/annotation", mode: 'copy'
 
@@ -565,7 +565,6 @@ reference_annotation_to_count.combine(Channel.of('reference')).concat(
 }
 
 process count {
-  tag 'StringTie'
 
   input:
     tuple path(annotation), val(type), val(prefix), path(map) from maps_to_count
@@ -605,7 +604,6 @@ counts_to_format.genes.concat(counts_to_format.transcripts).set {
 buffer = buffer.count().get()
 
 process format {
-  tag 'Python'
 
   publishDir "$output/counts", mode: 'copy'
 
