@@ -47,12 +47,10 @@ if [[ -z "$pipeline" || -z "$output" ]]; then
   exit 1
 fi
 
-set -- "${args[@]}"
-args=()
-
 # Prepare nextflow temp folder
-mkdir -p "$output"/temp/input
+mkdir -p "$output"/temp
 ln -sf "$output"/temp .nextflow
+rm -rf "$output"/temp/input
 rm -rf "$output"/logs/nextflow.log
 rm -rf "$output"/logs/report.html
 rm -rf "$output"/logs/timeline.html
@@ -62,32 +60,41 @@ mkdir -p "$output"/logs
 [ -f "$output"/logs/command.log ] && echo "" >> "$output"/logs/command.log
 echo $(date '+%Y/%m/%d %H:%M:%S')$'\t'"${command[@]}" >> "$output"/logs/command.log
 
-# Parse pipeline arguments
+# Parse arguments
+set -- "${args[@]}"
+args=()
 while (( "$#" )); do
   case "$1" in
     # Parse options and parameters
-    --?*)
+    -?*)
       args+=("$1")
+      [[ "$1" == --* ]] && glob=true || glob=false
+      option="${1#--}"
+      paths=""
+      values=""
       params=""
       while [[ -n "$2" && "$2" != -* ]]; do
-        if [[ -d "$2" || -f "$2" ]]; then
-          # Replace paths with spaceless commaless symlinks for nextflow
-          value=$(basename "$2")
-          value="${value// /_}"
-          value="${value//,/_}"
-          value="$output"/temp/input/"$value"
-          ln -sfr "$2" "$value"
+        if [[ $glob == true && (-d "$2" || -f "$2") ]]; then
+          # Create symlink to original path
+          symlink=$(basename "$2")
+          symlink="$output"/temp/input/"$option"/"$symlink"
+          mkdir -p "$output"/temp/input/"$option"
+          ln -sf "$2" "$symlink"
+          # Replace path with glob to symlink
+          paths="$output"/temp/input/"$option"/*
         else
-          value="$2"
+          # Join values with commas
+          values+="$2",
         fi
-        # Separate parameters with commas for nextflow
-        params+="$value",
         shift
       done
-      args+=("${params%,}")
+      params+="$values"
+      params+="$paths"
+      params="${params%,}"
+      args+=("$params")
       shift
       ;;
-    # Preserve other arguments
+    # Parse other arguments
     *)
       args+=("$1")
       shift
