@@ -342,11 +342,11 @@ if (number_of_raw_reads > 0) {
 
     script:
       """
-      trim_galore $reads \
-                  $paired \
-                  --cores $threads \
-                  --fastqc \
-                  --gzip \
+      trim_galore $reads \\
+                  $paired \\
+                  --cores $threads \\
+                  --fastqc \\
+                  --gzip \\
                   --basename "$prefix"
 
       for f in *_val_?.fq.gz; do
@@ -562,11 +562,11 @@ process count {
 
   script:
     """
-    stringtie $map \
-              $direction \
-              -e \
-              -B \
-              -G $annotation \
+    stringtie $map \\
+              $direction \\
+              -e \\
+              -B \\
+              -G $annotation \\
               -A "$prefix"."$type"_genes.tsv
 
     mv t_data.ctab "$prefix"."$type"_transcripts.tsv
