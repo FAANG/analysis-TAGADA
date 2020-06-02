@@ -52,7 +52,7 @@ args=()
 
 # Prepare nextflow temp folder
 mkdir -p "$output"/temp/input
-ln -sfr "$output"/temp .nextflow
+ln -sf "$output"/temp .nextflow
 rm -rf "$output"/logs/nextflow.log
 
 # Write command to history
