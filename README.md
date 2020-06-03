@@ -1,17 +1,12 @@
 # GENE-SWitCH project RNA-Seq analysis pipeline
 
-## Requirements
 
-The following dependencies are required:
+## Installation
 
-- [Nextflow 20.01.0](https://www.nextflow.io/docs/latest/getstarted.html)
-- [FastQC 0.11.9](https://github.com/s-andrews/FastQC)
-- [Cutadapt 2.9](https://cutadapt.readthedocs.io/en/stable/installation.html)
-- [Trim Galore 0.6.5](https://github.com/FelixKrueger/TrimGalore)
-- [STAR 2.7.3a](https://github.com/alexdobin/STAR)
-- [Samtools 1.10](https://github.com/samtools/samtools)
-- [StringTie 2.1.1](https://github.com/gpertea/stringtie)
-- Python with [Pandas](https://pandas.pydata.org/docs/getting_started/install.html#installing-using-your-linux-distribution-s-package-manager)
+To use this pipeline, simply clone or download this repository, and install the dependencies:
+
+- [Nextflow](https://www.nextflow.io/docs/latest/getstarted.html) >= 20.01.0
+- [Docker](https://docs.docker.com/engine/install/) >= 19.03.2 or [Singularity](https://sylabs.io/guides/3.5/user-guide/quick_start.html) >= 3.4
 
 
 ## Usage
@@ -20,25 +15,67 @@ Execute this nextflow pipeline with:
 
     ./run rnaseq.nf [arguments]
 
-The pipeline accepts the following arguments:
+The `./run` launcher script replaces the `nextflow run` command and grants these benefits:
+- Options can receive multiple space-separated parameters.
+- Long options are preceded by double dashes, following GNU conventions.
+- Temporary files and logs are written to the output directory, keeping the execution directory clean.
+- Temporary files are deleted after the pipeline has successfully completed.
+- The pipeline can be resumed from any directory with the `--resume` option.
 
-    --output <directory>            Output directory                  Required
-    --reads <'*.{fq,bam}'>          Input reads glob pattern          Required
-    --genome <genome.fa>            Input genome sequence file        Required if raw --reads and no --index
-    --index <directory>             Input genome index directory      Required if raw --reads and no --genome
-    --annotation <annotation.gff>   Input reference annotation file   Required
-    --metadata <metadata.tsv>       Input metadata file               Required if --merge
-    --merge <factor1,factor2>       Factor(s) to merge mapped reads   Optional
-    --direction <rf|fr>             Direction of reads                Optional
-    --threads <number>              Number of threads                 Optional
-    -resume                         Resume pipeline                   Optional
+### Arguments
 
-For the pipeline to correctly generate output file names, use the following input file names:
-- `prefix[_R{1,2}].{fq,fastq}[.gz]` for `fastq` raw reads.
-- `prefix.bam` for `bam` mapped reads.
+| Option | Parameter(s) | Description | Requirement |
+|--------|--------------|-------------|-------------|
+| __`--profile`__ | `<profile1>` `<profile2>` `...` | Profile(s) to use when running the<br>pipeline. Specify the profiles that fit<br>your infrastructure among `slurm`,<br>`singularity`, `docker`. | Required |
+| __`--output`__ | `<directory>` | Output directory where all temporary<br>files, logs, and results are written. | Required |
+| __`--reads`__ | `<reads.fq>` `<*.bam>` `...` | Input `fastq` file(s) and/or `bam` file(s).<br><br>For single-end reads, name your files:<br>`prefix.{fq,fastq}[.gz]`<br><br>For paired-end reads, name your files:<br>`prefix_R{1,2}.{fq,fastq}[.gz]`<br><br>For mapped reads, name your files:<br>`prefix.bam` | Required |
+| __`--annotation`__ | `<annotation.gff>` | Input reference annotation file. | Required |
+| __`--genome`__ | `<genome.fa>` | Input genome sequence file. | Required if `fastq`<br>files are provided<br>and `--index` is<br>absent. |
+| __`--index`__ | `<directory>` | Input genome index directory.<br>Overrides `--genome`. | Required if `fastq`<br>files are provided<br>and `--genome` is<br>absent. |
+| __`--metadata`__ | `<metadata.tsv>` | Input tabulated metadata file. | Required if `--merge`<br>is provided. |
+| __`--merge`__ | `<factor1>` `<factor2>` `...` | Factor(s) to merge reads files. See<br>the [merge factors](https://github.com/FAANG/proj-gs-rna-seq#merge-factors) section for details. | Optional |
+| __`--direction`__ | `<rf\|fr>` | Direction of reads. Either `rf` or `fr`. | Optional |
+| __`--max-cpus`__ | `<number of cores>` | Maximum number of CPU cores that<br>can be used for each process. This<br>is a limit, not the actual number of<br>requested CPU cores. | Optional |
+| __`--max-memory`__ | `<number of gigabytes>` | Maximum memory in gigabytes that<br>can be used for each process. This<br>is a limit, not the actual amount of<br>requested memory. | Optional |
+| __`--max-time`__ | `<number of hours>` | Maximum time in hours that can be<br>spent on each process. This is a limit,<br> not the actual amount of alloted time.| Optional |
+| __`--resume`__ | | Resume the pipeline after interruption.<br>Previously completed processes will<br>be skipped. | Optional |
+
+### Merge factors
+
+Use the `--merge` and `--metadata` options together to merge reads files after trimming and mapping. This results in genes and transcripts being counted by __factor__ rather than by __input file__.
+
+The metadata file consists of tab-separated values describing your input files. The first column must contain input file prefixes without extensions. There is no restriction on column names or number of columns.
+
+#### Examples
+
+Given the following tabulated metadata file:
+
+    input    diet      tissue
+    A        corn      liver
+    B        corn      liver
+    C        wheat     liver
+    D        wheat     muscle
+
+With the following arguments:
+
+    --reads A.fq B.fq C.fq D.bam --metadata metadata.tsv --merge diet
+
+- __A__ and __B__ mapped reads will be merged, resulting in gene and transcript counts for the __corn__ diet.
+- __C__ and __D__ mapped reads will be merged, resulting in gene and transcript counts for the __wheat__ diet.
+
+With the following arguments:
+
+    --reads A.fq B.fq C.fq D.bam --metadata metadata.tsv --merge diet tissue
+
+- __A__ and __B__ mapped reads will be merged, resulting in gene and transcript counts for the __corn__ diet and __liver__ tissue pair.
+- __C__ mapped reads will be left alone, resulting in gene and transcript counts for the __wheat__ diet and __liver__ tissue pair.
+- __D__ mapped reads will be left alone, resulting in gene and transcript counts for the __wheat__ diet and __muscle__ tissue pair.
+
+
+## Workflow
 
 The pipeline executes the following processes:
-1. __Control__ raw reads quality with [FastQC](https://github.com/s-andrews/FastQC).  
+1. __Control__ reads quality with [FastQC](https://github.com/s-andrews/FastQC).  
    Outputs quality reports to `output/quality/raw`.
 2. __Trim__ adaptators from reads with [Trim Galore](https://github.com/FelixKrueger/TrimGalore).  
    Outputs quality reports to `output/quality/trimmed`.
@@ -47,52 +84,12 @@ The pipeline executes the following processes:
 4. __Map__ reads to indexed genome with [STAR](https://github.com/alexdobin/STAR).  
    Outputs mapped reads to `output/maps`.
 5. __Merge__ mapped reads by factors with [Samtools](https://github.com/samtools/samtools).  
-   See the [merging factors](#merging-factors) section for details.
+   See the [merge factors](#merge-factors) section for details.
 6. __Assemble__ transcripts and __combine__ them into a new assembly annotation with [StringTie](https://github.com/gpertea/stringtie).  
    Outputs the new assembly annotation to `output/annotation`.
 7. __Count__ genes and transcripts with [StringTie](https://github.com/gpertea/stringtie), and __format__ them into tabulated files.  
    Outputs TPM counts and average per-base read coverage to `output/counts`.  
    Counts are given for the reference and assembly annotations separately.
-
-
-## Merging factors
-
-Use the `--merge` and `--metadata` options together to merge multiple mapped reads.  
-This results in genes and transcripts being counted by __factors__ rather than by __inputs__.
-
-#### Examples
-
-Given the following tabulated metadata file:
-
-    prefix    diet     tissue
-    A         corn     liver
-    B         corn     liver
-    C         wheat    liver
-    D         wheat    muscle
-
-With the following options:
-
-    --reads '{A.fq,B.fq,C.fq,D.bam}' --metadata metadata.tsv --merge diet
-
-- __A__ and __B__ mapped reads will be merged, resulting in gene and transcript counts for the __corn__ diet.
-- __C__ and __D__ mapped reads will be merged, resulting in gene and transcript counts for the __wheat__ diet.
-
-
-With the following options:
-
-    --reads '{A.fq,B.fq,C.fq,D.bam}' --metadata metadata.tsv --merge diet,tissue
-
-- __A__ and __B__ mapped reads will be merged, resulting in gene and transcript counts for the __corn__ diet and __liver__ tissue pair.
-- __C__ mapped reads will be left untouched, resulting in gene and transcript counts for the __wheat__ diet and __liver__ tissue pair.
-- __D__ mapped reads will be left untouched, resulting in gene and transcript counts for the __wheat__ diet and __muscle__ tissue pair.
-
-
-## Nextflow wrapper script
-
-Using the `./run` wrapper script instead of the `nextflow run` command grants several benefits:
-- All results and temporary files are written to the output directory, keeping the execution directory clean.
-- All temporary files are deleted once the pipeline has successfully completed.
-- The pipeline can be resumed from any directory with nextflow's `-resume` option.
 
 
 ## About this project
