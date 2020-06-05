@@ -45,7 +45,7 @@ if (error) exit 1, error
 // Check index, genome, annotation, metadata
 // #########################################
 if (index) {
-  Channel.fromPath(index, checkIfExists: true).set {
+  Channel.fromPath(index, type: 'dir', checkIfExists: true).set {
     index_to_map
   }
 }
