@@ -325,6 +325,7 @@ if (number_of_raw_reads > 0) {
   process trim {
 
     label 'high_cpu'
+    label 'medium_memory'
 
     publishDir "$output", mode: 'copy', saveAs: { filename ->
       if (filename.endsWith('trimming_report.txt')) "logs/trim_galore/$filename"
@@ -495,6 +496,8 @@ if (merge && metadata) {
 
   process merge {
 
+    label 'high_cpu'
+
     input:
       tuple val(prefix), path(maps) from maps_to_merge
 
@@ -504,7 +507,7 @@ if (merge && metadata) {
 
     script:
       """
-      samtools merge "$prefix".bam $maps
+      samtools merge "$prefix".bam $maps --threads ${task.cpus}
       """
   }
 
