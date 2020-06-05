@@ -35,9 +35,9 @@ The `./run` launcher script replaces the `nextflow run` command and grants these
 | __`--metadata`__ | `<metadata.tsv>` | Input tabulated metadata file. | Required if `--merge`<br>is provided. |
 | __`--merge`__ | `<factor1>` `<factor2>` `...` | Factor(s) to merge reads files. See<br>the [merge factors](https://github.com/FAANG/proj-gs-rna-seq#merge-factors) section for details. | Optional |
 | __`--direction`__ | `<rf\|fr>` | Direction of reads. Either `rf` or `fr`. | Optional |
-| __`--max-cpus`__ | `<number of cores>` | Maximum number of CPU cores that<br>can be used for each process. This<br>is a limit, not the actual number of<br>requested CPU cores. | Optional |
-| __`--max-memory`__ | `<number of gigabytes>` | Maximum memory in gigabytes that<br>can be used for each process. This<br>is a limit, not the actual amount of<br>requested memory. | Optional |
-| __`--max-time`__ | `<number of hours>` | Maximum time in hours that can be<br>spent on each process. This is a limit,<br> not the actual amount of alloted time.| Optional |
+| __`--max-cpus`__ | `<16>` | Maximum number of CPU cores that<br>can be used for each process. This<br>is a limit, not the actual number of<br>requested CPU cores. | Optional |
+| __`--max-memory`__ | `<64GB>` | Maximum memory that can be used<br>for each process. This is a limit, not<br>the actual amount of alloted memory. | Optional |
+| __`--max-time`__ | `<12h>` | Maximum time that can be spent<br>on each process. This is a limit and<br>has no effect on the duration of each<br>process.| Optional |
 | __`--resume`__ | | Resume the pipeline after interruption.<br>Previously completed processes will<br>be skipped. | Optional |
 
 ### Merge factors
