@@ -4,7 +4,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - cutadapt=2.9
+  - cutadapt=2.10
   - fastqc=0.11.9
   - pandas=1.0.3
   - samtools=1.10
