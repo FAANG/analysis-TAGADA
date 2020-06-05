@@ -49,7 +49,7 @@ fi
 
 # Prepare nextflow temp folder
 mkdir -p "$output"/temp
-ln -sf "$output"/temp .nextflow
+ln -sf "$output"/temp "$output"/.nextflow
 rm -rf "$output"/temp/input
 rm -rf "$output"/logs/nextflow.log
 rm -rf "$output"/logs/report.html
@@ -102,6 +102,9 @@ while (( "$#" )); do
   esac
 done
 
+# Go to output directory
+cd "$output"
+
 # Run nextflow pipeline and remove temp folder
 # after pipeline successfully completes
 nextflow \
@@ -112,4 +115,4 @@ run "$pipeline" \
 -work-dir "$output"/temp/work \
 --output "$output" \
 "${args[@]}" \
-&& rm -rf .nextflow "$output"/temp
+&& rm -rf "$output"/temp "$output"/.nextflow
