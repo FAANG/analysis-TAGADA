@@ -4,7 +4,7 @@
 command=("$0")
 escape="'\''"
 command+=("'${1//\'/$escape}'")
-pipeline="$1"
+[ -f "$1" ] && pipeline=$(readlink -m "$1") || pipeline="$1"
 shift
 while (( "$#" )); do
   # Split --option=parameter into two variables
