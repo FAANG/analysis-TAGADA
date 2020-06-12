@@ -104,19 +104,19 @@ Channel.fromPath(reads, checkIfExists: true).map { path ->
 reads.R1.into {
   r1_reads_to_check
   r1_reads_to_pair
-  r1_reads_to_control
+  r1_reads_to_control_quality
 }
 
 reads.R2.into {
   r2_reads_to_check
   r2_reads_to_pair
-  r2_reads_to_control
+  r2_reads_to_control_quality
 }
 
 reads.single.into {
   single_reads_to_check
   single_reads_to_append
-  single_reads_to_control
+  single_reads_to_control_quality
 }
 
 reads.mapped.into {
@@ -291,10 +291,13 @@ r1_reads_to_pair.join(r2_reads_to_pair).map { it ->
   reads_to_trim
 }
 
-single_reads_to_control.concat(r1_reads_to_control, r2_reads_to_control).map {
+single_reads_to_control_quality.concat(
+  r1_reads_to_control_quality,
+  r2_reads_to_control_quality
+).map {
   [it['prefix'], it['R'] ? '_R' + it['R'] : '', it['path']]
 }.set {
-  reads_to_control
+  reads_to_control_quality
 }
 
 // Process raw reads
@@ -303,12 +306,12 @@ if (number_of_raw_reads > 0) {
 
   // Control reads quality
   // #####################
-  process control {
+  process control_quality {
 
-    publishDir "$output/quality/raw", mode: 'copy'
+    publishDir "$output/control/quality/raw", mode: 'copy'
 
     input:
-      tuple val(prefix), val(R), path(read) from reads_to_control
+      tuple val(prefix), val(R), path(read) from reads_to_control_quality
 
     output:
       path '*_fastqc.html'
@@ -329,7 +332,7 @@ if (number_of_raw_reads > 0) {
 
     publishDir "$output", mode: 'copy', saveAs: { filename ->
       if (filename.endsWith('trimming_report.txt')) "logs/trim_galore/$filename"
-      else if (filename.endsWith('fastqc.html')) "quality/trimmed/$filename"
+      else if (filename.endsWith('fastqc.html')) "control/quality/trimmed/$filename"
     }
 
     input:
