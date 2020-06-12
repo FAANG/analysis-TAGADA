@@ -19,16 +19,17 @@ prefix = re.search('\.([^\.]+)\.tsv$', files[0]).group(1)
 for file in files:
 
   df = pd.read_csv(file, sep = '\t').rename(columns = {
-    'Gene ID': 'gene_id',
-    't_name': 'transcript_id',
+    'Gene ID': 'gene',
+    'gene_id': 'gene',
+    't_name': 'transcript',
     'Coverage': 'cov',
   })
 
   if not keys:
-    if 'transcript_id' in df.columns:
-      keys = ['transcript_id', 'gene_id']
+    if 'transcript' in df.columns:
+      keys = ['transcript', 'gene']
     else:
-      keys = ['gene_id']
+      keys = ['gene']
 
   id = re.sub(r'\.([^\.]+)\.tsv$', '', file)
   columns += [id]
