@@ -61,6 +61,7 @@ Channel.fromPath(annotation, checkIfExists: true).into {
   reference_annotation_to_assemble
   reference_annotation_to_combine
   reference_annotation_to_count
+  reference_annotation_to_control_length
 }
 
 if (metadata) {
@@ -553,6 +554,7 @@ process combine {
 
   output:
     path '*.gff' into assembly_annotation_to_count
+    path '*.gff' into assembly_annotation_to_control_length
 
   script:
     """
@@ -618,9 +620,33 @@ process format {
 
   output:
     path '*.tsv'
+    path 'assembly_transcripts_TPM.tsv' optional true into formatted_transcripts_to_control_length
 
   script:
     """
     merge.py $counts
+    """
+}
+
+// Control length of exons and transcripts
+// #######################################
+process control_length {
+
+  publishDir "$output/control/length", mode: 'copy'
+
+  input:
+    path reference_annotation from reference_annotation_to_control_length
+    path assembly_annotation from assembly_annotation_to_control_length
+    path formatted_transcripts from formatted_transcripts_to_control_length
+
+  output:
+    path '*.tsv'
+
+  script:
+    """
+    ref_pred_all_expr_2_tr_ratio_size_pos.sh \\
+      $reference_annotation \\
+      $assembly_annotation \\
+      $formatted_transcripts
     """
 }
