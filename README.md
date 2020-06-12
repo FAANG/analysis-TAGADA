@@ -16,7 +16,7 @@ Execute this nextflow pipeline with:
     ./run rnaseq.nf [arguments]
 
 The `./run` launcher script replaces the `nextflow run` command and grants these benefits:
-- Options can receive multiple space-separated parameters.
+- Options can receive multiple space-separated parameters and unquoted globs.
 - Long options are preceded by double dashes, following GNU conventions.
 - Temporary files and logs are written to the output directory, keeping the execution directory clean.
 - Temporary files are deleted after the pipeline has successfully completed.
@@ -28,12 +28,12 @@ The `./run` launcher script replaces the `nextflow run` command and grants these
 |--------|--------------|-------------|-------------|
 | __`--profile`__ | `<profile1>` `<profile2>` `...` | Profile(s) to use when running the<br>pipeline. Specify the profiles that fit<br>your infrastructure among `slurm`,<br>`singularity`, `docker`. | Required |
 | __`--output`__ | `<directory>` | Output directory where all temporary<br>files, logs, and results are written. | Required |
-| __`--reads`__ | `<reads.fq>` `<*.bam>` `...` | Input `fastq` file(s) and/or `bam` file(s).<br><br>For single-end reads, name your files:<br>`prefix.{fq,fastq}[.gz]`<br><br>For paired-end reads, name your files:<br>`prefix_R{1,2}.{fq,fastq}[.gz]`<br><br>For mapped reads, name your files:<br>`prefix.bam` | Required |
+| __`--reads`__ | `<reads.fq>` `<*.bam>` `...` | Input `fastq` file(s) and/or `bam` file(s).<br><br>For single-end reads, name your files:<br>`name.{fq,fastq}[.gz]`<br><br>For paired-end reads, name your files:<br>`name_R{1,2}.{fq,fastq}[.gz]`<br><br>For mapped reads, name your files:<br>`name.bam` | Required |
 | __`--annotation`__ | `<annotation.gff>` | Input reference annotation file. | Required |
 | __`--genome`__ | `<genome.fa>` | Input genome sequence file. | Required if `fastq`<br>files are provided<br>and `--index` is<br>absent. |
 | __`--index`__ | `<directory>` | Input genome index directory.<br>Overrides `--genome`. | Required if `fastq`<br>files are provided<br>and `--genome` is<br>absent. |
 | __`--metadata`__ | `<metadata.tsv>` | Input tabulated metadata file. | Required if `--merge`<br>is provided. |
-| __`--merge`__ | `<factor1>` `<factor2>` `...` | Factor(s) to merge reads files. See<br>the [merge factors](https://github.com/FAANG/proj-gs-rna-seq#merge-factors) section for details. | Optional |
+| __`--merge`__ | `<factor1>` `<factor2>` `...` | Factor(s) to merge mapped reads. See<br>the [merge factors](https://github.com/FAANG/proj-gs-rna-seq#merge-factors) section for details. | Optional |
 | __`--direction`__ | `<rf\|fr>` | Direction of reads. Either `rf` or `fr`. | Optional |
 | __`--max-cpus`__ | `<16>` | Maximum number of CPU cores that<br>can be used for each process. This<br>is a limit, not the actual number of<br>requested CPU cores. | Optional |
 | __`--max-memory`__ | `<64GB>` | Maximum memory that can be used<br>for each process. This is a limit, not<br>the actual amount of alloted memory. | Optional |
@@ -42,9 +42,9 @@ The `./run` launcher script replaces the `nextflow run` command and grants these
 
 ### Merge factors
 
-Use the `--merge` and `--metadata` options together to merge reads files after trimming and mapping. This results in genes and transcripts being counted by __factor__ rather than by __input file__.
+Use the `--merge` and `--metadata` options together to merge mapped reads. This results in genes and transcripts being counted by __factors__ rather than by __inputs__.
 
-The metadata file consists of tab-separated values describing your input files. The first column must contain input file prefixes without extensions. There is no restriction on column names or number of columns.
+The metadata file consists of tab-separated values describing your inputs. The first column must contain file names without extensions. There is no restriction on column names or number of columns.
 
 #### Examples
 
@@ -58,14 +58,14 @@ Given the following tabulated metadata file:
 
 With the following arguments:
 
-    --reads A.fq B.fq C.fq D.bam --metadata metadata.tsv --merge diet
+    --reads A_R1.fq A_R2.fq B.fq C.fq D.bam --metadata metadata.tsv --merge diet
 
 - __A__ and __B__ mapped reads will be merged, resulting in gene and transcript counts for the __corn__ diet.
 - __C__ and __D__ mapped reads will be merged, resulting in gene and transcript counts for the __wheat__ diet.
 
 With the following arguments:
 
-    --reads A.fq B.fq C.fq D.bam --metadata metadata.tsv --merge diet tissue
+    --reads A_R1.fq A_R2.fq B.fq C.fq D.bam --metadata metadata.tsv --merge diet tissue
 
 - __A__ and __B__ mapped reads will be merged, resulting in gene and transcript counts for the __corn__ diet and __liver__ tissue pair.
 - __C__ mapped reads will be left alone, resulting in gene and transcript counts for the __wheat__ diet and __liver__ tissue pair.
