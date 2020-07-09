@@ -539,7 +539,7 @@ process assemble {
 // ##################
 process combine {
 
-  publishDir "$output/annotation", mode: 'copy'
+  publishDir "$output/assembly", mode: 'copy'
 
   input:
     path annotation from reference_annotation_to_combine
@@ -605,7 +605,7 @@ buffer = buffer.count().get()
 
 process format {
 
-  publishDir "$output/counts", mode: 'copy'
+  publishDir "$output/quantification", mode: 'copy'
 
   input:
     path counts from counts_to_format.buffer(size: buffer)
