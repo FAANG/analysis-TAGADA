@@ -11,10 +11,10 @@ direction = params.containsKey('direction') ? params.'direction' : ''
 
 error = ''
 
-if (!output) error += 'No --output provided.\n'
+if (!output) error += 'No --output provided\n'
 
 if (!reads) {
-  error += 'No --reads provided.\n'
+  error += 'No --reads provided\n'
 } else {
   number_of_raw_reads = Channel.fromPath(reads).filter { path ->
     filename = path.getName()
@@ -22,14 +22,14 @@ if (!reads) {
   }.count().get()
 
   if (number_of_raw_reads > 0 && !genome && !index) {
-    error += 'No --genome or --index provided.\n'
+    error += 'No --genome or --index provided\n'
   }
 }
 
-if (!annotation) error += 'No --annotation provided.\n'
+if (!annotation) error += 'No --annotation provided\n'
 
 if (merge && !metadata) {
-  error += 'No --metadata provided to execute --merge.\n'
+  error += 'No --metadata provided to execute --merge\n'
 }
 
 if (direction == 'rf') {
@@ -37,7 +37,7 @@ if (direction == 'rf') {
 } else if (direction == 'fr') {
   direction = '--fr'
 } else if (direction != '') {
-  error += 'Invalid --direction. Expected "fr" or "rf".\n'
+  error += 'Invalid --direction. Expected "fr" or "rf"\n'
 }
 
 if (error) exit 1, error
@@ -134,7 +134,7 @@ invalid = reads.invalid.toList().get()
 if (invalid.size() > 0) {
   s = invalid.size() > 1 ? 's' : ''
   error += "Wrong format for file name$s:\n  "
-  error += invalid.join('\n  ') + '\n\n'
+  error += invalid.join('\n  ') + '\n'
 }
 
 // Check pairing
@@ -156,7 +156,7 @@ unpaired = r1.findAll {
 if (unpaired.size() > 0) {
   s = unpaired.size() > 1 ? 's' : ''
   error += "No pair$s found for file$s:\n  "
-  error += unpaired.collect{it['filename']}.join('\n  ') + '\n\n'
+  error += unpaired.collect{it['filename']}.join('\n  ') + '\n'
 }
 
 // Check duplicates
@@ -185,11 +185,8 @@ duplicated = (
 }
 
 if (duplicated.size() > 0) {
-  error += "Duplicates detected:\n"
-  duplicated.each {
-    error += '  ' + it.join('  ') + '\n'
-  }
-  error += '\n'
+  error += 'Duplicates detected:\n  '
+  error += duplicated.collect{it.join('  ')}.join('\n  ') + '\n'
 }
 
 // Check metadata
@@ -213,7 +210,7 @@ if (merge && metadata) {
   if (missing_rows.size() > 0) {
     s = missing_rows.size() > 1 ? 's' : ''
     error += "No metadata row$s found for file$s:\n  "
-    error += missing_rows.collect{it['filename']}.join('\n  ') + '\n\n'
+    error += missing_rows.collect{it['filename']}.join('\n  ') + '\n'
   }
 
   // Check missing metadata columns
@@ -227,13 +224,13 @@ if (merge && metadata) {
   if (missing_columns.size() > 0) {
     s = missing_columns.size() > 1 ? 's' : ''
     error += "No metadata column$s found for merge factor$s:\n  "
-    error += missing_columns.join('\n  ') + '\n\n'
+    error += missing_columns.join('\n  ') + '\n'
   }
 
   // Check missing metadata values
   // #############################
   missing_values = metadata_to_check.findAll {
-    it.values()[0] in inputs.collect { it['prefix'] }
+    it.values()[0] in inputs.collect{it['prefix']}
   }.inject([], { result, row ->
     factors = []
     merge.each { factor ->
@@ -253,17 +250,14 @@ if (merge && metadata) {
       }
       return result
     }).size() > 1 ? 's' : ''
-    warning += "Metadata row$s with missing factor$ss will not be merged:\n"
-    missing_values.each {
-      warning += '  ' + it.join('  ') + '\n'
-    }
-    warning += '\n'
+    warning += "Metadata row$s with missing factor$ss will not be merged:\n  "
+    warning += missing_values.collect{it.join('  ')}.join('\n  ')
   }
 }
 
 if (error) exit 1, error
 
-if (warning) log.warn '\n' + warning
+if (warning) log.warn warning
 
 // Pair R1/R2 and format reads
 // ###########################
