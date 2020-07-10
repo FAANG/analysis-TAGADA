@@ -7,10 +7,7 @@ import sys
 
 files = sys.argv[1:]
 
-dataframes = {
-  'cov': [],
-  'TPM': []
-}
+dataframes = []
 
 keys = []
 columns = []
@@ -21,8 +18,8 @@ for file in files:
   df = pd.read_csv(file, sep = '\t').rename(columns = {
     'Gene ID': 'gene',
     'gene_id': 'gene',
-    't_name': 'transcript',
-    'Coverage': 'cov',
+    'transcript_id': 'transcript',
+    't_name': 'transcript'
   })
 
   if not keys:
@@ -41,35 +38,24 @@ for file in files:
     )
 
   if 'TPM' in df.columns:
-    dataframes['TPM'] += [df[keys + ['TPM']].rename(columns = {
+    dataframes += [df[keys + ['TPM']].rename(columns = {
       'TPM': id
     })]
 
-  if 'cov' in df.columns:
-    dataframes['cov'] += [df[keys + ['cov']].rename(columns = {
-      'cov': id
+  if 'counts' in df.columns:
+    dataframes += [df[keys + ['counts']].rename(columns = {
+      'counts': id
     })]
 
-cov, TPM = [
-  reduce(lambda df1, df2:
-    pd.merge(
-      df1, df2,
-      on = keys,
-      how = 'outer'
-    ),
-    dataframes
-  )
-  for dataframes in [dataframes['cov'], dataframes['TPM']]
-]
-
-cov.reindex(
+reduce(
+  lambda df1, df2: pd.merge(
+    df1, df2,
+    on = keys,
+    how = 'outer'
+  ),
+  dataframes
+).reindex(
   columns = keys + sorted(columns, key = str.casefold)
 ).sort_values(
   keys
-).to_csv(prefix+'_coverage.tsv', sep='\t', index=False)
-
-TPM.reindex(
-  columns = keys + sorted(columns, key = str.casefold)
-).sort_values(
-  keys
-).to_csv(prefix+'_TPM.tsv', sep='\t', index=False)
+).to_csv(prefix + '.tsv', sep = '\t', index = False)

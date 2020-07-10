@@ -4,10 +4,18 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+  - bedtools=2.29.2
+  - bioconductor-edger=3.26.0
+  - bioconductor-gostats=2.48.0
   - cutadapt=2.10
   - fastqc=0.11.9
   - pandas=1.0.3
+  - r-ggplot2=3.1.1
+  - r-optparse=1.6.2
+  - r-plyr=1.8.4
+  - r-reshape2=1.4.3
   - samtools=1.10
   - star=2.7.3a
   - stringtie=2.1.1
+  - subread=1.6.0
   - trim-galore=0.6.5

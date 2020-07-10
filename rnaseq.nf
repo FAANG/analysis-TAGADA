@@ -7,14 +7,13 @@ index = params.containsKey('index') ? params.index : ''
 annotation = params.containsKey('annotation') ? params.annotation : ''
 metadata = params.containsKey('metadata') ? params.metadata : ''
 merge = params.containsKey('merge') ? params.merge.tokenize(',') : ''
-direction = params.containsKey('direction') ? params.'direction' : ''
 
 error = ''
 
-if (!output) error += 'No --output provided.\n'
+if (!output) error += 'No --output provided\n'
 
 if (!reads) {
-  error += 'No --reads provided.\n'
+  error += 'No --reads provided\n'
 } else {
   number_of_raw_reads = Channel.fromPath(reads).filter { path ->
     filename = path.getName()
@@ -22,22 +21,14 @@ if (!reads) {
   }.count().get()
 
   if (number_of_raw_reads > 0 && !genome && !index) {
-    error += 'No --genome or --index provided.\n'
+    error += 'No --genome or --index provided\n'
   }
 }
 
-if (!annotation) error += 'No --annotation provided.\n'
+if (!annotation) error += 'No --annotation provided\n'
 
 if (merge && !metadata) {
-  error += 'No --metadata provided to execute --merge.\n'
-}
-
-if (direction == 'rf') {
-  direction = '--rf'
-} else if (direction == 'fr') {
-  direction = '--fr'
-} else if (direction != '') {
-  error += 'Invalid --direction. Expected "fr" or "rf".\n'
+  error += 'No --metadata provided to execute --merge\n'
 }
 
 if (error) exit 1, error
@@ -58,9 +49,10 @@ if (genome) {
 
 Channel.fromPath(annotation, checkIfExists: true).into {
   reference_annotation_to_index
+  reference_annotation_to_estimate
   reference_annotation_to_assemble
   reference_annotation_to_combine
-  reference_annotation_to_count
+  reference_annotation_to_quantify
   reference_annotation_to_control_length
 }
 
@@ -120,9 +112,12 @@ reads.single.into {
   single_reads_to_control_quality
 }
 
-reads.mapped.into {
+reads.mapped.tap {
   mapped_reads_to_check
-  mapped_reads_to_merge
+}.map {
+  [it['prefix'], it['path']]
+}.set {
+  mapped_reads_to_estimate
 }
 
 error = ''
@@ -135,7 +130,7 @@ invalid = reads.invalid.toList().get()
 if (invalid.size() > 0) {
   s = invalid.size() > 1 ? 's' : ''
   error += "Wrong format for file name$s:\n  "
-  error += invalid.join('\n  ') + '\n\n'
+  error += invalid.join('\n  ') + '\n'
 }
 
 // Check pairing
@@ -157,7 +152,7 @@ unpaired = r1.findAll {
 if (unpaired.size() > 0) {
   s = unpaired.size() > 1 ? 's' : ''
   error += "No pair$s found for file$s:\n  "
-  error += unpaired.collect{it['filename']}.join('\n  ') + '\n\n'
+  error += unpaired.collect{it['filename']}.join('\n  ') + '\n'
 }
 
 // Check duplicates
@@ -186,11 +181,8 @@ duplicated = (
 }
 
 if (duplicated.size() > 0) {
-  error += "Duplicates detected:\n"
-  duplicated.each {
-    error += '  ' + it.join('  ') + '\n'
-  }
-  error += '\n'
+  error += 'Duplicates detected:\n  '
+  error += duplicated.collect{it.join('  ')}.join('\n  ') + '\n'
 }
 
 // Check metadata
@@ -214,7 +206,7 @@ if (merge && metadata) {
   if (missing_rows.size() > 0) {
     s = missing_rows.size() > 1 ? 's' : ''
     error += "No metadata row$s found for file$s:\n  "
-    error += missing_rows.collect{it['filename']}.join('\n  ') + '\n\n'
+    error += missing_rows.collect{it['filename']}.join('\n  ') + '\n'
   }
 
   // Check missing metadata columns
@@ -228,13 +220,13 @@ if (merge && metadata) {
   if (missing_columns.size() > 0) {
     s = missing_columns.size() > 1 ? 's' : ''
     error += "No metadata column$s found for merge factor$s:\n  "
-    error += missing_columns.join('\n  ') + '\n\n'
+    error += missing_columns.join('\n  ') + '\n'
   }
 
   // Check missing metadata values
   // #############################
   missing_values = metadata_to_check.findAll {
-    it.values()[0] in inputs.collect { it['prefix'] }
+    it.values()[0] in inputs.collect{it['prefix']}
   }.inject([], { result, row ->
     factors = []
     merge.each { factor ->
@@ -254,17 +246,38 @@ if (merge && metadata) {
       }
       return result
     }).size() > 1 ? 's' : ''
-    warning += "Metadata row$s with missing factor$ss will not be merged:\n"
-    missing_values.each {
-      warning += '  ' + it.join('  ') + '\n'
-    }
-    warning += '\n'
+    warning += "Metadata row$s with missing factor$ss will not be merged:\n  "
+    warning += missing_values.collect{it.join('  ')}.join('\n  ')
   }
 }
 
 if (error) exit 1, error
 
-if (warning) log.warn '\n' + warning
+if (warning) log.warn warning
+
+// Determine merge groups
+// ######################
+if (merge && metadata) {
+
+  metadata_to_merge.filter {
+    it.values()[0] in inputs.collect{it['prefix']}
+  }.map {
+    factors = it.subMap(merge).values()
+    id = '' in factors ? 'NA_' + it.values()[0] : factors.join('_')
+    [id, it.values()[0]]
+  }.groupTuple().into {
+    groups_to_merge
+    groups_to_log
+  }
+
+  groups_to_log = groups_to_log.toList().get().sort { a, b -> a[0] <=> b[0] }
+
+  s = groups_to_log.size() > 1 ? 's' : ''
+  info = "The following merge group$s will be created:\n  "
+  info += groups_to_log.collect{ it[0] + ': ' + it[1].join('  ') }.join('\n  ')
+
+  log.info info
+}
 
 // Pair R1/R2 and format reads
 // ###########################
@@ -452,7 +465,7 @@ if (number_of_raw_reads > 0) {
     output:
       path '*.out'
       path '*.out.tab'
-      tuple val(prefix), path('*.bam') into maps_to_merge
+      tuple val(prefix), path('*.bam') into maps_to_estimate
 
     script:
       """
@@ -467,47 +480,126 @@ if (number_of_raw_reads > 0) {
       """
   }
 
-  mapped_reads_to_merge.map {
-    [it['prefix'], it['path']]
-  }.concat(maps_to_merge).set {
-    maps_to_merge
+  reference_annotation_to_estimate.combine(
+    mapped_reads_to_estimate.concat(maps_to_estimate)
+  ).set {
+    maps_to_estimate
   }
 
 } else {
-  mapped_reads_to_merge.map {
-    [it['prefix'], it['path']]
-  }.set {
-    maps_to_merge
+  reference_annotation_to_estimate.combine(
+    mapped_reads_to_estimate
+  ).set {
+    maps_to_estimate
   }
 }
 
-// Merge maps using metadata
-// #########################
-if (merge && metadata) {
+// Estimate read lengths and directions from maps
+// ##############################################
+process estimate {
 
-  metadata_to_merge.cross(maps_to_merge).map {
-    missing_values = false
-    id = it[0].collectMany { k, v ->
-      if (!merge.contains(k)) return []
-      else if (!v) missing_values = true
-      return [v]
-    }.join('_')
-    if (missing_values) id = "NA_" + it[1][0]
-    [id, it[1][1]]
-  }.groupTuple().set {
+  input:
+    tuple path(annotation), val(prefix), path(map) from maps_to_estimate
+
+  output:
+    tuple val(prefix), env(length), env(direction), path(map) into maps_to_merge
+
+  script:
+    """
+    length=\$(samtools view $map | head -n 10000 | awk '{total += length(\$10)} END {print int((total/(NR*5))+0.5) * 5 }')
+
+    proportions=(\$(infer_library_type.sh $map $annotation))
+    difference=\$(awk -v a=\${proportions[0]} -v b=\${proportions[1]} 'BEGIN {print sqrt((a - b)^2)}')
+    ratio=\$(awk -v a=\${proportions[0]} -v b=\${proportions[1]} 'BEGIN {print a / b}')
+    if [[ \$difference > 50 && \$ratio > 1 ]]; then direction="FR";
+    elif [[ \$difference > 50 ]]; then direction="RF";
+    else direction="No direction"; fi
+    """
+}
+
+maps_to_merge.tap {
+  maps_to_log
+}.map {
+  if (it[2] == 'FR') direction = '--fr'
+  else if (it[2] == 'RF') direction = '--rf'
+  else direction = ''
+  [it[0], it[1], direction, it[3]]
+}.set {
+  maps_to_merge
+}
+
+maps_to_log = maps_to_log.toList().get().sort { a, b -> a[0] <=> b[0] }
+
+s = maps_to_log.size() > 1 ? 's' : ''
+info = "Proceeding with the following read length$s and direction$s:\n  "
+info += maps_to_log.collect{
+  it[0] + ' (' + it[1] + ') (' + it[2] + ')'
+}.join('\n  ')
+
+log.info info
+
+// Process merge groups
+// ####################
+if (merge) {
+
+  // Add maps to merge groups
+  // ########################
+  groups_to_merge = groups_to_merge.toList().get()
+
+  maps_to_merge.map { map ->
+    [groups_to_merge.find { group ->
+      map[0] in group[1]
+    }[0]] + map
+  }.groupTuple().tap {
+    maps_to_check
+  }.map {
+    [it[0], it[2][0], it[3][0], it[4]]
+  }.set {
     maps_to_merge
   }
 
+  // Check differing read lengths and directions
+  // ###########################################
+  error = ''
+
+  maps_to_check = maps_to_check.toList().get().sort  { a, b -> a[0] <=> b[0] }
+
+  differing_lengths = maps_to_check.findAll {
+    it[2].toUnique().size() > 1
+  }.collectEntries { group ->
+    [(group[0]): group[1].withIndex().collect { it, i -> it + ' (' + group[2][i] + ')' }]
+  }
+
+  if (differing_lengths.size() > 0) {
+    error += 'Cannot merge differing read lengths:\n  '
+    error += differing_lengths.collect{ it.key + ': ' + it.value.join('  ') }.join('\n  ') + '\n'
+  }
+
+  differing_directions = maps_to_check.findAll {
+    it[3].toUnique().size() > 1
+  }.collectEntries { group ->
+    [(group[0]): group[1].withIndex().collect { it, i -> it + ' (' + group[3][i] + ')' }]
+  }
+
+  if (differing_directions.size() > 0) {
+    error += 'Cannot merge differing read directions:\n  '
+    error += differing_directions.collect{ it.key + ': ' + it.value.join('  ') }.join('\n  ') + '\n'
+  }
+
+  if (error) exit 1, error
+
+  // Merge maps
+  // ##########
   process merge {
 
     label 'high_cpu'
 
     input:
-      tuple val(prefix), path(maps) from maps_to_merge
+      tuple val(prefix), val(length), val(direction), path(maps) from maps_to_merge
 
     output:
-      tuple val(prefix), path('*.bam') into maps_to_assemble
-      tuple val(prefix), path('*.bam') into maps_to_count
+      tuple val(prefix), val(direction), path('*.bam') into maps_to_assemble
+      tuple val(prefix), val(length), val(direction), path('*.bam') into maps_to_quantify
 
     script:
       """
@@ -516,9 +608,12 @@ if (merge && metadata) {
   }
 
 } else {
-  maps_to_merge.into {
+  maps_to_merge.tap {
+    maps_to_quantify
+  }.map {
+    [it[0], it[2], it[3]]
+  }.set {
     maps_to_assemble
-    maps_to_count
   }
 }
 
@@ -531,7 +626,7 @@ reference_annotation_to_assemble.combine(maps_to_assemble).set {
 process assemble {
 
   input:
-    tuple path(annotation), val(prefix), path(map) from maps_to_assemble
+    tuple path(annotation), val(prefix), val(direction), path(map) from maps_to_assemble
 
   output:
     path '*.gff' into assemblies_to_combine
@@ -546,14 +641,14 @@ process assemble {
 // ##################
 process combine {
 
-  publishDir "$output/annotation", mode: 'copy'
+  publishDir "$output/assembly", mode: 'copy'
 
   input:
     path annotation from reference_annotation_to_combine
     path assemblies from assemblies_to_combine.collect()
 
   output:
-    path '*.gff' into assembly_annotation_to_count
+    path '*.gff' into assembly_annotation_to_quantify
     path '*.gff' into assembly_annotation_to_control_length
 
   script:
@@ -562,24 +657,28 @@ process combine {
     """
 }
 
-// Count genes and transcripts
-// ###########################
-reference_annotation_to_count.combine(Channel.of('reference')).concat(
-  assembly_annotation_to_count.combine(Channel.of('assembly'))
-).combine(
-  maps_to_count
-).set {
-  maps_to_count
+// Quantify genes and transcripts
+// ##############################
+reference_annotation_to_quantify.combine(Channel.of('reference')).concat(
+  assembly_annotation_to_quantify.combine(Channel.of('assembly'))
+).combine(maps_to_quantify).set {
+  maps_to_quantify
 }
 
-process count {
+process quantify {
 
   input:
-    tuple path(annotation), val(type), val(prefix), path(map) from maps_to_count
+    tuple path(annotation), val(type), val(prefix), val(length), val(direction), path(map) from maps_to_quantify
 
   output:
-    tuple path('*.reference_genes.tsv'), path('*.reference_transcripts.tsv') optional true into reference_counts_to_format
-    tuple path('*.assembly_genes.tsv'), path('*.assembly_transcripts.tsv') optional true into assembly_counts_to_format
+    path('*.reference_genes_TPM.tsv') optional true into reference_genes_TPM_to_format
+    path('*.reference_genes_counts.tsv') optional true into reference_genes_counts_to_format
+    path('*.reference_transcripts_TPM.tsv') optional true into reference_transcripts_TPM_to_format
+    path('*.reference_transcripts_counts.tsv') optional true into reference_transcripts_counts_to_format
+    path('*.assembly_genes_TPM.tsv') optional true into assembly_genes_TPM_to_format
+    path('*.assembly_genes_counts.tsv') optional true into assembly_genes_counts_to_format
+    path('*.assembly_transcripts_TPM.tsv') optional true into assembly_transcripts_TPM_to_format
+    path('*.assembly_transcripts_counts.tsv') optional true into assembly_transcripts_counts_to_format
 
   script:
     """
@@ -588,35 +687,55 @@ process count {
               -e \\
               -B \\
               -G $annotation \\
-              -A "$prefix"."$type"_genes.tsv
+              -A "$prefix"."$type"_genes_TPM.tsv \\
+              -o "$prefix"."$type".gtf
 
-    mv t_data.ctab "$prefix"."$type"_transcripts.tsv
+    mv t_data.ctab "$prefix"."$type"_transcripts_TPM.tsv
+
+    mkdir counts
+    mv "$prefix"."$type".gtf counts
+
+    prepDE.py -i . \\
+              -p counts \\
+              -g "$prefix"."$type"_genes_counts.csv \\
+              -t "$prefix"."$type"_transcripts_counts.csv \\
+              -l $length
+
+    tr ',' '\t' < "$prefix"."$type"_genes_counts.csv > "$prefix"."$type"_genes_counts.tsv
+
+    join <(awk 'BEGIN {FS=","; OFS="\\t"} NR > 1 {print \$1,\$2 | "sort"}' "$prefix"."$type"_transcripts_counts.csv) \\
+         <(awk 'BEGIN {OFS="\\t"} NR > 1 {print \$6,\$9 | "sort"}' "$prefix"."$type"_transcripts_TPM.tsv) \\
+         -t \$'\\t' \\
+         -a 1 \\
+         -o "1.1 2.2 1.2" \\
+         | cat <(echo "transcript"\$'\\t'"gene"\$'\\t'"counts") - > "$prefix"."$type"_transcripts_counts.tsv
     """
 }
 
-// Format count results
-// ####################
-reference_counts_to_format.tap {
+// Format results
+// ##############
+reference_genes_TPM_to_format.tap {
   buffer
-}.concat(assembly_counts_to_format).multiMap {
-  genes: it[0]
-  transcripts: it[1]
-}.set {
-  counts_to_format
-}
-
-counts_to_format.genes.concat(counts_to_format.transcripts).set {
-  counts_to_format
+}.concat(
+  reference_genes_counts_to_format,
+  reference_transcripts_TPM_to_format,
+  reference_transcripts_counts_to_format,
+  assembly_genes_TPM_to_format,
+  assembly_genes_counts_to_format,
+  assembly_transcripts_TPM_to_format,
+  assembly_transcripts_counts_to_format,
+).set {
+  quantifications_to_format
 }
 
 buffer = buffer.count().get()
 
 process format {
 
-  publishDir "$output/counts", mode: 'copy'
+  publishDir "$output/quantification", mode: 'copy'
 
   input:
-    path counts from counts_to_format.buffer(size: buffer)
+    path quantifications from quantifications_to_format.buffer(size: buffer)
 
   output:
     path '*.tsv'
@@ -624,7 +743,7 @@ process format {
 
   script:
     """
-    merge.py $counts
+    format.py $quantifications
     """
 }
 
