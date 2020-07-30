@@ -40,7 +40,7 @@ for file in files:
   if 'TPM' in df.columns:
     dataframes += [df[keys + ['TPM']].rename(columns = {
       'TPM': id
-    }).groupby(keys).sum().reset_index()]
+    }).groupby(keys).sum().round(6).astype(str).reset_index()]
 
   if 'counts' in df.columns:
     dataframes += [df[keys + ['counts']].rename(columns = {
