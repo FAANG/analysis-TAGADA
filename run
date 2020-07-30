@@ -20,8 +20,23 @@ while (( "$#" )); do
       fi
       shift
       ;;
+    # Parse keep temp files option
+    --keep-temp)
+      command+=("$1")
+      keeptemp=true
+      shift
+      ;;
+    # Parse overridden nextflow options
+    --with-report|-with-report|--with-timeline|-with-timeline|--work-dir|-work-dir|-w)
+      command+=("$1")
+      if [[ -n "$2" && "$2" != -* ]]; then
+        command+=("'${2//\'/$escape}'")
+        shift
+      fi
+      shift
+      ;;
     # Parse nextflow options passed as pipeline options
-    --ansi-log|--bucket-dir|--cache|--dump-channels|--dump-hashes|--e.?*|--entry|--help|--hub|--latest|--lib|--name|--offline|--params-file|--process.?*|--profile|--qs|--queue-size|--resume|--revision|--test|--user|--with-conda|--with-dag|--with-docker|--with-notification|--with-podman|--with-report|--with-singularity|--with-timeline|--with-tower|--with-trace|--with-weblog|--without-docker|--without-podman|--work-dir)
+    --ansi-log|--bucket-dir|--cache|--dump-channels|--dump-hashes|--e.?*|--entry|--help|--hub|--latest|--lib|--name|--offline|--params-file|--process.?*|--profile|--qs|--queue-size|--resume|--revision|--test|--user|--with-conda|--with-dag|--with-docker|--with-notification|--with-podman|--with-singularity|--with-tower|--with-trace|--with-weblog|--without-docker|--without-podman)
       command+=("$1")
       args+=("${1#-}")
       shift
@@ -115,4 +130,5 @@ run "$pipeline" \
 -work-dir "$output"/temp/work \
 --output "$output" \
 "${args[@]}" \
-&& rm -rf "$output"/temp "$output"/.nextflow
+&& rm -rf "$output"/.nextflow \
+&& [[ -z "$keeptemp" ]] && rm -rf "$output"/temp
