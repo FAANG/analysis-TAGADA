@@ -40,12 +40,12 @@ for file in files:
   if 'TPM' in df.columns:
     dataframes += [df[keys + ['TPM']].rename(columns = {
       'TPM': id
-    })]
+    }).groupby(keys).sum().reset_index()]
 
   if 'counts' in df.columns:
     dataframes += [df[keys + ['counts']].rename(columns = {
       'counts': id
-    })]
+    }).groupby(keys).sum().reset_index()]
 
 reduce(
   lambda df1, df2: pd.merge(
