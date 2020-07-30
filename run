@@ -20,6 +20,12 @@ while (( "$#" )); do
       fi
       shift
       ;;
+    # Parse keep temp files option
+    --keep-temp)
+      command+=("$1")
+      keeptemp=true
+      shift
+      ;;
     # Parse overridden nextflow options
     --with-report|-with-report|--with-timeline|-with-timeline|--work-dir|-work-dir|-w)
       command+=("$1")
@@ -124,4 +130,5 @@ run "$pipeline" \
 -work-dir "$output"/temp/work \
 --output "$output" \
 "${args[@]}" \
-&& rm -rf "$output"/temp "$output"/.nextflow
+&& rm -rf "$output"/.nextflow \
+&& [[ -z "$keeptemp" ]] && rm -rf "$output"/temp
