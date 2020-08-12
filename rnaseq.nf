@@ -355,6 +355,7 @@ if (number_of_raw_reads > 0) {
       path '*_trimming_report.txt'
       path '*_fastqc.html'
       tuple val(prefix), path('*_trimmed.fq.gz') into reads_to_map
+      path '*_trimmed.fq.gz' into reads_to_overhang
 
     script:
       """
@@ -415,6 +416,21 @@ if (number_of_raw_reads > 0) {
   // ############
   if (!index) {
 
+    process overhang {
+
+      input:
+        path read from reads_to_overhang.flatten()
+
+      output:
+        env overhang into overhangs_to_index
+
+      script:
+        """
+        \$(gzip -t $read &> /dev/null) && reader=zcat || reader=cat;
+        overhang=\$(\$reader $read | head -n 40000 | awk 'NR%4 == 2 {total += length(\$0)} END {print int(total/(NR/4))-1}')
+        """
+    }
+
     process index {
 
       label 'high_cpu'
@@ -425,6 +441,7 @@ if (number_of_raw_reads > 0) {
       input:
         path genome from genome_to_index
         path annotation from reference_annotation_to_index
+        val overhang from overhangs_to_index.max()
 
       output:
         path 'index' into index_to_map
@@ -436,7 +453,8 @@ if (number_of_raw_reads > 0) {
              --runMode genomeGenerate \\
              --genomeDir index \\
              --sjdbGTFfile $annotation \\
-             --genomeFastaFiles $genome
+             --genomeFastaFiles $genome \\
+             --sjdbOverhang $overhang
         """
     }
   }
