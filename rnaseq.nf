@@ -489,6 +489,7 @@ if (number_of_raw_reads > 0) {
       STAR --runThreadN ${task.cpus} \\
            --readFilesCommand zcat \\
            --outSAMtype BAM SortedByCoordinate \\
+           --outFilterIntronMotifs RemoveNoncanonical \\
            --genomeDir $index \\
            --readFilesIn $reads \\
            --outFileNamePrefix "$prefix".
