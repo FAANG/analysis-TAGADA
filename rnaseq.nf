@@ -523,6 +523,7 @@ process direction {
 
   output:
     tuple val(prefix), env(direction), path(map) into maps_to_length
+    tuple val(prefix), env(direction), path(map) into maps_to_coverage
 
   script:
     """
@@ -532,6 +533,32 @@ process direction {
     if [[ \$difference > 50 && \$ratio > 1 ]]; then direction="FR";
     elif [[ \$difference > 50 ]]; then direction="RF";
     else direction="No direction"; fi
+    """
+}
+
+// Get read coverage from maps
+// ###########################
+process coverage {
+
+  publishDir "$output/control/coverage", mode: 'copy'
+
+  input:
+    tuple val(prefix), val(direction), path(map) from maps_to_coverage
+
+  output:
+    path '*.bed'
+
+  script:
+    """
+    if [[ "$direction" == "RF" || "$direction" == "FR" ]]; then
+      bedtools genomecov -ibam $map -bg -strand + > +.tsv
+      bedtools genomecov -ibam $map -bg -strand - > -.tsv
+      cat <(awk 'BEGIN {OFS="\\t"} {print \$0,"+"}' +.tsv) \\
+          <(awk 'BEGIN {OFS="\\t"} {print \$0,"-"}' -.tsv) | sort -k1,3 -k5 \\
+          > "$prefix".bed
+    else
+      bedtools genomecov -ibam $map -bg > "$prefix".bed
+    fi
     """
 }
 
