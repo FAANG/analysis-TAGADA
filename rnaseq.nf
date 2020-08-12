@@ -625,7 +625,13 @@ if (merge) {
   maps_to_check = maps_to_check.toList().get().sort  { a, b -> a[0] <=> b[0] }
 
   differing_lengths = maps_to_check.findAll {
-    it[2].toUnique().size() > 1
+    it[2].subsequences().findAll {
+      it.size() == 2
+    }.collect {
+      (it[0] - it[1]).abs()
+    }.findAll {
+      it > 10
+    }.size() > 0
   }.collectEntries { group ->
     [(group[0]): group[1].withIndex().collect { it, i -> it + ' (' + group[2][i] + ')' }]
   }
