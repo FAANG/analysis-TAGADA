@@ -583,7 +583,7 @@ maps_to_merge.tap {
   if (it[2] == 'FR') direction = '--fr'
   else if (it[2] == 'RF') direction = '--rf'
   else direction = ''
-  [it[0], it[1], direction, it[3]]
+  [it[0], it[1].toInteger(), direction, it[3]]
 }.set {
   maps_to_merge
 }
@@ -613,7 +613,7 @@ if (merge) {
   }.groupTuple().tap {
     maps_to_check
   }.map {
-    [it[0], it[2][0], it[3][0], it[4]]
+    [it[0], (it[2].sum()/it[2].size()).toInteger(), it[3][0], it[4]]
   }.set {
     maps_to_merge
   }
