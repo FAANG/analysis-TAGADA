@@ -607,9 +607,11 @@ if (merge) {
   groups_to_merge = groups_to_merge.toList().get()
 
   maps_to_merge.map { map ->
-    [groups_to_merge.find { group ->
-      map[0] in group[1]
-    }[0]] + map
+    [
+      groups_to_merge.find { group ->
+        map[0] in group[1]
+      }[0]
+    ] + map
   }.groupTuple().tap {
     maps_to_check
   }.map {
@@ -622,7 +624,7 @@ if (merge) {
   // ###########################################
   error = ''
 
-  maps_to_check = maps_to_check.toList().get().sort  { a, b -> a[0] <=> b[0] }
+  maps_to_check = maps_to_check.toList().get().sort { a, b -> a[0] <=> b[0] }
 
   differing_lengths = maps_to_check.findAll {
     it[2].subsequences().findAll {
@@ -633,18 +635,28 @@ if (merge) {
       it > 10
     }.size() > 0
   }.collectEntries { group ->
-    [(group[0]): group[1].withIndex().collect { it, i -> it + ' (' + group[2][i] + ')' }]
+    [
+      (group[0]): group[1].withIndex().collect { it, i ->
+        it + ' (' + group[2][i] + ')'
+      }
+    ]
   }
 
   if (differing_lengths.size() > 0) {
     error += 'Cannot merge differing read lengths:\n  '
-    error += differing_lengths.collect{ it.key + ': ' + it.value.join('  ') }.join('\n  ') + '\n'
+    error += differing_lengths.collect {
+      it.key + ': ' + it.value.join('  ')
+    }.join('\n  ') + '\n'
   }
 
   differing_directions = maps_to_check.findAll {
     it[3].toUnique().size() > 1
   }.collectEntries { group ->
-    [(group[0]): group[1].withIndex().collect { it, i -> it + ' (' + group[3][i] + ')' }]
+    [
+      (group[0]): group[1].withIndex().collect { it, i ->
+        it + ' (' + group[3][i] + ')'
+      }
+    ]
   }
 
   if (differing_directions.size() > 0) {
