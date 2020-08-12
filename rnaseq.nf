@@ -49,7 +49,7 @@ if (genome) {
 
 Channel.fromPath(annotation, checkIfExists: true).into {
   reference_annotation_to_index
-  reference_annotation_to_estimate
+  reference_annotation_to_direction
   reference_annotation_to_assemble
   reference_annotation_to_combine
   reference_annotation_to_quantify
@@ -96,19 +96,19 @@ Channel.fromPath(reads, checkIfExists: true).map { path ->
 reads.R1.into {
   r1_reads_to_check
   r1_reads_to_pair
-  r1_reads_to_control_quality
+  r1_reads_to_quality
 }
 
 reads.R2.into {
   r2_reads_to_check
   r2_reads_to_pair
-  r2_reads_to_control_quality
+  r2_reads_to_quality
 }
 
 reads.single.into {
   single_reads_to_check
   single_reads_to_append
-  single_reads_to_control_quality
+  single_reads_to_quality
 }
 
 reads.mapped.tap {
@@ -116,7 +116,7 @@ reads.mapped.tap {
 }.map {
   [it['prefix'], it['path']]
 }.set {
-  mapped_reads_to_estimate
+  mapped_reads_to_direction
 }
 
 error = ''
@@ -304,13 +304,13 @@ r1_reads_to_pair.join(r2_reads_to_pair).map { it ->
   reads_to_trim
 }
 
-single_reads_to_control_quality.concat(
-  r1_reads_to_control_quality,
-  r2_reads_to_control_quality
+single_reads_to_quality.concat(
+  r1_reads_to_quality,
+  r2_reads_to_quality
 ).map {
   [it['prefix'], it['R'] ? '_R' + it['R'] : '', it['path']]
 }.set {
-  reads_to_control_quality
+  reads_to_quality
 }
 
 // Process raw reads
@@ -319,12 +319,12 @@ if (number_of_raw_reads > 0) {
 
   // Control reads quality
   // #####################
-  process control_quality {
+  process quality {
 
     publishDir "$output/control/quality/raw", mode: 'copy'
 
     input:
-      tuple val(prefix), val(R), path(read) from reads_to_control_quality
+      tuple val(prefix), val(R), path(read) from reads_to_quality
 
     output:
       path '*_fastqc.html'
@@ -464,7 +464,7 @@ if (number_of_raw_reads > 0) {
     output:
       path '*.out'
       path '*.out.tab'
-      tuple val(prefix), path('*.bam') into maps_to_estimate
+      tuple val(prefix), path('*.bam') into maps_to_direction
 
     script:
       """
@@ -479,40 +479,55 @@ if (number_of_raw_reads > 0) {
       """
   }
 
-  reference_annotation_to_estimate.combine(
-    mapped_reads_to_estimate.concat(maps_to_estimate)
+  reference_annotation_to_direction.combine(
+    mapped_reads_to_direction.concat(
+      maps_to_direction
+    )
   ).set {
-    maps_to_estimate
+    maps_to_direction
   }
 
 } else {
-  reference_annotation_to_estimate.combine(
-    mapped_reads_to_estimate
+  reference_annotation_to_direction.combine(
+    mapped_reads_to_direction
   ).set {
-    maps_to_estimate
+    maps_to_direction
   }
 }
 
-// Estimate read lengths and directions from maps
-// ##############################################
-process estimate {
+// Get read directions from maps
+// #############################
+process direction {
 
   input:
-    tuple path(annotation), val(prefix), path(map) from maps_to_estimate
+    tuple path(annotation), val(prefix), path(map) from maps_to_direction
 
   output:
-    tuple val(prefix), env(length), env(direction), path(map) into maps_to_merge
+    tuple val(prefix), env(direction), path(map) into maps_to_length
 
   script:
     """
-    length=\$(samtools view $map | head -n 10000 | awk '{total += length(\$10)} END {print int((total/(NR*5))+0.5) * 5 }')
-
     proportions=(\$(infer_library_type.sh $map $annotation))
     difference=\$(awk -v a=\${proportions[0]} -v b=\${proportions[1]} 'BEGIN {print sqrt((a - b)^2)}')
     ratio=\$(awk -v a=\${proportions[0]} -v b=\${proportions[1]} 'BEGIN {print a / b}')
     if [[ \$difference > 50 && \$ratio > 1 ]]; then direction="FR";
     elif [[ \$difference > 50 ]]; then direction="RF";
     else direction="No direction"; fi
+    """
+}
+
+// Get read lengths from maps
+// ##########################
+process length {
+  input:
+    tuple val(prefix), val(direction), path(map) from maps_to_length
+
+  output:
+    tuple val(prefix), env(length), val(direction), path(map) into maps_to_merge
+
+  script:
+    """
+    length=\$(samtools view $map | head -n 10000 | awk '{total += length(\$10)} END {print int(total/NR)}')
     """
 }
 
