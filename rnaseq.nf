@@ -49,7 +49,7 @@ if (genome) {
 
 Channel.fromPath(annotation, checkIfExists: true).into {
   reference_annotation_to_index
-  reference_annotation_to_estimate
+  reference_annotation_to_direction
   reference_annotation_to_assemble
   reference_annotation_to_combine
   reference_annotation_to_quantify
@@ -97,19 +97,19 @@ Channel.fromPath(reads, checkIfExists: true).map { path ->
 reads.R1.into {
   r1_reads_to_check
   r1_reads_to_pair
-  r1_reads_to_control_quality
+  r1_reads_to_quality
 }
 
 reads.R2.into {
   r2_reads_to_check
   r2_reads_to_pair
-  r2_reads_to_control_quality
+  r2_reads_to_quality
 }
 
 reads.single.into {
   single_reads_to_check
   single_reads_to_append
-  single_reads_to_control_quality
+  single_reads_to_quality
 }
 
 reads.mapped.tap {
@@ -117,7 +117,7 @@ reads.mapped.tap {
 }.map {
   [it['prefix'], it['path']]
 }.set {
-  mapped_reads_to_estimate
+  mapped_reads_to_direction
 }
 
 error = ''
@@ -305,13 +305,13 @@ r1_reads_to_pair.join(r2_reads_to_pair).map { it ->
   reads_to_trim
 }
 
-single_reads_to_control_quality.concat(
-  r1_reads_to_control_quality,
-  r2_reads_to_control_quality
+single_reads_to_quality.concat(
+  r1_reads_to_quality,
+  r2_reads_to_quality
 ).map {
   [it['prefix'], it['R'] ? '_R' + it['R'] : '', it['path']]
 }.set {
-  reads_to_control_quality
+  reads_to_quality
 }
 
 // Process raw reads
@@ -320,12 +320,12 @@ if (number_of_raw_reads > 0) {
 
   // Control reads quality
   // #####################
-  process control_quality {
+  process quality {
 
-    publishDir "$output/control/quality/raw", mode: 'copy'
+    publishDir "$output/quality/raw", mode: 'copy'
 
     input:
-      tuple val(prefix), val(R), path(read) from reads_to_control_quality
+      tuple val(prefix), val(R), path(read) from reads_to_quality
 
     output:
       path '*_fastqc.html'
@@ -341,12 +341,12 @@ if (number_of_raw_reads > 0) {
   // ###############
   process trim {
 
-    label 'high_cpu'
-    label 'medium_memory'
+    label 'cpu_16'
+    label 'memory_16'
 
     publishDir "$output", mode: 'copy', saveAs: { filename ->
       if (filename.endsWith('trimming_report.txt')) "logs/trim_galore/$filename"
-      else if (filename.endsWith('fastqc.html')) "control/quality/trimmed/$filename"
+      else if (filename.endsWith('fastqc.html')) "quality/trimmed/$filename"
     }
 
     input:
@@ -356,6 +356,7 @@ if (number_of_raw_reads > 0) {
       path '*_trimming_report.txt'
       path '*_fastqc.html'
       tuple val(prefix), path('*_trimmed.fq.gz') into reads_to_map
+      path '*_trimmed.fq.gz' into reads_to_overhang
 
     script:
       """
@@ -416,16 +417,32 @@ if (number_of_raw_reads > 0) {
   // ############
   if (!index) {
 
+    process overhang {
+
+      input:
+        path read from reads_to_overhang.flatten()
+
+      output:
+        env overhang into overhangs_to_index
+
+      script:
+        """
+        \$(gzip -t $read &> /dev/null) && reader=zcat || reader=cat;
+        overhang=\$(\$reader $read | head -n 40000 | awk 'NR%4 == 2 {total += length(\$0)} END {print int(total/(NR/4))-1}')
+        """
+    }
+
     process index {
 
-      label 'high_cpu'
-      label 'high_memory'
+      label 'cpu_16'
+      label 'memory_32'
 
       publishDir "$output", mode: 'copy'
 
       input:
         path genome from genome_to_index
         path annotation from reference_annotation_to_index
+        val overhang from overhangs_to_index.max()
 
       output:
         path 'index' into index_to_map
@@ -437,7 +454,8 @@ if (number_of_raw_reads > 0) {
              --runMode genomeGenerate \\
              --genomeDir index \\
              --sjdbGTFfile $annotation \\
-             --genomeFastaFiles $genome
+             --genomeFastaFiles $genome \\
+             --sjdbOverhang $overhang
         """
     }
   }
@@ -450,8 +468,8 @@ if (number_of_raw_reads > 0) {
 
   process map {
 
-    label 'high_cpu'
-    label 'high_memory'
+    label 'cpu_16'
+    label 'memory_32'
 
     publishDir "$output", mode: 'copy', saveAs: { filename ->
       if (filename.endsWith('.out')) "logs/star/$filename"
@@ -465,13 +483,14 @@ if (number_of_raw_reads > 0) {
     output:
       path '*.out'
       path '*.out.tab'
-      tuple val(prefix), path('*.bam') into maps_to_estimate
+      tuple val(prefix), path('*.bam') into maps_to_direction
 
     script:
       """
       STAR --runThreadN ${task.cpus} \\
            --readFilesCommand zcat \\
            --outSAMtype BAM SortedByCoordinate \\
+           --outFilterIntronMotifs RemoveNoncanonical \\
            --genomeDir $index \\
            --readFilesIn $reads \\
            --outFileNamePrefix "$prefix".
@@ -480,34 +499,35 @@ if (number_of_raw_reads > 0) {
       """
   }
 
-  reference_annotation_to_estimate.combine(
-    mapped_reads_to_estimate.concat(maps_to_estimate)
+  reference_annotation_to_direction.combine(
+    mapped_reads_to_direction.concat(
+      maps_to_direction
+    )
   ).set {
-    maps_to_estimate
+    maps_to_direction
   }
 
 } else {
-  reference_annotation_to_estimate.combine(
-    mapped_reads_to_estimate
+  reference_annotation_to_direction.combine(
+    mapped_reads_to_direction
   ).set {
-    maps_to_estimate
+    maps_to_direction
   }
 }
 
-// Estimate read lengths and directions from maps
-// ##############################################
-process estimate {
+// Get read directions from maps
+// #############################
+process direction {
 
   input:
-    tuple path(annotation), val(prefix), path(map) from maps_to_estimate
+    tuple path(annotation), val(prefix), path(map) from maps_to_direction
 
   output:
-    tuple val(prefix), env(length), env(direction), path(map) into maps_to_merge
+    tuple val(prefix), env(direction), path(map) into maps_to_length
+    tuple val(prefix), env(direction), path(map) into maps_to_coverage
 
   script:
     """
-    length=\$(samtools view $map | head -n 10000 | awk '{total += length(\$10)} END {print int((total/(NR*5))+0.5) * 5 }')
-
     proportions=(\$(infer_library_type.sh $map $annotation))
     difference=\$(awk -v a=\${proportions[0]} -v b=\${proportions[1]} 'BEGIN {print sqrt((a - b)^2)}')
     ratio=\$(awk -v a=\${proportions[0]} -v b=\${proportions[1]} 'BEGIN {print a / b}')
@@ -517,13 +537,57 @@ process estimate {
     """
 }
 
+// Get read coverage from maps
+// ###########################
+process coverage {
+
+  label 'memory_4'
+
+  publishDir "$output/coverage", mode: 'copy'
+
+  input:
+    tuple val(prefix), val(direction), path(map) from maps_to_coverage
+
+  output:
+    path '*.bed'
+
+  script:
+    """
+    if [[ "$direction" == "RF" || "$direction" == "FR" ]]; then
+      bedtools genomecov -ibam $map -bg -strand + > +.tsv
+      bedtools genomecov -ibam $map -bg -strand - > -.tsv
+      cat <(awk 'BEGIN {OFS="\\t"} {print \$0,"+"}' +.tsv) \\
+          <(awk 'BEGIN {OFS="\\t"} {print \$0,"-"}' -.tsv) | sort -k1,3 -k5 \\
+          > "$prefix".bed
+    else
+      bedtools genomecov -ibam $map -bg > "$prefix".bed
+    fi
+    """
+}
+
+// Get read lengths from maps
+// ##########################
+process length {
+
+  input:
+    tuple val(prefix), val(direction), path(map) from maps_to_length
+
+  output:
+    tuple val(prefix), env(length), val(direction), path(map) into maps_to_merge
+
+  script:
+    """
+    length=\$(samtools view $map | head -n 10000 | awk '{total += length(\$10)} END {print int(total/NR)}')
+    """
+}
+
 maps_to_merge.tap {
   maps_to_log
 }.map {
   if (it[2] == 'FR') direction = '--fr'
   else if (it[2] == 'RF') direction = '--rf'
   else direction = ''
-  [it[0], it[1], direction, it[3]]
+  [it[0], it[1].toInteger(), direction, it[3]]
 }.set {
   maps_to_merge
 }
@@ -547,13 +611,15 @@ if (merge) {
   groups_to_merge = groups_to_merge.toList().get()
 
   maps_to_merge.map { map ->
-    [groups_to_merge.find { group ->
-      map[0] in group[1]
-    }[0]] + map
+    [
+      groups_to_merge.find { group ->
+        map[0] in group[1]
+      }[0]
+    ] + map
   }.groupTuple().tap {
     maps_to_check
   }.map {
-    [it[0], it[2][0], it[3][0], it[4]]
+    [it[0], (it[2].sum()/it[2].size()).toInteger(), it[3][0], it[4]]
   }.set {
     maps_to_merge
   }
@@ -562,23 +628,39 @@ if (merge) {
   // ###########################################
   error = ''
 
-  maps_to_check = maps_to_check.toList().get().sort  { a, b -> a[0] <=> b[0] }
+  maps_to_check = maps_to_check.toList().get().sort { a, b -> a[0] <=> b[0] }
 
   differing_lengths = maps_to_check.findAll {
-    it[2].toUnique().size() > 1
+    it[2].subsequences().findAll {
+      it.size() == 2
+    }.collect {
+      (it[0] - it[1]).abs()
+    }.findAll {
+      it > 10
+    }.size() > 0
   }.collectEntries { group ->
-    [(group[0]): group[1].withIndex().collect { it, i -> it + ' (' + group[2][i] + ')' }]
+    [
+      (group[0]): group[1].withIndex().collect { it, i ->
+        it + ' (' + group[2][i] + ')'
+      }
+    ]
   }
 
   if (differing_lengths.size() > 0) {
     error += 'Cannot merge differing read lengths:\n  '
-    error += differing_lengths.collect{ it.key + ': ' + it.value.join('  ') }.join('\n  ') + '\n'
+    error += differing_lengths.collect {
+      it.key + ': ' + it.value.join('  ')
+    }.join('\n  ') + '\n'
   }
 
   differing_directions = maps_to_check.findAll {
     it[3].toUnique().size() > 1
   }.collectEntries { group ->
-    [(group[0]): group[1].withIndex().collect { it, i -> it + ' (' + group[3][i] + ')' }]
+    [
+      (group[0]): group[1].withIndex().collect { it, i ->
+        it + ' (' + group[3][i] + ')'
+      }
+    ]
   }
 
   if (differing_directions.size() > 0) {
@@ -592,7 +674,7 @@ if (merge) {
   // ##########
   process merge {
 
-    label 'high_cpu'
+    label 'cpu_16'
 
     input:
       tuple val(prefix), val(length), val(direction), path(maps) from maps_to_merge
