@@ -340,8 +340,8 @@ if (number_of_raw_reads > 0) {
   // ###############
   process trim {
 
-    label 'high_cpu'
-    label 'medium_memory'
+    label 'cpu_16'
+    label 'memory_16'
 
     publishDir "$output", mode: 'copy', saveAs: { filename ->
       if (filename.endsWith('trimming_report.txt')) "logs/trim_galore/$filename"
@@ -433,8 +433,8 @@ if (number_of_raw_reads > 0) {
 
     process index {
 
-      label 'high_cpu'
-      label 'high_memory'
+      label 'cpu_16'
+      label 'memory_32'
 
       publishDir "$output", mode: 'copy'
 
@@ -467,8 +467,8 @@ if (number_of_raw_reads > 0) {
 
   process map {
 
-    label 'high_cpu'
-    label 'high_memory'
+    label 'cpu_16'
+    label 'memory_32'
 
     publishDir "$output", mode: 'copy', saveAs: { filename ->
       if (filename.endsWith('.out')) "logs/star/$filename"
@@ -540,6 +540,8 @@ process direction {
 // ###########################
 process coverage {
 
+  label 'memory_4'
+
   publishDir "$output/control/coverage", mode: 'copy'
 
   input:
@@ -565,6 +567,7 @@ process coverage {
 // Get read lengths from maps
 // ##########################
 process length {
+
   input:
     tuple val(prefix), val(direction), path(map) from maps_to_length
 
@@ -670,7 +673,7 @@ if (merge) {
   // ##########
   process merge {
 
-    label 'high_cpu'
+    label 'cpu_16'
 
     input:
       tuple val(prefix), val(length), val(direction), path(maps) from maps_to_merge
