@@ -321,7 +321,7 @@ if (number_of_raw_reads > 0) {
   // #####################
   process quality {
 
-    publishDir "$output/control/quality/raw", mode: 'copy'
+    publishDir "$output/quality/raw", mode: 'copy'
 
     input:
       tuple val(prefix), val(R), path(read) from reads_to_quality
@@ -345,7 +345,7 @@ if (number_of_raw_reads > 0) {
 
     publishDir "$output", mode: 'copy', saveAs: { filename ->
       if (filename.endsWith('trimming_report.txt')) "logs/trim_galore/$filename"
-      else if (filename.endsWith('fastqc.html')) "control/quality/trimmed/$filename"
+      else if (filename.endsWith('fastqc.html')) "quality/trimmed/$filename"
     }
 
     input:
@@ -542,7 +542,7 @@ process coverage {
 
   label 'memory_4'
 
-  publishDir "$output/control/coverage", mode: 'copy'
+  publishDir "$output/coverage", mode: 'copy'
 
   input:
     tuple val(prefix), val(direction), path(map) from maps_to_coverage
