@@ -26,18 +26,19 @@ The `./run` launcher script replaces the `nextflow run` command and grants these
 
 | Option | Parameter(s) | Description | Requirement |
 |--------|--------------|-------------|-------------|
-| __`--profile`__ | `<profile1>` `<profile2>` `...` | Profile(s) to use when running the<br>pipeline. Specify the profiles that fit<br>your infrastructure among `slurm`,<br>`singularity`, `docker`. | Required |
-| __`--output`__ | `<directory>` | Output directory where all logs,<br>temporary files and results are written. | Required |
-| __`--reads`__ | `<reads.fq>` `<*.bam>` `...` | Input `fastq` file(s) and/or `bam` file(s).<br><br>For single-end reads, name your files:<br>`name.{fq,fastq}[.gz]`<br><br>For paired-end reads, name your files:<br>`name_R{1,2}.{fq,fastq}[.gz]`<br><br>For mapped reads, name your files:<br>`name.bam` | Required |
-| __`--annotation`__ | `<annotation.gff>` | Input reference annotation file. | Required |
-| __`--genome`__ | `<genome.fa>` | Input genome sequence file. | Required if `fastq`<br>files are provided<br>and `--index` is<br>absent. |
-| __`--index`__ | `<directory>` | Input genome index directory.<br>Overrides `--genome`. | Required if `fastq`<br>files are provided<br>and `--genome` is<br>absent. |
-| __`--metadata`__ | `<metadata.tsv>` | Input tabulated metadata file. | Required if `--merge`<br>is provided. |
-| __`--merge`__ | `<factor1>` `<factor2>` `...` | Factor(s) to merge mapped reads.<br>See the [merge factors](https://github.com/FAANG/proj-gs-rna-seq#merge-factors) section for<br>details. | Optional |
-| __`--max-cpus`__ | `<16>` | Maximum number of CPU cores that<br>can be used for each process. This<br>is a limit, not the actual number of<br>requested CPU cores. | Optional |
-| __`--max-memory`__ | `<64GB>` | Maximum memory that can be used<br>for each process. This is a limit, not<br>the actual amount of alloted memory. | Optional |
-| __`--max-time`__ | `<12h>` | Maximum time that can be spent<br>on each process. This is a limit and<br>has no effect on the duration of each<br>process.| Optional |
-| __`--resume`__ | | Resume the pipeline after an<br>interruption. Previously completed<br>processes will be skipped. | Optional |
+| __`--profile`__ | `<profile1>` `<profile2>` `...` | Profile(s) to use when<br>running the pipeline.<br>Specify the profiles that<br>fit your infrastructure<br>among `singularity`,<br>`docker`, `slurm`. | Required |
+| __`--output`__ | `<directory>` | Output directory where<br>all temporary files, logs,<br>and results are written. | Required |
+| __`--reads`__ | `<reads.fq>` `<*.bam>` `...` | Input `fastq` file(s)<br>and/or `bam` file(s).<br><br>For single-end reads,<br>name your files:<br>`name.fq[.gz]`<br><br>For paired-end reads,<br>name your files:<br>`name_R{1,2}.fq[.gz]`<br><br>For mapped reads,<br>name your files:<br>`name.bam` | Required |
+| __`--annotation`__ | `<annotation.gff>` | Input reference<br>annotation file. | Required |
+| __`--genome`__ | `<genome.fa>` | Input genome<br>sequence file. | Required if `fastq`<br>files are provided<br>and `--index` is<br>absent. |
+| __`--index`__ | `<directory>` | Input genome index<br>directory. Overrides<br>`--genome`. | Required if `fastq`<br>files are provided<br>and `--genome` is<br>absent. |
+| __`--metadata`__ | `<metadata.tsv>` | Input tabulated<br>metadata file. | Required if `--merge`<br>is provided. |
+| __`--merge`__ | `<factor1>` `<factor2>` `...` | Factor(s) to merge<br>mapped reads. See<br>the [merge factors](https://github.com/FAANG/proj-gs-rna-seq#merge-factors)<br>section for details. | Optional |
+| __`--max-cpus`__ | `<16>` | Maximum number of<br>CPU cores that can be<br>used for each process.<br>This is a limit, not the<br>actual number of<br>requested CPU cores. | Optional |
+| __`--max-memory`__ | `<64GB>` | Maximum memory that<br>can be used for each<br>process. This is a limit,<br>not the actual amount<br>of alloted memory. | Optional |
+| __`--max-time`__ | `<12h>` | Maximum time that can<br>be spent on each<br>process. This is a limit<br>and has no effect on the<br>duration of each process.| Optional |
+| __`--resume`__ | | Resume the pipeline after<br>an interruption. Previously<br>completed processes will<br>be skipped. | Optional |
+| __`--keep-temp`__ | | Do not delete temporary<br>files upon completion. | Optional |
 
 ### Merge factors
 
@@ -74,19 +75,21 @@ With the following arguments:
 ## Workflow
 
 The pipeline executes the following processes:
-1. __Control__ reads quality with [FastQC](https://github.com/s-andrews/FastQC).  
+1. Control reads __quality__ with [FastQC](https://github.com/s-andrews/FastQC).  
    Outputs quality reports to `output/quality/raw`.
 2. __Trim__ adaptators from reads with [Trim Galore](https://github.com/FelixKrueger/TrimGalore).  
    Outputs quality reports to `output/quality/trimmed`.
-3. __Index__ genome sequence wih [STAR](https://github.com/alexdobin/STAR).  
+3. Estimate __overhang__ length of splice junctions, and __index__ the genome sequence with [STAR](https://github.com/alexdobin/STAR).  
    Outputs indexed genome to `output/index`.
-4. __Map__ reads to indexed genome with [STAR](https://github.com/alexdobin/STAR) and __estimate__ read lengths and directions.  
+4. __Map__ reads to indexed genome with [STAR](https://github.com/alexdobin/STAR).  
    Outputs mapped reads to `output/maps`.
-5. __Merge__ mapped reads by factors with [Samtools](https://github.com/samtools/samtools).  
+5. Estimate __direction__ and __length__ of mapped reads, and compute genome __coverage__ with [Bedtools](https://github.com/arq5x/bedtools2).  
+   Outputs bedGraph files to `output/coverage`.
+6. __Merge__ mapped reads by factors with [Samtools](https://github.com/samtools/samtools).  
    See the [merge factors](#merge-factors) section for details.
-6. __Assemble__ transcripts and __combine__ them into a new assembly annotation with [StringTie](https://github.com/gpertea/stringtie).  
+7. __Assemble__ transcripts and __combine__ them into a new assembly annotation with [StringTie](https://github.com/gpertea/stringtie).  
    Outputs the new assembly annotation to `output/assembly`.
-7. __Quantify__ genes and transcripts with [StringTie](https://github.com/gpertea/stringtie), and __format__ them into tabulated files.  
+8. __Quantify__ genes and transcripts with [StringTie](https://github.com/gpertea/stringtie), and __format__ them into tabulated files.  
    Outputs TPM values and read counts to `output/quantification` for the reference and assembly annotations.
 
 
