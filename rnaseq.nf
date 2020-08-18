@@ -556,7 +556,7 @@ process coverage {
       bedtools genomecov -ibam $map -bg -strand + > +.tsv
       bedtools genomecov -ibam $map -bg -strand - > -.tsv
       cat <(awk 'BEGIN {OFS="\\t"} {print \$0,"+"}' +.tsv) \\
-          <(awk 'BEGIN {OFS="\\t"} {print \$0,"-"}' -.tsv) | sort -k1,3 -k5 \\
+          <(awk 'BEGIN {OFS="\\t"} {print \$0,"-"}' -.tsv) | sort -T "." -k1,3 -k5 \\
           > "$prefix".bed
     else
       bedtools genomecov -ibam $map -bg > "$prefix".bed
