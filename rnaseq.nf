@@ -53,7 +53,7 @@ Channel.fromPath(annotation, checkIfExists: true).into {
   reference_annotation_to_assemble
   reference_annotation_to_combine
   reference_annotation_to_quantify
-  reference_annotation_to_control_length
+  reference_annotation_to_control_elements
 }
 
 if (metadata) {
@@ -731,7 +731,7 @@ process combine {
 
   output:
     path '*.gff' into assembly_annotation_to_quantify
-    path '*.gff' into assembly_annotation_to_control_length
+    path '*.gff' into assembly_annotation_to_control_elements
 
   script:
     """
@@ -821,7 +821,10 @@ process format {
 
   output:
     path '*.tsv'
-    path 'assembly_transcripts_TPM.tsv' optional true into formatted_transcripts_to_control_length
+    path 'assembly_transcripts_TPM.tsv' optional true into formatted_transcripts_to_control_elements
+    path 'assembly_genes_TPM.tsv' optional true into formatted_genes_to_control_elements
+    path 'reference_genes_TPM.tsv' optional true into formatted_genes_tpm_to_control_expression
+    path 'reference_genes_counts.tsv' optional true into formatted_genes_counts_to_control_expression
 
   script:
     """
@@ -829,25 +832,56 @@ process format {
     """
 }
 
-// Control length of exons and transcripts
-// #######################################
-process control_length {
+// Control elements detected
+// #########################
+process control_elements {
 
-  publishDir "$output/control/length", mode: 'copy'
+  publishDir "$output/control/elements", mode: 'copy'
 
   input:
-    path reference_annotation from reference_annotation_to_control_length
-    path assembly_annotation from assembly_annotation_to_control_length
-    path formatted_transcripts from formatted_transcripts_to_control_length
+    path reference_annotation from reference_annotation_to_control_elements
+    path assembly_annotation from assembly_annotation_to_control_elements
+    path formatted_transcripts from formatted_transcripts_to_control_elements
+    path formatted_genes from formatted_genes_to_control_elements
 
   output:
+    path 'Plots'
+    path 'Tables'
     path '*.tsv'
+    path '*.out'
+    path '*.err'
 
   script:
     """
-    ref_pred_all_expr_2_tr_ratio_size_pos.sh \\
+    detected_elements_sumstats.sh \\
       $reference_annotation \\
       $assembly_annotation \\
-      $formatted_transcripts
+      $formatted_transcripts \\
+      $formatted_genes
+    """
+}
+
+// Control reference gene expression detected
+// ##########################################
+process control_expression {
+
+  publishDir "$output/control/expression", mode: 'copy'
+
+  input:
+    path formatted_genes_tpm from formatted_genes_tpm_to_control_expression
+    path formatted_genes_counts from formatted_genes_counts_to_control_expression
+
+  output:
+    path '*.pdf'
+    path '*.out'
+    path '*.err'
+
+  script:
+    """
+    awk 'BEGIN{OFS="\\t"; print "labExpId"} NR==1{for(i=2; i<=NF; i++){print \$i}}' $formatted_genes_tpm > metadata.tsv
+    plot_gene_expression.sh \\
+      $formatted_genes_tpm \\
+      $formatted_genes_counts \\
+      metadata.tsv labExpId .
     """
 }
