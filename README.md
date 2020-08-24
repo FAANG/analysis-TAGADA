@@ -13,7 +13,7 @@ To use this pipeline, simply clone or download this repository, and install the 
 
 Execute this nextflow pipeline with:
 
-    ./run rnaseq.nf [arguments]
+    ./run main.nf [arguments]
 
 The `./run` launcher script replaces the `nextflow run` command and grants these benefits:
 - Options can receive multiple space-separated parameters and unquoted globs.
