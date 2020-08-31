@@ -848,8 +848,6 @@ process control_elements {
     path 'Plots'
     path 'Tables'
     path '*.tsv'
-    path '*.out'
-    path '*.err'
 
   script:
     """
@@ -873,8 +871,7 @@ process control_expression {
 
   output:
     path '*.pdf'
-    path '*.out'
-    path '*.err'
+  
 
   script:
     """
