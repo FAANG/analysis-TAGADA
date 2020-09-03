@@ -54,6 +54,7 @@ Channel.fromPath(annotation, checkIfExists: true).into {
   reference_annotation_to_combine
   reference_annotation_to_quantify
   reference_annotation_to_control_elements
+  reference_annotation_to_control_exon_counts
 }
 
 if (metadata) {
@@ -682,6 +683,7 @@ if (merge) {
     output:
       tuple val(prefix), val(direction), path('*.bam') into maps_to_assemble
       tuple val(prefix), val(length), val(direction), path('*.bam') into maps_to_quantify
+      path '*.bam' into maps_to_control_exon_counts
 
     script:
       """
@@ -694,8 +696,12 @@ if (merge) {
     maps_to_quantify
   }.map {
     [it[0], it[2], it[3]]
-  }.set {
+  }.tap {
     maps_to_assemble
+  }.map {
+    it[2]
+  }.set {
+    maps_to_control_exon_counts
   }
 }
 
@@ -732,6 +738,7 @@ process combine {
   output:
     path '*.gff' into assembly_annotation_to_quantify
     path '*.gff' into assembly_annotation_to_control_elements
+    path '*.gff' into assembly_annotation_to_control_exon_counts
 
   script:
     """
@@ -871,7 +878,6 @@ process control_expression {
 
   output:
     path '*.pdf'
-  
 
   script:
     """
@@ -880,5 +886,39 @@ process control_expression {
       $formatted_genes_tpm \\
       $formatted_genes_counts \\
       metadata.tsv labExpId .
+    """
+}
+
+// Control exonic reads counts
+// ###########################
+reference_annotation_to_control_exon_counts.combine(Channel.of('reference')).concat(
+  assembly_annotation_to_control_exon_counts.combine(Channel.of('assembly'))
+).set {
+  annotations_to_control_exon_counts
+}
+
+process control_exon_counts {
+
+  label 'cpu_16'
+
+  publishDir "$output/control/exons", mode: 'copy'
+
+  input:
+    tuple path(annotation), val(type) from annotations_to_control_exon_counts
+    path(maps) from maps_to_control_exon_counts.collect()
+
+  output:
+    path '*.tsv'
+
+  script:
+    """
+    featureCounts -t exon \\
+                  -g gene_id \\
+                  -s 0 \\
+                  --primary \\
+                  -T ${task.cpus} \\
+                  -a $annotation \\
+                  -o "$type"_exons_counts.tsv \\
+                  $maps
     """
 }
