@@ -13,7 +13,7 @@ To use this pipeline, simply clone or download this repository, and install the 
 
 Execute this nextflow pipeline with:
 
-    ./run rnaseq.nf [arguments]
+    ./run main.nf [arguments]
 
 The `./run` launcher script replaces the `nextflow run` command and grants these benefits:
 - Options can receive multiple space-separated parameters and unquoted globs.
@@ -26,7 +26,7 @@ The `./run` launcher script replaces the `nextflow run` command and grants these
 
 | Option | Parameter(s) | Description | Requirement |
 |--------|--------------|-------------|-------------|
-| __`--profile`__ | `<profile1>` `<profile2>` `...` | Profile(s) to use when<br>running the pipeline.<br>Specify the profiles that<br>fit your infrastructure<br>among `singularity`,<br>`docker`, `slurm`. | Required |
+| __`--profile`__ | `<profile1>` `<profile2>` `...` | Profile(s) to use when<br>running the pipeline.<br>Specify the profiles that<br>fit your infrastructure<br>among `singularity`,<br>`docker`, `kubernetes`,<br>`slurm`. | Required |
 | __`--output`__ | `<directory>` | Output directory where<br>all temporary files, logs,<br>and results are written. | Required |
 | __`--reads`__ | `<reads.fq>` `<*.bam>` `...` | Input `fastq` file(s)<br>and/or `bam` file(s).<br><br>For single-end reads,<br>name your files:<br>`name.fq[.gz]`<br><br>For paired-end reads,<br>name your files:<br>`name_R{1,2}.fq[.gz]`<br><br>For mapped reads,<br>name your files:<br>`name.bam` | Required |
 | __`--annotation`__ | `<annotation.gff>` | Input reference<br>annotation file. | Required |
