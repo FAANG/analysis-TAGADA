@@ -36,7 +36,7 @@ while (( "$#" )); do
       shift
       ;;
     # Parse nextflow options passed as pipeline options
-    --ansi-log|--bucket-dir|--cache|--dump-channels|--dump-hashes|--e.?*|--entry|--help|--hub|--latest|--lib|--name|--offline|--params-file|--process.?*|--profile|--qs|--queue-size|--resume|--revision|--test|--user|--with-conda|--with-dag|--with-docker|--with-notification|--with-podman|--with-singularity|--with-tower|--with-trace|--with-weblog|--without-docker|--without-podman)
+    --ansi-log|--bucket-dir|--cache|--config|--dump-channels|--dump-hashes|--e.?*|--entry|--help|--hub|--latest|--lib|--name|--offline|--params-file|--process.?*|--profile|--qs|--queue-size|--resume|--revision|--test|--user|--with-conda|--with-dag|--with-docker|--with-notification|--with-podman|--with-singularity|--with-tower|--with-trace|--with-weblog|--without-docker|--without-podman)
       command+=("$1")
       args+=("${1#-}")
       shift
