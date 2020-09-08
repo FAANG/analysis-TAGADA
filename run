@@ -15,7 +15,7 @@ while (( "$#" )); do
       command+=("$1")
       if [[ -n "$2" && "$2" != -* ]]; then
         command+=("'${2//\'/$escape}'")
-        output="$2"
+        output=$(readlink -m "$2")
         shift
       fi
       shift
@@ -89,7 +89,7 @@ while (( "$#" )); do
       values=""
       params=""
       while [[ -n "$2" && "$2" != -* ]]; do
-        if [[ $glob == true && (-d "$2" || -f "$2") ]]; then
+        if [[ $glob == true && (-f "$2" || -d "$2") ]]; then
           # Create symlink to original path
           symlink=$(basename "$2")
           symlink="$output"/temp/input/"$option"/"$symlink"
@@ -97,6 +97,9 @@ while (( "$#" )); do
           ln -sf "$2" "$symlink"
           # Replace path with glob to symlink
           paths="$output"/temp/input/"$option"/*
+        elif [[ -f "$2" || -d "$2" ]]; then
+          # Get complete path
+          values+=$(readlink -m "$2"),
         else
           # Join values with commas
           values+="$2",
