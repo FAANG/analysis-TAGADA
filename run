@@ -4,7 +4,7 @@
 command=("$0")
 escape="'\''"
 command+=("'${1//\'/$escape}'")
-[ -f "$1" ] && pipeline=$(readlink -m "$1") || pipeline="$1"
+[[ -f "$1" || -d "$1" ]] && pipeline=$(readlink -m "$1") || pipeline="$1"
 shift
 while (( "$#" )); do
   # Split --option=parameter into two variables
@@ -58,7 +58,7 @@ done
 
 # Check required arguments
 if [[ -z "$pipeline" || -z "$output" ]]; then
-  echo "Usage: $0 <pipeline.nf> --output <directory> [arguments]"
+  echo "Usage: $0 <pipeline> --output <directory> [arguments]"
   exit 1
 fi
 
