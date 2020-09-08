@@ -11,7 +11,7 @@ while (( "$#" )); do
   [[ "$1" == --*=* ]] && set -- "${1%%=*}" "${1#*=}" "${@:2}"
   case "$1" in
     # Parse output directory
-    --output)
+    --output|--outdir)
       command+=("$1")
       if [[ -n "$2" && "$2" != -* ]]; then
         command+=("'${2//\'/$escape}'")
@@ -129,6 +129,7 @@ run "$pipeline" \
 -with-timeline "$output"/logs/timeline.html \
 -work-dir "$output"/temp/work \
 --output "$output" \
+--outdir "$output" \
 "${args[@]}" \
 && rm -rf "$output"/.nextflow \
 && [[ -z "$keeptemp" ]] && rm -rf "$output"/temp
