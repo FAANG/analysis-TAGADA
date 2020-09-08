@@ -132,4 +132,4 @@ run "$pipeline" \
 --outdir "$output" \
 "${args[@]}" \
 && rm -rf "$output"/.nextflow \
-&& [[ -z "$keeptemp" ]] && rm -rf "$output"/temp
+&& if [[ -z "$keeptemp" ]]; then rm -rf "$output"/temp; fi
