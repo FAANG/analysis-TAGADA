@@ -13,9 +13,9 @@ To use this pipeline, simply clone or download this repository, and install the 
 
 Execute this nextflow pipeline with:
 
-    ./run main.nf [arguments]
+    ./nextflow-run proj-gs-rna-seq [arguments]
 
-The `./run` launcher script replaces the `nextflow run` command and grants these benefits:
+The `./nextflow-run` launcher script replaces the `nextflow run` command and grants these benefits:
 - Options can receive multiple space-separated parameters and unquoted globs.
 - Long options are preceded by double dashes, following GNU conventions.
 - Temporary files and logs are written to the output directory, keeping the execution directory clean.
