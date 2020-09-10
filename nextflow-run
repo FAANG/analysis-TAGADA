@@ -4,18 +4,18 @@
 command=("$0")
 escape="'\''"
 command+=("'${1//\'/$escape}'")
-[ -f "$1" ] && pipeline=$(readlink -m "$1") || pipeline="$1"
+[[ -f "$1" || -d "$1" ]] && pipeline=$(readlink -m "$1") || pipeline="$1"
 shift
 while (( "$#" )); do
   # Split --option=parameter into two variables
   [[ "$1" == --*=* ]] && set -- "${1%%=*}" "${1#*=}" "${@:2}"
   case "$1" in
     # Parse output directory
-    --output)
+    --output|--outdir)
       command+=("$1")
       if [[ -n "$2" && "$2" != -* ]]; then
         command+=("'${2//\'/$escape}'")
-        output="$2"
+        output=$(readlink -m "$2")
         shift
       fi
       shift
@@ -36,7 +36,7 @@ while (( "$#" )); do
       shift
       ;;
     # Parse nextflow options passed as pipeline options
-    --ansi-log|--bucket-dir|--cache|--dump-channels|--dump-hashes|--e.?*|--entry|--help|--hub|--latest|--lib|--name|--offline|--params-file|--process.?*|--profile|--qs|--queue-size|--resume|--revision|--test|--user|--with-conda|--with-dag|--with-docker|--with-notification|--with-podman|--with-singularity|--with-tower|--with-trace|--with-weblog|--without-docker|--without-podman)
+    --ansi-log|--bucket-dir|--cache|--config|--dump-channels|--dump-hashes|--e.?*|--entry|--help|--hub|--latest|--lib|--name|--offline|--params-file|--process.?*|--profile|--qs|--queue-size|--resume|--revision|--test|--user|--with-conda|--with-dag|--with-docker|--with-notification|--with-podman|--with-singularity|--with-tower|--with-trace|--with-weblog|--without-docker|--without-podman)
       command+=("$1")
       args+=("${1#-}")
       shift
@@ -58,7 +58,7 @@ done
 
 # Check required arguments
 if [[ -z "$pipeline" || -z "$output" ]]; then
-  echo "Usage: $0 <pipeline.nf> --output <directory> [arguments]"
+  echo "Usage: $0 <pipeline> --output <directory> [arguments]"
   exit 1
 fi
 
@@ -89,7 +89,7 @@ while (( "$#" )); do
       values=""
       params=""
       while [[ -n "$2" && "$2" != -* ]]; do
-        if [[ $glob == true && (-d "$2" || -f "$2") ]]; then
+        if [[ $glob == true && (-f "$2" || -d "$2") ]]; then
           # Create symlink to original path
           symlink=$(basename "$2")
           symlink="$output"/temp/input/"$option"/"$symlink"
@@ -97,6 +97,9 @@ while (( "$#" )); do
           ln -sf "$2" "$symlink"
           # Replace path with glob to symlink
           paths="$output"/temp/input/"$option"/*
+        elif [[ -f "$2" || -d "$2" ]]; then
+          # Get complete path
+          values+=$(readlink -m "$2"),
         else
           # Join values with commas
           values+="$2",
@@ -129,6 +132,7 @@ run "$pipeline" \
 -with-timeline "$output"/logs/timeline.html \
 -work-dir "$output"/temp/work \
 --output "$output" \
+--outdir "$output" \
 "${args[@]}" \
 && rm -rf "$output"/.nextflow \
-&& [[ -z "$keeptemp" ]] && rm -rf "$output"/temp
+&& if [[ -z "$keeptemp" ]]; then rm -rf "$output"/temp; fi
