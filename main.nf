@@ -538,34 +538,6 @@ process get_direction {
     """
 }
 
-// Get read coverage from maps
-// ###########################
-process coverage {
-
-  label 'memory_4'
-
-  publishDir "$output/coverage", mode: 'copy'
-
-  input:
-    tuple val(prefix), val(direction), path(map) from maps_to_coverage
-
-  output:
-    path '*.bed'
-
-  script:
-    """
-    if [[ "$direction" == "RF" || "$direction" == "FR" ]]; then
-      bedtools genomecov -ibam $map -bg -strand + > +.tsv
-      bedtools genomecov -ibam $map -bg -strand - > -.tsv
-      cat <(awk 'BEGIN {OFS="\\t"} {print \$0,"+"}' +.tsv) \\
-          <(awk 'BEGIN {OFS="\\t"} {print \$0,"-"}' -.tsv) | sort -T "." -k1,3 -k5 \\
-          > "$prefix".bed
-    else
-      bedtools genomecov -ibam $map -bg > "$prefix".bed
-    fi
-    """
-}
-
 // Get read lengths from maps
 // ##########################
 process get_length {
@@ -602,6 +574,34 @@ info += maps_to_log.collect{
 }.join('\n  ')
 
 log.info info
+
+// Get read coverage from maps
+// ###########################
+process coverage {
+
+  label 'memory_4'
+
+  publishDir "$output/coverage", mode: 'copy'
+
+  input:
+    tuple val(prefix), val(direction), path(map) from maps_to_coverage
+
+  output:
+    path '*.bed'
+
+  script:
+    """
+    if [[ "$direction" == "RF" || "$direction" == "FR" ]]; then
+      bedtools genomecov -ibam $map -bg -strand + > +.tsv
+      bedtools genomecov -ibam $map -bg -strand - > -.tsv
+      cat <(awk 'BEGIN {OFS="\\t"} {print \$0,"+"}' +.tsv) \\
+          <(awk 'BEGIN {OFS="\\t"} {print \$0,"-"}' -.tsv) | sort -T "." -k1,3 -k5 \\
+          > "$prefix".bed
+    else
+      bedtools genomecov -ibam $map -bg > "$prefix".bed
+    fi
+    """
+}
 
 // Process merge groups
 // ####################
