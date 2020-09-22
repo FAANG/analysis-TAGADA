@@ -49,12 +49,12 @@ if (genome) {
 
 Channel.fromPath(annotation, checkIfExists: true).into {
   reference_annotation_to_index
-  reference_annotation_to_direction
+  reference_annotation_to_get_direction
   reference_annotation_to_assemble
   reference_annotation_to_combine
   reference_annotation_to_quantify
   reference_annotation_to_control_elements
-  reference_annotation_to_control_exon_counts
+  reference_annotation_to_control_exons
 }
 
 if (metadata) {
@@ -98,19 +98,19 @@ Channel.fromPath(reads, checkIfExists: true).map { path ->
 reads.R1.into {
   r1_reads_to_check
   r1_reads_to_pair
-  r1_reads_to_quality
+  r1_reads_to_control_quality
 }
 
 reads.R2.into {
   r2_reads_to_check
   r2_reads_to_pair
-  r2_reads_to_quality
+  r2_reads_to_control_quality
 }
 
 reads.single.into {
   single_reads_to_check
   single_reads_to_append
-  single_reads_to_quality
+  single_reads_to_control_quality
 }
 
 reads.mapped.tap {
@@ -118,7 +118,7 @@ reads.mapped.tap {
 }.map {
   [it['prefix'], it['path']]
 }.set {
-  mapped_reads_to_direction
+  mapped_reads_to_get_direction
 }
 
 error = ''
@@ -306,13 +306,13 @@ r1_reads_to_pair.join(r2_reads_to_pair).map { it ->
   reads_to_trim
 }
 
-single_reads_to_quality.concat(
-  r1_reads_to_quality,
-  r2_reads_to_quality
+single_reads_to_control_quality.concat(
+  r1_reads_to_control_quality,
+  r2_reads_to_control_quality
 ).map {
   [it['prefix'], it['R'] ? '_R' + it['R'] : '', it['path']]
 }.set {
-  reads_to_quality
+  reads_to_control_quality
 }
 
 // Process raw reads
@@ -321,12 +321,12 @@ if (number_of_raw_reads > 0) {
 
   // Control reads quality
   // #####################
-  process quality {
+  process control_quality {
 
-    publishDir "$output/quality/raw", mode: 'copy'
+    publishDir "$output/control/quality/raw", mode: 'copy'
 
     input:
-      tuple val(prefix), val(R), path(read) from reads_to_quality
+      tuple val(prefix), val(R), path(read) from reads_to_control_quality
 
     output:
       path '*_fastqc.html'
@@ -347,7 +347,7 @@ if (number_of_raw_reads > 0) {
 
     publishDir "$output", mode: 'copy', saveAs: { filename ->
       if (filename.endsWith('trimming_report.txt')) "logs/trim_galore/$filename"
-      else if (filename.endsWith('fastqc.html')) "quality/trimmed/$filename"
+      else if (filename.endsWith('fastqc.html')) "control/quality/trimmed/$filename"
     }
 
     input:
@@ -357,7 +357,7 @@ if (number_of_raw_reads > 0) {
       path '*_trimming_report.txt'
       path '*_fastqc.html'
       tuple val(prefix), path('*_trimmed.fq.gz') into reads_to_map
-      path '*_trimmed.fq.gz' into reads_to_overhang
+      path '*_trimmed.fq.gz' into reads_to_get_overhang
 
     script:
       """
@@ -418,10 +418,10 @@ if (number_of_raw_reads > 0) {
   // ############
   if (!index) {
 
-    process overhang {
+    process get_overhang {
 
       input:
-        path read from reads_to_overhang.flatten()
+        path read from reads_to_get_overhang.flatten()
 
       output:
         env overhang into overhangs_to_index
@@ -484,7 +484,7 @@ if (number_of_raw_reads > 0) {
     output:
       path '*.out'
       path '*.out.tab'
-      tuple val(prefix), path('*.bam') into maps_to_direction
+      tuple val(prefix), path('*.bam') into maps_to_get_direction
 
     script:
       """
@@ -500,31 +500,31 @@ if (number_of_raw_reads > 0) {
       """
   }
 
-  reference_annotation_to_direction.combine(
-    mapped_reads_to_direction.concat(
-      maps_to_direction
+  reference_annotation_to_get_direction.combine(
+    mapped_reads_to_get_direction.concat(
+      maps_to_get_direction
     )
   ).set {
-    maps_to_direction
+    maps_to_get_direction
   }
 
 } else {
-  reference_annotation_to_direction.combine(
-    mapped_reads_to_direction
+  reference_annotation_to_get_direction.combine(
+    mapped_reads_to_get_direction
   ).set {
-    maps_to_direction
+    maps_to_get_direction
   }
 }
 
 // Get read directions from maps
 // #############################
-process direction {
+process get_direction {
 
   input:
-    tuple path(annotation), val(prefix), path(map) from maps_to_direction
+    tuple path(annotation), val(prefix), path(map) from maps_to_get_direction
 
   output:
-    tuple val(prefix), env(direction), path(map) into maps_to_length
+    tuple val(prefix), env(direction), path(map) into maps_to_get_length
     tuple val(prefix), env(direction), path(map) into maps_to_coverage
 
   script:
@@ -568,10 +568,10 @@ process coverage {
 
 // Get read lengths from maps
 // ##########################
-process length {
+process get_length {
 
   input:
-    tuple val(prefix), val(direction), path(map) from maps_to_length
+    tuple val(prefix), val(direction), path(map) from maps_to_get_length
 
   output:
     tuple val(prefix), env(length), val(direction), path(map) into maps_to_merge
@@ -683,7 +683,7 @@ if (merge) {
     output:
       tuple val(prefix), val(direction), path('*.bam') into maps_to_assemble
       tuple val(prefix), val(length), val(direction), path('*.bam') into maps_to_quantify
-      path '*.bam' into maps_to_control_exon_counts
+      path '*.bam' into maps_to_control_exons
 
     script:
       """
@@ -701,7 +701,7 @@ if (merge) {
   }.map {
     it[2]
   }.set {
-    maps_to_control_exon_counts
+    maps_to_control_exons
   }
 }
 
@@ -738,7 +738,7 @@ process combine {
   output:
     path '*.gff' into assembly_annotation_to_quantify
     path '*.gff' into assembly_annotation_to_control_elements
-    path '*.gff' into assembly_annotation_to_control_exon_counts
+    path '*.gff' into assembly_annotation_to_control_exons
 
   script:
     """
@@ -891,21 +891,21 @@ process control_expression {
 
 // Control exonic reads counts
 // ###########################
-reference_annotation_to_control_exon_counts.combine(Channel.of('reference')).concat(
-  assembly_annotation_to_control_exon_counts.combine(Channel.of('assembly'))
+reference_annotation_to_control_exons.combine(Channel.of('reference')).concat(
+  assembly_annotation_to_control_exons.combine(Channel.of('assembly'))
 ).set {
-  annotations_to_control_exon_counts
+  annotations_to_control_exons
 }
 
-process control_exon_counts {
+process control_exons {
 
   label 'cpu_16'
 
   publishDir "$output/control/exons", mode: 'copy'
 
   input:
-    tuple path(annotation), val(type) from annotations_to_control_exon_counts
-    path(maps) from maps_to_control_exon_counts.collect()
+    tuple path(annotation), val(type) from annotations_to_control_exons
+    path(maps) from maps_to_control_exons.collect()
 
   output:
     path '*.tsv'
