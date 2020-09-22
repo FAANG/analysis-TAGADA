@@ -920,5 +920,7 @@ process control_exon_counts {
                   -a $annotation \\
                   -o "$type"_exons_counts.tsv \\
                   $maps
+
+    sed -i -e '2s/\\.bam\\b//g' "$type"_exons_counts.tsv
     """
 }
