@@ -323,18 +323,16 @@ if (number_of_raw_reads > 0) {
   // #####################
   process control_quality {
 
-    publishDir "$output/control/quality/raw", mode: 'copy'
-
     input:
       tuple val(prefix), val(R), path(read) from reads_to_control_quality
 
     output:
-      path '*_fastqc.html'
+      path '*_fastqc.zip' into control_quality_to_report
 
     script:
       """
       fastqc $read
-      mv *_fastqc.html "$prefix""$R"_raw_fastqc.html
+      mv *_fastqc.zip "$prefix""$R"_raw_fastqc.zip
       """
   }
 
@@ -345,17 +343,14 @@ if (number_of_raw_reads > 0) {
     label 'cpu_16'
     label 'memory_16'
 
-    publishDir "$output", mode: 'copy', saveAs: { filename ->
-      if (filename.endsWith('trimming_report.txt')) "logs/trim_galore/$filename"
-      else if (filename.endsWith('fastqc.html')) "control/quality/trimmed/$filename"
-    }
+    publishDir "$output/logs/trim_galore", mode: 'copy'
 
     input:
       tuple val(prefix), val(paired), path(reads) from reads_to_trim
 
     output:
       path '*_trimming_report.txt'
-      path '*_fastqc.html'
+      tuple path('*_trimming_report.txt'), path('*_fastqc.zip') into trim_to_report
       tuple val(prefix), path('*_trimmed.fq.gz') into reads_to_map
       path '*_trimmed.fq.gz' into reads_to_get_overhang
 
@@ -386,13 +381,13 @@ if (number_of_raw_reads > 0) {
         [[ "\$name" != "\$rename" ]] && mv "\$f" "\$rename"
       done
 
-      for f in *_fastqc.html; do
+      for f in *_fastqc.zip; do
         [ -f "\$f" ] || break
-        suffix="\${f%_fastqc.html}"
+        suffix="\${f%_fastqc.zip}"
         R=""
         [[ "\$suffix" =~ _val_[12]\$ ]] && R=_R"\${suffix: -1}"
         name=\$(basename "\$f")
-        rename="$prefix""\$R"_trimmed_fastqc.html
+        rename="$prefix""\$R"_trimmed_fastqc.zip
         [[ "\$name" != "\$rename" ]] && mv "\$f" "\$rename"
       done
 
@@ -484,6 +479,7 @@ if (number_of_raw_reads > 0) {
     output:
       path '*.out'
       path '*.out.tab'
+      path '*.Log.final.out' into map_to_report
       tuple val(prefix), path('*.bam') into maps_to_get_direction
 
     script:
@@ -855,6 +851,7 @@ process control_elements {
     path 'Plots'
     path 'Tables'
     path '*.tsv'
+    path 'Plots/*/*.png' into control_elements_to_report
 
   script:
     """
@@ -909,6 +906,7 @@ process control_exons {
 
   output:
     path '*.tsv'
+    path '*.summary' into control_exons_to_report
 
   script:
     """
@@ -921,6 +919,31 @@ process control_exons {
                   -o "$type"_exons_counts.tsv \\
                   $maps
 
+    mv "$type"_exons_counts.tsv.summary "$type"_exons_counts.summary
     sed -i -e '2s/\\.bam\\b//g' "$type"_exons_counts.tsv
+    sed -i -e '1s/\\.bam\\b//g' "$type"_exons_counts.summary
+    """
+}
+
+// Create multiqc report
+// #####################
+process report {
+
+  publishDir "$output/control", mode: 'copy'
+
+  input:
+    path '*' from control_quality_to_report.flatten().collect()
+    path '*' from trim_to_report.flatten().collect()
+    path '*' from map_to_report.flatten().collect()
+    path '*' from control_elements_to_report.flatten().collect()
+    path '*' from control_exons_to_report.flatten().collect()
+
+  output:
+    path 'multiqc_report.html'
+
+  script:
+    """
+    for f in *.png; do mv "\$f" "\${f%.*}"_mqc."\${f##*.}"; done
+    multiqc .
     """
 }
