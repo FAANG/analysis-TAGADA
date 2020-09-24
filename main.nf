@@ -874,7 +874,7 @@ process control_expression {
     path formatted_genes_counts from formatted_genes_counts_to_control_expression
 
   output:
-    path '*.pdf'
+    path '*.png'
 
   script:
     """
