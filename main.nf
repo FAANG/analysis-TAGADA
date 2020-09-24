@@ -510,6 +510,10 @@ if (number_of_raw_reads > 0) {
   ).set {
     maps_to_get_direction
   }
+
+  control_quality_to_report = Channel.of()
+  trim_to_report = Channel.of()
+  map_to_report = Channel.of()
 }
 
 // Get read directions from maps
