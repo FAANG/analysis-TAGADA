@@ -324,6 +324,9 @@ process sort {
 
   output:
     tuple val(prefix), path('*.bam') into maps_to_get_direction
+    tuple val(prefix), path('*.bam') into maps_to_control_contigs
+    tuple val(prefix), path('*.bam') into maps_to_control_metrics
+    tuple val(prefix), path('*.bam') into maps_to_control_flags
 
   script:
     """
@@ -496,6 +499,9 @@ if (number_of_raw_reads > 0) {
       path '*.out.tab'
       path '*.Log.final.out' into map_to_report
       tuple val(prefix), path('*.bam') into mapped_reads_to_get_direction
+      tuple val(prefix), path('*.bam') into mapped_reads_to_control_contigs
+      tuple val(prefix), path('*.bam') into mapped_reads_to_control_metrics
+      tuple val(prefix), path('*.bam') into mapped_reads_to_control_flags
 
     script:
       """
@@ -519,6 +525,24 @@ if (number_of_raw_reads > 0) {
     maps_to_get_direction
   }
 
+  maps_to_control_contigs.concat(
+    mapped_reads_to_control_contigs
+  ).set {
+    maps_to_control_contigs
+  }
+
+  maps_to_control_metrics.concat(
+    mapped_reads_to_control_metrics
+  ).set {
+    maps_to_control_metrics
+  }
+
+  maps_to_control_flags.concat(
+    mapped_reads_to_control_flags
+  ).set {
+    maps_to_control_flags
+  }
+
 } else {
   reference_annotation_to_get_direction.combine(
     maps_to_get_direction
@@ -530,6 +554,56 @@ if (number_of_raw_reads > 0) {
   trim_to_report = Channel.of()
   map_to_report = Channel.of()
 }
+
+// Control mapped reads per contig
+// ###############################
+process control_contigs {
+
+  input:
+    tuple val(prefix), path(map) from maps_to_control_contigs
+
+  output:
+    path('*.idxstats') into control_contigs_to_report
+
+  script:
+    """
+    samtools index -@ \$((${task.cpus} - 1)) $map
+    samtools idxstats $map > "$prefix".idxstats
+    """
+}
+
+// Control mapping metrics
+// #######################
+process control_metrics {
+
+  input:
+    tuple val(prefix), path(map) from maps_to_control_metrics
+
+  output:
+    path('*.stats') into control_metrics_to_report
+
+  script:
+    """
+    samtools stats -@ \$((${task.cpus} - 1)) $map > "$prefix".stats
+    """
+}
+
+// Control mapping flags
+// #####################
+process control_flags {
+
+  input:
+    tuple val(prefix), path(map) from maps_to_control_flags
+
+  output:
+    path('*.flagstat') into control_flags_to_report
+
+  script:
+    """
+    samtools flagstat -@ \$((${task.cpus} - 1)) $map > "$prefix".flagstat
+    """
+}
+
 
 // Get read directions from maps
 // #############################
@@ -956,6 +1030,9 @@ process report {
     path '*' from map_to_report.flatten().collect()
     path '*' from control_elements_to_report.flatten().collect()
     path '*' from control_exons_to_report.flatten().collect()
+    path '*' from control_contigs_to_report.flatten().collect()
+    path '*' from control_metrics_to_report.flatten().collect()
+    path '*' from control_flags_to_report.flatten().collect()
 
   output:
     path 'multiqc_report.html'
