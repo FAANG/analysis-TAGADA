@@ -118,7 +118,7 @@ reads.mapped.tap {
 }.map {
   [it['prefix'], it['path']]
 }.set {
-  mapped_reads_to_get_direction
+  mapped_reads_to_sort
 }
 
 error = ''
@@ -315,6 +315,23 @@ single_reads_to_control_quality.concat(
   raw_reads_to_control_quality
 }
 
+// Sort input maps
+// ###############
+process sort {
+
+  input:
+    tuple val(prefix), path(map) from mapped_reads_to_sort
+
+  output:
+    tuple val(prefix), path('*.bam') into maps_to_get_direction
+
+  script:
+    """
+    samtools sort -@ ${task.cpus} -o sorted.bam $map
+    mv sorted.bam $map
+    """
+}
+
 // Process raw reads
 // #################
 if (number_of_raw_reads > 0) {
@@ -478,7 +495,7 @@ if (number_of_raw_reads > 0) {
       path '*.out'
       path '*.out.tab'
       path '*.Log.final.out' into map_to_report
-      tuple val(prefix), path('*.bam') into maps_to_get_direction
+      tuple val(prefix), path('*.bam') into mapped_reads_to_get_direction
 
     script:
       """
@@ -495,8 +512,8 @@ if (number_of_raw_reads > 0) {
   }
 
   reference_annotation_to_get_direction.combine(
-    mapped_reads_to_get_direction.concat(
-      maps_to_get_direction
+    maps_to_get_direction.concat(
+      mapped_reads_to_get_direction
     )
   ).set {
     maps_to_get_direction
@@ -504,7 +521,7 @@ if (number_of_raw_reads > 0) {
 
 } else {
   reference_annotation_to_get_direction.combine(
-    mapped_reads_to_get_direction
+    maps_to_get_direction
   ).set {
     maps_to_get_direction
   }
