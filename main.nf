@@ -74,7 +74,7 @@ Channel.fromPath(reads, checkIfExists: true).map { path ->
   filename = path.getName()
 
   return (
-    filename =~ /^(.+?)(?:[\._ ][Rr]([12]))?(?:\.(fastq|fq|gz|bam))+$/
+    filename =~ /^(.+?)(?:[\._ ][Rr]?([12]))?(?:\.(fastq|fq|gz|bam))+$/
   ).with {
     matches() ? [
       'prefix': it[0][1],
