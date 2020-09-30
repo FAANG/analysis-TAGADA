@@ -303,38 +303,21 @@ single_reads_to_append.map {
 r1_reads_to_pair.join(r2_reads_to_pair).map { it ->
   [it[0], '--paired', [it[1], it[2]]]
 }.concat(single_reads_to_append).set {
-  reads_to_trim
+  raw_reads_to_trim
 }
 
 single_reads_to_control_quality.concat(
   r1_reads_to_control_quality,
   r2_reads_to_control_quality
 ).map {
-  [it['prefix'], it['R'] ? '_R' + it['R'] : '', it['path']]
+  [it['path'], 'raw']
 }.set {
-  reads_to_control_quality
+  raw_reads_to_control_quality
 }
 
 // Process raw reads
 // #################
 if (number_of_raw_reads > 0) {
-
-  // Control reads quality
-  // #####################
-  process control_quality {
-
-    input:
-      tuple val(prefix), val(R), path(read) from reads_to_control_quality
-
-    output:
-      path '*_fastqc.zip' into control_quality_to_report
-
-    script:
-      """
-      fastqc $read
-      mv *_fastqc.zip "$prefix""$R"_raw_fastqc.zip
-      """
-  }
 
   // Trim adaptators
   // ###############
@@ -343,69 +326,85 @@ if (number_of_raw_reads > 0) {
     label 'cpu_16'
     label 'memory_16'
 
-    publishDir "$output/logs/trim_galore", mode: 'copy'
-
     input:
-      tuple val(prefix), val(paired), path(reads) from reads_to_trim
+      tuple val(prefix), val(paired), path(reads) from raw_reads_to_trim
 
     output:
-      path '*_trimming_report.txt'
-      tuple path('*_trimming_report.txt'), path('*_fastqc.zip') into trim_to_report
-      tuple val(prefix), path('*_trimmed.fq.gz') into reads_to_map
-      path '*_trimmed.fq.gz' into reads_to_get_overhang
+      path '*_trimming_report.txt' into trim_to_report
+      path '* (trimmed)*' into trimmed_reads_to_get_overhang
+      path '* (trimmed)*' into trimmed_reads_to_control_quality
+      tuple val(prefix), path('* (trimmed)*') into trimmed_reads_to_map
 
     script:
       """
       for f in $reads; do
         name=\$(basename "\$f")
-        symlink="\${name// /_}"
-        target=\$(readlink -m "\$f")
-        [[ "\$name" != "\$symlink" ]] && ln -sf "\$target" "\$symlink"
-        reads+=("\$symlink")
+        rename="\${name// /_}"
+        [[ "\$name" != "\$rename" ]] && mv "\$f" "\$rename"
+        reads+=("\$rename")
       done
 
       trim_galore "\${reads[@]}" \\
                   $paired \\
                   --cores ${task.cpus} \\
-                  --fastqc \\
                   --gzip \\
                   --basename "$prefix"
 
-      for f in *_{val_1,val_2,trimmed}.fq.gz; do
+      for f in *_trimmed.*; do
         [ -f "\$f" ] || break
-        suffix="\${f%.fq.gz}"
-        R=""
-        [[ "\$suffix" =~ _val_[12]\$ ]] && R=_R"\${suffix: -1}"
-        name=\$(basename "\$f")
-        rename="$prefix""\$R"_trimmed.fq.gz
-        [[ "\$name" != "\$rename" ]] && mv "\$f" "\$rename"
+        mv "\$f" "$prefix"" (trimmed)""\${f##*_trimmed}"
       done
 
-      for f in *_fastqc.zip; do
-        [ -f "\$f" ] || break
-        suffix="\${f%_fastqc.zip}"
-        R=""
-        [[ "\$suffix" =~ _val_[12]\$ ]] && R=_R"\${suffix: -1}"
-        name=\$(basename "\$f")
-        rename="$prefix""\$R"_trimmed_fastqc.zip
-        [[ "\$name" != "\$rename" ]] && mv "\$f" "\$rename"
-      done
-
-      for f in *_trimming_report.txt; do
-        [ -f "\$f" ] || break
-        suffix="\${f%_trimming_report.txt}"
-        while [[ "\$suffix" =~ \\.(fastq|fq|gz|bam)\$ ]]; do
-          suffix="\${suffix%.gz}"
-          suffix="\${suffix%.fq}"
-          suffix="\${suffix%.fastq}"
-          suffix="\${suffix%.bam}"
+      for n in 1 2; do
+        for f in *_val_\$n.*; do
+          [ -f "\$f" ] || break
+          i=\$((n - 1))
+          prefix="\${reads[i]}"
+          while [[ "\$prefix" =~ \\.(fastq|fq|gz)\$ ]]; do
+            prefix="\${prefix%.gz}"
+            prefix="\${prefix%.fq}"
+            prefix="\${prefix%.fastq}"
+          done
+          mv "\$f" "\$prefix"" (trimmed)""\${f##*_val_\$n}"
         done
-        R=""
-        [[ "\$suffix" =~ ([\\._]|[[:blank:]])[Rr][12]\$ ]] && R=_R"\${suffix: -1}"
-        name=\$(basename "\$f")
-        rename="$prefix""\$R"_trimming_report.txt
-        [[ "\$name" != "\$rename" ]] && mv "\$f" "\$rename"
       done
+      """
+  }
+
+  // Control reads quality
+  // #####################
+  raw_reads_to_control_quality.concat(
+    trimmed_reads_to_control_quality.flatten().map {
+      [it, null]
+    }
+  ).set {
+    reads_to_control_quality
+  }
+
+  process control_quality {
+
+    input:
+      tuple path(read), val(suffix) from reads_to_control_quality
+
+    output:
+      path '*_fastqc.zip' into control_quality_to_report
+
+    script:
+      """
+      if [ $suffix != null ]; then
+        prefix=$read
+        while [[ "\$prefix" =~ \\.(fastq|fq|gz)\$ ]]; do
+          prefix="\${prefix%.gz}"
+          prefix="\${prefix%.fq}"
+          prefix="\${prefix%.fastq}"
+        done
+        read="\$prefix"" ("$suffix").fq"
+        \$(gzip -t $read &> /dev/null) && read="\$read".gz
+        [[ $read != "\$read" ]] && mv $read "\$read"
+        fastqc "\$read"
+      else
+        fastqc $read
+      fi
       """
   }
 
@@ -416,15 +415,14 @@ if (number_of_raw_reads > 0) {
     process get_overhang {
 
       input:
-        path read from reads_to_get_overhang.flatten()
+        path read from trimmed_reads_to_get_overhang.flatten()
 
       output:
         env overhang into overhangs_to_index
 
       script:
         """
-        \$(gzip -t $read &> /dev/null) && reader=zcat || reader=cat;
-        overhang=\$(\$reader $read | head -n 40000 | awk 'NR%4 == 2 {total += length(\$0)} END {print int(total/(NR/4))-1}')
+        overhang=\$(zcat $read | head -n 40000 | awk 'NR%4 == 2 {total += length(\$0)} END {print int(total/(NR/4))-1}')
         """
     }
 
@@ -458,8 +456,8 @@ if (number_of_raw_reads > 0) {
 
   // Map reads to genome
   // ###################
-  index_to_map.combine(reads_to_map).set {
-    reads_to_map
+  index_to_map.combine(trimmed_reads_to_map).set {
+    trimmed_reads_to_map
   }
 
   process map {
@@ -474,7 +472,7 @@ if (number_of_raw_reads > 0) {
     }
 
     input:
-      tuple path(index), val(prefix), path(reads) from reads_to_map
+      tuple path(index), val(prefix), path(reads) from trimmed_reads_to_map
 
     output:
       path '*.out'
