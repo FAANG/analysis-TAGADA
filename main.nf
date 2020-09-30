@@ -61,7 +61,9 @@ if (metadata) {
   Channel.fromPath(
     metadata,
     checkIfExists: true
-  ).splitCsv(header: true, sep: '\t').into {
+  ).tap {
+    metadata_to_report
+  }.splitCsv(header: true, sep: '\t').into {
     metadata_to_check
     metadata_to_merge
   }
@@ -485,18 +487,13 @@ if (number_of_raw_reads > 0) {
     label 'cpu_16'
     label 'memory_32'
 
-    publishDir "$output", mode: 'copy', saveAs: { filename ->
-      if (filename.endsWith('.out')) "logs/star/$filename"
-      else if (filename.endsWith('.out.tab')) "logs/star/$filename"
-      else if (filename.endsWith('.bam')) "maps/$filename"
-    }
+    publishDir "$output/maps", mode: 'copy'
 
     input:
       tuple path(index), val(prefix), path(reads) from trimmed_reads_to_map
 
     output:
-      path '*.out'
-      path '*.out.tab'
+      path '*.bam'
       path '*.Log.final.out' into map_to_report
       tuple val(prefix), path('*.bam') into mapped_reads_to_get_direction
       tuple val(prefix), path('*.bam') into mapped_reads_to_control_contigs
@@ -1020,11 +1017,15 @@ process control_exons {
 
 // Create multiqc report
 // #####################
+config_to_report = Channel.fromPath("$baseDir/multiqc.yaml", checkIfExists: true)
+
 process report {
 
   publishDir "$output/control", mode: 'copy'
 
   input:
+    path config from config_to_report
+    path '*' from metadata_to_report
     path '*' from control_quality_to_report.flatten().collect()
     path '*' from trim_to_report.flatten().collect()
     path '*' from map_to_report.flatten().collect()
@@ -1039,7 +1040,10 @@ process report {
 
   script:
     """
-    for f in *.png; do mv "\$f" "\${f%.*}"_mqc."\${f##*.}"; done
-    multiqc .
+    for f in *.tsv *.png; do
+      [ -f "\$f" ] || break
+      mv "\$f" "\${f%.*}"_mqc."\${f##*.}"
+    done
+    multiqc --config $config .
     """
 }
