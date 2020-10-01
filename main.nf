@@ -902,6 +902,7 @@ process control_exons {
 
   label 'cpu_16'
 
+
   publishDir "$output/control/exons", mode: 'copy'
 
   input:
