@@ -61,7 +61,9 @@ if (metadata) {
   Channel.fromPath(
     metadata,
     checkIfExists: true
-  ).splitCsv(header: true, sep: '\t').into {
+  ).tap {
+    metadata_to_report
+  }.splitCsv(header: true, sep: '\t').into {
     metadata_to_check
     metadata_to_merge
   }
@@ -74,7 +76,7 @@ Channel.fromPath(reads, checkIfExists: true).map { path ->
   filename = path.getName()
 
   return (
-    filename =~ /^(.+?)(?:[\._ ][Rr]([12]))?(?:\.(fastq|fq|gz|bam))+$/
+    filename =~ /^(.+?)(?:[\._ ][Rr]?([12]))?(?:\.(fastq|fq|gz|bam))+$/
   ).with {
     matches() ? [
       'prefix': it[0][1],
@@ -118,7 +120,7 @@ reads.mapped.tap {
 }.map {
   [it['prefix'], it['path']]
 }.set {
-  mapped_reads_to_get_direction
+  mapped_reads_to_sort
 }
 
 error = ''
@@ -303,38 +305,41 @@ single_reads_to_append.map {
 r1_reads_to_pair.join(r2_reads_to_pair).map { it ->
   [it[0], '--paired', [it[1], it[2]]]
 }.concat(single_reads_to_append).set {
-  reads_to_trim
+  raw_reads_to_trim
 }
 
 single_reads_to_control_quality.concat(
   r1_reads_to_control_quality,
   r2_reads_to_control_quality
 ).map {
-  [it['prefix'], it['R'] ? '_R' + it['R'] : '', it['path']]
+  [it['path'], 'raw']
 }.set {
-  reads_to_control_quality
+  raw_reads_to_control_quality
+}
+
+// Sort input maps
+// ###############
+process sort {
+
+  input:
+    tuple val(prefix), path(map) from mapped_reads_to_sort
+
+  output:
+    tuple val(prefix), path('*.bam') into maps_to_get_direction
+    tuple val(prefix), path('*.bam') into maps_to_control_contigs
+    tuple val(prefix), path('*.bam') into maps_to_control_metrics
+    tuple val(prefix), path('*.bam') into maps_to_control_flags
+
+  script:
+    """
+    samtools sort -@ ${task.cpus} -o sorted.bam $map
+    mv sorted.bam $map
+    """
 }
 
 // Process raw reads
 // #################
 if (number_of_raw_reads > 0) {
-
-  // Control reads quality
-  // #####################
-  process control_quality {
-
-    input:
-      tuple val(prefix), val(R), path(read) from reads_to_control_quality
-
-    output:
-      path '*_fastqc.zip' into control_quality_to_report
-
-    script:
-      """
-      fastqc $read
-      mv *_fastqc.zip "$prefix""$R"_raw_fastqc.zip
-      """
-  }
 
   // Trim adaptators
   // ###############
@@ -343,69 +348,85 @@ if (number_of_raw_reads > 0) {
     label 'cpu_16'
     label 'memory_16'
 
-    publishDir "$output/logs/trim_galore", mode: 'copy'
-
     input:
-      tuple val(prefix), val(paired), path(reads) from reads_to_trim
+      tuple val(prefix), val(paired), path(reads) from raw_reads_to_trim
 
     output:
-      path '*_trimming_report.txt'
-      tuple path('*_trimming_report.txt'), path('*_fastqc.zip') into trim_to_report
-      tuple val(prefix), path('*_trimmed.fq.gz') into reads_to_map
-      path '*_trimmed.fq.gz' into reads_to_get_overhang
+      path '*_trimming_report.txt' into trim_to_report
+      path '* (trimmed)*' into trimmed_reads_to_get_overhang
+      path '* (trimmed)*' into trimmed_reads_to_control_quality
+      tuple val(prefix), path('* (trimmed)*') into trimmed_reads_to_map
 
     script:
       """
       for f in $reads; do
         name=\$(basename "\$f")
-        symlink="\${name// /_}"
-        target=\$(readlink -m "\$f")
-        [[ "\$name" != "\$symlink" ]] && ln -sf "\$target" "\$symlink"
-        reads+=("\$symlink")
+        rename="\${name// /_}"
+        [[ "\$name" != "\$rename" ]] && mv "\$f" "\$rename"
+        reads+=("\$rename")
       done
 
       trim_galore "\${reads[@]}" \\
                   $paired \\
                   --cores ${task.cpus} \\
-                  --fastqc \\
                   --gzip \\
                   --basename "$prefix"
 
-      for f in *_{val_1,val_2,trimmed}.fq.gz; do
+      for f in *_trimmed.*; do
         [ -f "\$f" ] || break
-        suffix="\${f%.fq.gz}"
-        R=""
-        [[ "\$suffix" =~ _val_[12]\$ ]] && R=_R"\${suffix: -1}"
-        name=\$(basename "\$f")
-        rename="$prefix""\$R"_trimmed.fq.gz
-        [[ "\$name" != "\$rename" ]] && mv "\$f" "\$rename"
+        mv "\$f" "$prefix"" (trimmed)""\${f##*_trimmed}"
       done
 
-      for f in *_fastqc.zip; do
-        [ -f "\$f" ] || break
-        suffix="\${f%_fastqc.zip}"
-        R=""
-        [[ "\$suffix" =~ _val_[12]\$ ]] && R=_R"\${suffix: -1}"
-        name=\$(basename "\$f")
-        rename="$prefix""\$R"_trimmed_fastqc.zip
-        [[ "\$name" != "\$rename" ]] && mv "\$f" "\$rename"
-      done
-
-      for f in *_trimming_report.txt; do
-        [ -f "\$f" ] || break
-        suffix="\${f%_trimming_report.txt}"
-        while [[ "\$suffix" =~ \\.(fastq|fq|gz|bam)\$ ]]; do
-          suffix="\${suffix%.gz}"
-          suffix="\${suffix%.fq}"
-          suffix="\${suffix%.fastq}"
-          suffix="\${suffix%.bam}"
+      for n in 1 2; do
+        for f in *_val_\$n.*; do
+          [ -f "\$f" ] || break
+          i=\$((n - 1))
+          prefix="\${reads[i]}"
+          while [[ "\$prefix" =~ \\.(fastq|fq|gz)\$ ]]; do
+            prefix="\${prefix%.gz}"
+            prefix="\${prefix%.fq}"
+            prefix="\${prefix%.fastq}"
+          done
+          mv "\$f" "\$prefix"" (trimmed)""\${f##*_val_\$n}"
         done
-        R=""
-        [[ "\$suffix" =~ ([\\._]|[[:blank:]])[Rr][12]\$ ]] && R=_R"\${suffix: -1}"
-        name=\$(basename "\$f")
-        rename="$prefix""\$R"_trimming_report.txt
-        [[ "\$name" != "\$rename" ]] && mv "\$f" "\$rename"
       done
+      """
+  }
+
+  // Control reads quality
+  // #####################
+  raw_reads_to_control_quality.concat(
+    trimmed_reads_to_control_quality.flatten().map {
+      [it, null]
+    }
+  ).set {
+    reads_to_control_quality
+  }
+
+  process control_quality {
+
+    input:
+      tuple path(read), val(suffix) from reads_to_control_quality
+
+    output:
+      path '*_fastqc.zip' into control_quality_to_report
+
+    script:
+      """
+      if [ $suffix != null ]; then
+        prefix=$read
+        while [[ "\$prefix" =~ \\.(fastq|fq|gz)\$ ]]; do
+          prefix="\${prefix%.gz}"
+          prefix="\${prefix%.fq}"
+          prefix="\${prefix%.fastq}"
+        done
+        read="\$prefix"" ("$suffix").fq"
+        \$(gzip -t $read &> /dev/null) && read="\$read".gz
+        [[ $read != "\$read" ]] && mv $read "\$read"
+        fastqc "\$read"
+      else
+        fastqc $read
+      fi
       """
   }
 
@@ -416,15 +437,14 @@ if (number_of_raw_reads > 0) {
     process get_overhang {
 
       input:
-        path read from reads_to_get_overhang.flatten()
+        path read from trimmed_reads_to_get_overhang.flatten()
 
       output:
         env overhang into overhangs_to_index
 
       script:
         """
-        \$(gzip -t $read &> /dev/null) && reader=zcat || reader=cat;
-        overhang=\$(\$reader $read | head -n 40000 | awk 'NR%4 == 2 {total += length(\$0)} END {print int(total/(NR/4))-1}')
+        overhang=\$(zcat $read | head -n 40000 | awk 'NR%4 == 2 {total += length(\$0)} END {print int(total/(NR/4))-1}')
         """
     }
 
@@ -458,8 +478,8 @@ if (number_of_raw_reads > 0) {
 
   // Map reads to genome
   // ###################
-  index_to_map.combine(reads_to_map).set {
-    reads_to_map
+  index_to_map.combine(trimmed_reads_to_map).set {
+    trimmed_reads_to_map
   }
 
   process map {
@@ -467,20 +487,18 @@ if (number_of_raw_reads > 0) {
     label 'cpu_16'
     label 'memory_32'
 
-    publishDir "$output", mode: 'copy', saveAs: { filename ->
-      if (filename.endsWith('.out')) "logs/star/$filename"
-      else if (filename.endsWith('.out.tab')) "logs/star/$filename"
-      else if (filename.endsWith('.bam')) "maps/$filename"
-    }
+    publishDir "$output/maps", mode: 'copy'
 
     input:
-      tuple path(index), val(prefix), path(reads) from reads_to_map
+      tuple path(index), val(prefix), path(reads) from trimmed_reads_to_map
 
     output:
-      path '*.out'
-      path '*.out.tab'
+      path '*.bam'
       path '*.Log.final.out' into map_to_report
-      tuple val(prefix), path('*.bam') into maps_to_get_direction
+      tuple val(prefix), path('*.bam') into mapped_reads_to_get_direction
+      tuple val(prefix), path('*.bam') into mapped_reads_to_control_contigs
+      tuple val(prefix), path('*.bam') into mapped_reads_to_control_metrics
+      tuple val(prefix), path('*.bam') into mapped_reads_to_control_flags
 
     script:
       """
@@ -497,16 +515,34 @@ if (number_of_raw_reads > 0) {
   }
 
   reference_annotation_to_get_direction.combine(
-    mapped_reads_to_get_direction.concat(
-      maps_to_get_direction
+    maps_to_get_direction.concat(
+      mapped_reads_to_get_direction
     )
   ).set {
     maps_to_get_direction
   }
 
+  maps_to_control_contigs.concat(
+    mapped_reads_to_control_contigs
+  ).set {
+    maps_to_control_contigs
+  }
+
+  maps_to_control_metrics.concat(
+    mapped_reads_to_control_metrics
+  ).set {
+    maps_to_control_metrics
+  }
+
+  maps_to_control_flags.concat(
+    mapped_reads_to_control_flags
+  ).set {
+    maps_to_control_flags
+  }
+
 } else {
   reference_annotation_to_get_direction.combine(
-    mapped_reads_to_get_direction
+    maps_to_get_direction
   ).set {
     maps_to_get_direction
   }
@@ -515,6 +551,56 @@ if (number_of_raw_reads > 0) {
   trim_to_report = Channel.of()
   map_to_report = Channel.of()
 }
+
+// Control mapped reads per contig
+// ###############################
+process control_contigs {
+
+  input:
+    tuple val(prefix), path(map) from maps_to_control_contigs
+
+  output:
+    path('*.idxstats') into control_contigs_to_report
+
+  script:
+    """
+    samtools index -@ \$((${task.cpus} - 1)) $map
+    samtools idxstats $map > "$prefix".idxstats
+    """
+}
+
+// Control mapping metrics
+// #######################
+process control_metrics {
+
+  input:
+    tuple val(prefix), path(map) from maps_to_control_metrics
+
+  output:
+    path('*.stats') into control_metrics_to_report
+
+  script:
+    """
+    samtools stats -@ \$((${task.cpus} - 1)) $map > "$prefix".stats
+    """
+}
+
+// Control mapping flags
+// #####################
+process control_flags {
+
+  input:
+    tuple val(prefix), path(map) from maps_to_control_flags
+
+  output:
+    path('*.flagstat') into control_flags_to_report
+
+  script:
+    """
+    samtools flagstat -@ \$((${task.cpus} - 1)) $map > "$prefix".flagstat
+    """
+}
+
 
 // Get read directions from maps
 // #############################
@@ -932,23 +1018,33 @@ process control_exons {
 
 // Create multiqc report
 // #####################
+config_to_report = Channel.fromPath("$baseDir/multiqc.yaml", checkIfExists: true)
+
 process report {
 
   publishDir "$output/control", mode: 'copy'
 
   input:
+    path config from config_to_report
+    path '*' from metadata_to_report
     path '*' from control_quality_to_report.flatten().collect()
     path '*' from trim_to_report.flatten().collect()
     path '*' from map_to_report.flatten().collect()
     path '*' from control_elements_to_report.flatten().collect()
     path '*' from control_exons_to_report.flatten().collect()
+    path '*' from control_contigs_to_report.flatten().collect()
+    path '*' from control_metrics_to_report.flatten().collect()
+    path '*' from control_flags_to_report.flatten().collect()
 
   output:
     path 'multiqc_report.html'
 
   script:
     """
-    for f in *.png; do mv "\$f" "\${f%.*}"_mqc."\${f##*.}"; done
-    multiqc .
+    for f in *.tsv *.png; do
+      [ -f "\$f" ] || break
+      mv "\$f" "\${f%.*}"_mqc."\${f##*.}"
+    done
+    multiqc --config $config .
     """
 }
