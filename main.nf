@@ -67,6 +67,12 @@ if (metadata) {
     metadata_to_check
     metadata_to_merge
   }
+} else {
+  Channel.of().into {
+    metadata_to_report
+    metadata_to_check
+    metadata_to_merge
+  }
 }
 
 // Split reads into R1/R2/single/mapped
@@ -547,9 +553,11 @@ if (number_of_raw_reads > 0) {
     maps_to_get_direction
   }
 
-  control_quality_to_report = Channel.of()
-  trim_to_report = Channel.of()
-  map_to_report = Channel.of()
+  Channel.of().into {
+    control_quality_to_report
+    trim_to_report
+    map_to_report
+  }
 }
 
 // Control mapped reads per contig
@@ -1026,15 +1034,15 @@ process report {
 
   input:
     path config from config_to_report
-    path '*' from metadata_to_report
-    path '*' from control_quality_to_report.flatten().collect()
-    path '*' from trim_to_report.flatten().collect()
-    path '*' from map_to_report.flatten().collect()
-    path '*' from control_elements_to_report.flatten().collect()
-    path '*' from control_exons_to_report.flatten().collect()
-    path '*' from control_contigs_to_report.flatten().collect()
-    path '*' from control_metrics_to_report.flatten().collect()
-    path '*' from control_flags_to_report.flatten().collect()
+    path '*' from metadata_to_report.flatten().collect().ifEmpty([])
+    path '*' from control_quality_to_report.flatten().collect().ifEmpty([])
+    path '*' from trim_to_report.flatten().collect().ifEmpty([])
+    path '*' from map_to_report.flatten().collect().ifEmpty([])
+    path '*' from control_elements_to_report.flatten().collect().ifEmpty([])
+    path '*' from control_exons_to_report.flatten().collect().ifEmpty([])
+    path '*' from control_contigs_to_report.flatten().collect().ifEmpty([])
+    path '*' from control_metrics_to_report.flatten().collect().ifEmpty([])
+    path '*' from control_flags_to_report.flatten().collect().ifEmpty([])
 
   output:
     path 'multiqc_report.html'
