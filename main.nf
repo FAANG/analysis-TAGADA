@@ -328,7 +328,7 @@ single_reads_to_control_quality.concat(
 process sort {
 
   input:
-    tuple val(prefix), path(map) from mapped_reads_to_sort
+    tuple val(prefix), path(map, stageAs: 'input') from mapped_reads_to_sort
 
   output:
     tuple val(prefix), path('*.bam') into maps_to_get_direction
@@ -338,8 +338,7 @@ process sort {
 
   script:
     """
-    samtools sort -@ ${task.cpus} -o sorted.bam $map
-    mv sorted.bam $map
+    samtools sort -@ ${task.cpus} -o "$prefix".bam input
     """
 }
 
