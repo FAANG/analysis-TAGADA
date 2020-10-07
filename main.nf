@@ -971,7 +971,7 @@ process control_expression {
     path formatted_genes_counts from formatted_genes_counts_to_control_expression
 
   output:
-    path '*.png'
+    path '*.png' into control_expression_to_report
 
   script:
     """
@@ -1038,6 +1038,7 @@ process report {
     path '*' from trim_to_report.flatten().collect().ifEmpty([])
     path '*' from map_to_report.flatten().collect().ifEmpty([])
     path '*' from control_elements_to_report.flatten().collect().ifEmpty([])
+    path '*' from control_expression_to_report.flatten().collect().ifEmpty([])
     path '*' from control_exons_to_report.flatten().collect().ifEmpty([])
     path '*' from control_contigs_to_report.flatten().collect().ifEmpty([])
     path '*' from control_metrics_to_report.flatten().collect().ifEmpty([])
