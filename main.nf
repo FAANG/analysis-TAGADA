@@ -68,7 +68,7 @@ if (metadata) {
     metadata_to_merge
   }
 } else {
-  Channel.of().into {
+  Channel.empty().into {
     metadata_to_report
     metadata_to_check
     metadata_to_merge
@@ -552,7 +552,7 @@ if (number_of_raw_reads > 0) {
     maps_to_get_direction
   }
 
-  Channel.of().into {
+  Channel.empty().into {
     control_quality_to_report
     trim_to_report
     map_to_report
