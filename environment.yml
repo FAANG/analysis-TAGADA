@@ -10,6 +10,7 @@ dependencies:
   - bioconductor-hgu95av2.db=3.2.3
   - cutadapt=2.10
   - fastqc=0.11.9
+  - imagemagick=7.0.10_28
   - multiqc=1.9
   - pandas=1.0.3
   - r-ggdendro=0.1-20
