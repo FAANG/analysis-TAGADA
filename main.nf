@@ -327,6 +327,11 @@ single_reads_to_control_quality.concat(
 // ###############
 process sort {
 
+  label 'cpu_16'
+  label 'memory_16'
+
+  publishDir "$output/maps", mode: 'copyNoFollow'
+
   input:
     tuple val(prefix), path(map, stageAs: 'input') from mapped_reads_to_sort
 
@@ -338,7 +343,12 @@ process sort {
 
   script:
     """
-    samtools sort -@ ${task.cpus} -o "$prefix".bam input
+    if [[ \$(grep SO:unsorted <(samtools view -H input | head -n 1)) ]]; then
+      samtools sort -@ ${task.cpus} -o "$prefix".bam input
+    else
+      target=\$(readlink -m input)
+      ln -sf "\$target" "$prefix".bam
+    fi
     """
 }
 
