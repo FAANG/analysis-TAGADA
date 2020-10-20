@@ -502,7 +502,9 @@ if (number_of_raw_reads > 0) {
     label 'cpu_16'
     label 'memory_32'
 
-    publishDir "$output/maps", mode: 'copy'
+    publishDir "$output/maps", mode: 'copy', saveAs: { filename ->
+      if (filename.endsWith('.bam')) filename
+    }
 
     input:
       tuple path(index), val(prefix), path(reads) from trimmed_reads_to_map
