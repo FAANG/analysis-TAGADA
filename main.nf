@@ -957,10 +957,7 @@ process control_elements {
     path formatted_genes from formatted_genes_to_control_elements
 
   output:
-    path 'Plots'
-    path 'Tables'
-    path '*.tsv'
-    path 'Plots/*/*.png' into control_elements_to_report
+    path '*.png' into control_elements_to_report
 
   script:
     """
@@ -969,6 +966,55 @@ process control_elements {
       $assembly_annotation \\
       $formatted_transcripts \\
       $formatted_genes
+
+    for f in \\
+      Plots/ExonPerTranscript/*.png \\
+      Plots/ExonLength/*.png \\
+      Plots/DistinctExonLength/*.png \\
+      Plots/5pExonLength_Tr/*.png \\
+      Plots/InternalExonLength/*.png \\
+      Plots/5pExonLength_Gn/*.png \\
+      Plots/DistinctInternalExonLength/*.png \\
+      Plots/TrLength/*.png \\
+      Plots/cDNALength/*.png; \\
+    do
+      [ -f "\$f" ] || break
+      convert "\$f" -crop 1400x2100+0+0 +repage "\${f%.png}"_cropped.png
+    done
+
+    convert Plots/ExonPerTranscript/*_cropped.png \\
+            Plots/TranscriptPerGene/prediction_nbtringn_forggplot.png \\
+            +append \\
+            +repage \\
+            expertr_trpergn.png
+
+    convert Plots/ExonLength/*_cropped.png \\
+            Plots/DistinctExonLength/*_cropped.png \\
+            Plots/MonoExTrExLength/*.png \\
+            +append \\
+            +repage \\
+            exlg_distinctexlg_monoextrlg.png
+
+    convert Plots/5pExonLength_Tr/*_cropped.png \\
+            Plots/InternalExonLength/*_cropped.png \\
+            Plots/3pExonLength_Tr/*.png \\
+            +append \\
+            +repage \\
+            5pexlgpertr_internexlg_3pexlgpertr.png
+
+    convert Plots/5pExonLength_Gn/*_cropped.png \\
+            Plots/DistinctInternalExonLength/*_cropped.png \\
+            Plots/3pExonLength_Gn/*.png \\
+            +append \\
+            +repage \\
+            5pexlgpergn_distinctinternexlg_3pexlgpergn.png
+
+    convert Plots/TrLength/*_cropped.png \\
+            Plots/cDNALength/*_cropped.png \\
+            Plots/Exact_tr_dist_to_Genc_TSS/*.png \\
+            +append \\
+            +repage \\
+            trlg_cdnalg_exacttrdisttoreftss.png
     """
 }
 
@@ -1006,7 +1052,6 @@ reference_annotation_to_control_exons.combine(Channel.of('reference')).concat(
 process control_exons {
 
   label 'cpu_16'
-
 
   publishDir "$output/control/exons", mode: 'copy'
 
