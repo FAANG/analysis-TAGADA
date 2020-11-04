@@ -388,13 +388,13 @@ if (number_of_raw_reads > 0) {
                   --basename "$prefix"
 
       for f in *_trimmed.*; do
-        [ -f "\$f" ] || break
+        [ -f "\$f" ] || continue
         mv "\$f" "$prefix"" (trimmed)""\${f##*_trimmed}"
       done
 
       for n in 1 2; do
         for f in *_val_\$n.*; do
-          [ -f "\$f" ] || break
+          [ -f "\$f" ] || continue
           i=\$((n - 1))
           prefix="\${reads[i]}"
           while [[ "\$prefix" =~ \\.(fastq|fq|gz)\$ ]]; do
@@ -978,7 +978,7 @@ process control_elements {
       Plots/TrLength/*.png \\
       Plots/cDNALength/*.png; \\
     do
-      [ -f "\$f" ] || break
+      [ -f "\$f" ] || continue
       convert "\$f" -crop 1400x2100+0+0 +repage "\${f%.png}"_cropped.png
     done
 
@@ -1107,7 +1107,7 @@ process report {
   script:
     """
     for f in *.tsv *.png; do
-      [ -f "\$f" ] || break
+      [ -f "\$f" ] || continue
       mv "\$f" "\${f%.*}"_mqc."\${f##*.}"
     done
     multiqc --config $config .
