@@ -1,6 +1,6 @@
 FROM nfcore/base:1.9
 
-RUN apt-get update && apt-get install libxt6 ocaml -y
+RUN apt-get update && apt-get install libxt6 ocaml gawk -y
 
 COPY environment.yml /
 RUN conda env create -f /environment.yml && conda clean -a
