@@ -948,7 +948,9 @@ process format {
 // #########################
 process control_elements {
 
-  publishDir "$output/control/elements", mode: 'copy'
+  publishDir "$output/control/elements", mode: 'copy', saveAs: { filename ->
+    if (filename.endsWith('.png')) filename
+  }
 
   input:
     path reference_annotation from reference_annotation_to_control_elements
@@ -957,7 +959,8 @@ process control_elements {
     path formatted_genes from formatted_genes_to_control_elements
 
   output:
-    path '*.png' into control_elements_to_report
+    path '*.png'
+    path 'transcripts_*.tsv' into control_elements_to_report
 
   script:
     """
@@ -1015,6 +1018,25 @@ process control_elements {
             +append \\
             +repage \\
             trlg_cdnalg_exacttrdisttoreftss.png
+
+    awk '
+      BEGIN {OFS = "\\t"}
+      NR <= 2 {print " ", " ", \$2, \$3, \$4, \$5, \$6, \$7, \$8, \$9}
+    ' detected_transcripts_genes_numbers.tsv > transcripts_detected.tsv
+
+    awk '
+      BEGIN {OFS = "\\t"}
+      NR == 1 {
+        print "Novel annotation subset", "Exact transcripts",
+        "Extended transcripts", "Shortened transcripts",
+        "Combined transcripts", "Other transcripts"
+      }
+      NR >= 4 {
+        if (\$1 == "string") \$1 = "All transcripts";
+        if (\$1 == "string_expr") \$1 = "Expressed transcripts";
+        print \$1, \$6, \$11-\$6, \$16-\$11, \$3-\$16, \$2-\$3
+      }
+    ' Tables/prediction_sets_eval_wrt_ref_for_table.txt > transcripts_distribution.tsv
     """
 }
 
@@ -1029,7 +1051,7 @@ process control_expression {
     path formatted_genes_counts from formatted_genes_counts_to_control_expression
 
   output:
-    path '*.png' into control_expression_to_report
+    path '*.png'
 
   script:
     """
@@ -1095,7 +1117,6 @@ process report {
     path '*' from trim_to_report.flatten().collect().ifEmpty([])
     path '*' from map_to_report.flatten().collect().ifEmpty([])
     path '*' from control_elements_to_report.flatten().collect().ifEmpty([])
-    path '*' from control_expression_to_report.flatten().collect().ifEmpty([])
     path '*' from control_exons_to_report.flatten().collect().ifEmpty([])
     path '*' from control_contigs_to_report.flatten().collect().ifEmpty([])
     path '*' from control_metrics_to_report.flatten().collect().ifEmpty([])

@@ -12,12 +12,8 @@ run_modules:
     - samtools
     - featureCounts
 
-top_modules:
-  - custom_content:
-      name: 'Metadata'
-      info: 'Metadata input file'
-      path_filters:
-        - '*_mqc.tsv'
+module_order:
+  - custom_content
   - fastqc:
       name: 'Raw reads quality'
       target: 'FastQC'
@@ -47,18 +43,55 @@ top_modules:
       target: 'FeatureCounts'
       info: 'results for each quantified bam file.'
 
+custom_content:
+  order:
+    - metadata
+    - transcripts_summary
+
+custom_data:
+  metadata:
+    parent_id: metadata
+    parent_name: 'Metadata'
+    parent_description: 'Metadata input file.'
+    plot_type: 'generalstats'
+  transcripts_detected:
+    parent_id: transcripts_summary
+    parent_name: 'Transcripts summary'
+    parent_description: 'Summarised comparison of novel transcripts to reference transcripts.'
+    section_name: 'Transcripts detected'
+    description: 'Number of novel transcripts and reference transcripts.'
+    plot_type: 'generalstats'
+    pconfig:
+      col1_header: ''
+  transcripts_distribution:
+    parent_id: transcripts_summary
+    parent_name: 'Transcripts summary'
+    parent_description: 'Summarised comparison of novel transcripts to reference transcripts.'
+    section_name: 'Transcripts distribution'
+    description: 'Types of transcripts in the novel annotation.'
+    plot_type: 'bargraph'
+
+sp:
+  metadata:
+    fn: 'metadata_mqc.tsv'
+  transcripts_detected:
+    fn: 'transcripts_detected_mqc.tsv'
+  transcripts_distribution:
+    fn: 'transcripts_distribution_mqc.tsv'
+
 fn_clean_exts:
   - '.gz'
   - '.fastq'
   - '.fq'
   - '.bam'
   - '.sam'
+  - '.png'
+  - '.tsv'
 
 fn_clean_trim:
   - '.'
   - '_'
-  - '_mqc.tsv'
-  - '_mqc.png'
+  - '_mqc'
   - '.Log.final.out'
   - '.stats'
   - '.idxstats'
