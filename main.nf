@@ -989,35 +989,35 @@ process control_elements {
             Plots/TranscriptPerGene/prediction_nbtringn_forggplot.png \\
             +append \\
             +repage \\
-            expertr_trpergn.png
+            exon_per_transcript_and_transcript_per_gene.png
 
     convert Plots/ExonLength/*_cropped.png \\
             Plots/DistinctExonLength/*_cropped.png \\
             Plots/MonoExTrExLength/*.png \\
             +append \\
             +repage \\
-            exlg_distinctexlg_monoextrlg.png
+            all_distinct_exon_length_and_monoexonic_transcript_length.png
 
     convert Plots/5pExonLength_Tr/*_cropped.png \\
             Plots/InternalExonLength/*_cropped.png \\
             Plots/3pExonLength_Tr/*.png \\
             +append \\
             +repage \\
-            5pexlgpertr_internexlg_3pexlgpertr.png
+            5p_internal_3p_exon_length_per_transcript.png
 
     convert Plots/5pExonLength_Gn/*_cropped.png \\
             Plots/DistinctInternalExonLength/*_cropped.png \\
             Plots/3pExonLength_Gn/*.png \\
             +append \\
             +repage \\
-            5pexlgpergn_distinctinternexlg_3pexlgpergn.png
+            5p_internal_3p_exon_length_per_gene.png
 
     convert Plots/TrLength/*_cropped.png \\
             Plots/cDNALength/*_cropped.png \\
             Plots/Exact_tr_dist_to_Genc_TSS/*.png \\
             +append \\
             +repage \\
-            trlg_cdnalg_exacttrdisttoreftss.png
+            transcript_cdna_length_and_TSStorefgeneTSS_distance_for_exact_transcripts.png
 
     awk '
       BEGIN {OFS = "\\t"}
@@ -1060,6 +1060,11 @@ process control_expression {
       $formatted_genes_tpm \\
       $formatted_genes_counts \\
       metadata.tsv Name .
+    mv histogram.log_T.psd_0.genes_TPM.png refgenes_log10TPM_distribution_nozero.png
+    mv histogram.log_T.psd_1e-04.genes_TPM.png refgenes_log10TPM_distribution_withzero.png
+    mv histogram.log_T.psd_0.genes_readcount.png refgenes_log10readcount_distribution_nozero.png
+    mv histogram.log_T.psd_1e-04.genes_readcount.png refgenes_log10readcount_distribution_withzero.png
+    mv TPM_fraction.genes_totalTPM_captured_by_top_genes.png cumulative_fraction_of_refgeneTPMsum_captured_by_N_most_expr_refgenes.png
     """
 }
 
