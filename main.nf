@@ -1055,11 +1055,11 @@ process control_expression {
 
   script:
     """
-    awk 'BEGIN{OFS="\\t"; print "labExpId"} NR==1{for(i=2; i<=NF; i++){print \$i}}' $formatted_genes_tpm > metadata.tsv
+    awk 'BEGIN{OFS="\\t"; print "labExpId", "Name"} NR==1{for(i=2; i<=NF; i++){print \$i, \$i}}' $formatted_genes_tpm > metadata.tsv
     plot_gene_expression.sh \\
       $formatted_genes_tpm \\
       $formatted_genes_counts \\
-      metadata.tsv labExpId .
+      metadata.tsv Name .
     """
 }
 
