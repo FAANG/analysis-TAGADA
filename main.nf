@@ -960,7 +960,7 @@ process control_elements {
 
   output:
     path '*.png'
-    path 'transcripts_*.tsv' into control_elements_to_report
+    path '*_transcripts.tsv' into control_elements_to_report
 
   script:
     """
@@ -1021,22 +1021,42 @@ process control_elements {
 
     awk '
       BEGIN {OFS = "\\t"}
-      NR <= 2 {print " ", " ", \$2, \$3, \$4, \$5, \$6, \$7, \$8, \$9}
-    ' detected_transcripts_genes_numbers.tsv > transcripts_detected.tsv
+      NR == 1 {
+        print "Reference annotation subset", "Number of transcripts",
+        "Number of transcripts / All transcripts";
+      }
+      NR == 2 {
+        print "All transcripts", \$2, "";
+        print "Detected transcripts", \$3, \$4"%";
+        print "Expressed transcripts (TPM >= 0.1 in at least 2 samples)", \$5, \$6"%";
+      }
+    ' detected_transcripts_genes_numbers.tsv > reference_transcripts.tsv
 
     awk '
       BEGIN {OFS = "\\t"}
       NR == 1 {
-        print "Novel annotation subset", "Exact transcripts",
-        "Extended transcripts", "Shortened transcripts",
-        "Combined transcripts", "Other transcripts"
+        print "Novel annotation subset", "Number of transcripts",
+        "Number of transcripts / All transcripts";
+      }
+      NR == 2 {
+        print "All new transcripts", \$7, "";
+        print "Expressed new transcripts (TPM >= 0.1 in at least 2 samples)", \$8, \$9"%";
+      }
+    ' detected_transcripts_genes_numbers.tsv > novel_transcripts.tsv
+
+    awk '
+      BEGIN {OFS = "\\t"}
+      NR == 1 {
+        print "Annotation subset", "Exact spliced transcripts",
+        "Extended spliced transcripts", "Shortened spliced transcripts",
+        "Other spliced transcripts", "Monoexonic transcripts";
       }
       NR >= 4 {
         if (\$1 == "string") \$1 = "All transcripts";
         if (\$1 == "string_expr") \$1 = "Expressed transcripts";
-        print \$1, \$6, \$11-\$6, \$16-\$11, \$3-\$16, \$2-\$3
+        print \$1, \$6, \$11-\$6, \$16-\$11, \$3-\$16, \$2-\$3;
       }
-    ' Tables/prediction_sets_eval_wrt_ref_for_table.txt > transcripts_distribution.tsv
+    ' Tables/prediction_sets_eval_wrt_ref_for_table.txt > differences_transcripts.tsv
     """
 }
 
