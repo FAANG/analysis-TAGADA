@@ -20,6 +20,16 @@ while (( "$#" )); do
       fi
       shift
       ;;
+    # Parse work directory
+    --workdir|--work-dir|-work-dir|-w)
+      command+=("$1")
+      if [[ -n "$2" && "$2" != -* ]]; then
+        command+=("'${2//\'/$escape}'")
+        workdir=$(readlink -m "$2")
+        shift
+      fi
+      shift
+      ;;
     # Parse keep temp files option
     --keep-temp)
       command+=("$1")
@@ -27,7 +37,7 @@ while (( "$#" )); do
       shift
       ;;
     # Parse overridden nextflow options
-    --with-report|-with-report|--with-timeline|-with-timeline|--work-dir|-work-dir|-w)
+    --with-report|-with-report|--with-timeline|-with-timeline)
       command+=("$1")
       if [[ -n "$2" && "$2" != -* ]]; then
         command+=("'${2//\'/$escape}'")
@@ -62,10 +72,14 @@ if [[ -z "$pipeline" || -z "$output" ]]; then
   exit 1
 fi
 
+if [[ -z "$workdir" ]]; then
+  workdir="$output"
+fi
+
 # Prepare nextflow temp folder
-mkdir -p "$output"/temp
-ln -sf "$output"/temp "$output"/.nextflow
-rm -rf "$output"/temp/input
+mkdir -p "$output" "$workdir"/temp
+ln -sf "$workdir"/temp "$output"/.nextflow
+rm -rf "$workdir"/temp/input
 rm -rf "$output"/logs/nextflow.log
 rm -rf "$output"/logs/report.html
 rm -rf "$output"/logs/timeline.html
@@ -92,11 +106,11 @@ while (( "$#" )); do
         if [[ $glob == true && (-f "$2" || -d "$2") ]]; then
           # Create symlink to original path
           symlink=$(basename "$2")
-          symlink="$output"/temp/input/"$option"/"$symlink"
-          mkdir -p "$output"/temp/input/"$option"
+          symlink="$workdir"/temp/input/"$option"/"$symlink"
+          mkdir -p "$workdir"/temp/input/"$option"
           ln -sf "$2" "$symlink"
           # Replace path with glob to symlink
-          paths="$output"/temp/input/"$option"/*
+          paths="$workdir"/temp/input/"$option"/*
         elif [[ -f "$2" || -d "$2" ]]; then
           # Get complete path
           values+=$(readlink -m "$2"),
@@ -130,9 +144,9 @@ nextflow \
 run "$pipeline" \
 -with-report "$output"/logs/report.html \
 -with-timeline "$output"/logs/timeline.html \
--work-dir "$output"/temp/work \
+-work-dir "$workdir"/temp/work \
 --output "$output" \
 --outdir "$output" \
 "${args[@]}" \
 && rm -rf "$output"/.nextflow \
-&& if [[ -z "$keeptemp" ]]; then rm -rf "$output"/temp; fi
+&& if [[ -z "$keeptemp" ]]; then rm -rf "$workdir"/temp; fi
