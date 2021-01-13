@@ -636,8 +636,7 @@ process get_direction {
     """
     proportions=(\$(infer_library_type.sh $map $annotation))
     difference=\$(awk -v a=\${proportions[0]} -v b=\${proportions[1]} 'BEGIN {print sqrt((a - b)^2)}')
-    ratio=\$(awk -v a=\${proportions[0]} -v b=\${proportions[1]} 'BEGIN {print a / b}')
-    if [[ \$difference > 50 && \$ratio > 1 ]]; then direction="FR";
+    if [[ \$difference > 50 && \$proportions[0] > \$proportions[1] ]]; then direction="FR";
     elif [[ \$difference > 50 ]]; then direction="RF";
     else direction="No direction"; fi
     """
