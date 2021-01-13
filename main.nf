@@ -15,7 +15,22 @@ if (!output) error += 'No --output provided\n'
 if (!reads) {
   error += 'No --reads provided\n'
 } else {
-  number_of_raw_reads = Channel.fromPath(reads).filter { path ->
+
+  if (reads.endsWith('.txt')) {
+    Channel.fromPath(reads, checkIfExists: true).splitText().map {
+      file(it.strip(), checkIfExists: true)
+    }.into {
+      reads_to_count
+      reads_to_split
+    }
+  } else {
+    Channel.fromPath(reads, checkIfExists: true).into {
+      reads_to_count
+      reads_to_split
+    }
+  }
+
+  number_of_raw_reads = reads_to_count.filter { path ->
     filename = path.getName()
     return filename =~ /\.(fastq|fq)(\.gz)?$/
   }.count().get()
@@ -36,25 +51,58 @@ if (error) exit 1, error
 // Check index, genome, annotation, metadata
 // #########################################
 if (index) {
-  Channel.fromPath(index, type: 'dir', checkIfExists: true).set {
-    index_to_map
+  Channel.fromPath(
+    index,
+    type: 'dir',
+    checkIfExists: true
+  ).map { path ->
+    filename = path.getName()
+    if (filename.endsWith('.gz'))
+      filename = filename.substring(0, filename.length() - 3)
+    if (filename.endsWith('.tar'))
+      filename = filename.substring(0, filename.length() - 4)
+    return [path, filename]
+  }.set {
+    index_to_decompress
+  }
+} else {
+  Channel.empty().set {
+    index_to_decompress
   }
 }
 
 if (genome) {
-  Channel.fromPath(genome, checkIfExists: true).set {
-    genome_to_index
+  Channel.fromPath(
+    genome,
+    checkIfExists: true
+  ).map { path ->
+    filename = path.getName()
+    if (filename.endsWith('.gz'))
+      filename = filename.substring(0, filename.length() - 3)
+    if (filename.endsWith('.tar'))
+      filename = filename.substring(0, filename.length() - 4)
+    return [path, filename]
+  }.set {
+    genome_to_decompress
+  }
+} else {
+  Channel.empty().set {
+    genome_to_decompress
   }
 }
 
-Channel.fromPath(annotation, checkIfExists: true).into {
-  reference_annotation_to_index
-  reference_annotation_to_get_direction
-  reference_annotation_to_assemble
-  reference_annotation_to_combine
-  reference_annotation_to_quantify
-  reference_annotation_to_control_elements
-  reference_annotation_to_control_exons
+Channel.fromPath(
+  annotation,
+  checkIfExists: true
+).map { path ->
+  filename = path.getName()
+  if (filename.endsWith('.gz'))
+    filename = filename.substring(0, filename.length() - 3)
+  if (filename.endsWith('.tar'))
+    filename = filename.substring(0, filename.length() - 4)
+  return [path, filename]
+}.set {
+  reference_annotation_to_decompress
 }
 
 if (metadata) {
@@ -77,7 +125,7 @@ if (metadata) {
 
 // Split reads into R1/R2/single/mapped
 // ####################################
-Channel.fromPath(reads, checkIfExists: true).map { path ->
+reads_to_split.map { path ->
 
   filename = path.getName()
 
@@ -323,6 +371,39 @@ single_reads_to_control_quality.concat(
   raw_reads_to_control_quality
 }
 
+// Decompress index, genome, annotation
+// ####################################
+process decompress {
+  input:
+    tuple path(index), val(index_name) from index_to_decompress.ifEmpty([file('   '),''])
+    tuple path(genome), val(genome_name) from genome_to_decompress.ifEmpty([file('  '),''])
+    tuple path(annotation), val(annotation_name) from reference_annotation_to_decompress.ifEmpty([file(' '),''])
+
+  output:
+    path "$index_name" optional true into index_to_map
+    path "$genome_name" optional true into genome_to_index
+    path "$annotation_name" optional true into (
+      reference_annotation_to_index,
+      reference_annotation_to_get_direction,
+      reference_annotation_to_assemble,
+      reference_annotation_to_combine,
+      reference_annotation_to_quantify,
+      reference_annotation_to_control_elements,
+      reference_annotation_to_control_exons
+    )
+
+  script:
+    """
+    for f in $index $genome $annotation; do
+      if [[ \${f: -7} == .tar.gz ]]; then
+        tar -xf "\$(readlink -m "\$f")"
+      elif [[ \${f: -3} == .gz ]]; then
+        gzip -c -d "\$(readlink -m "\$f")" > "\${f%.gz}"
+      fi
+    done
+    """
+}
+
 // Sort input maps
 // ###############
 process sort {
@@ -476,7 +557,7 @@ if (number_of_raw_reads > 0) {
         val overhang from overhangs_to_index.max()
 
       output:
-        path 'index' into index_to_map
+        path 'index' into indexed_genome_to_map
 
       script:
         """
@@ -488,6 +569,10 @@ if (number_of_raw_reads > 0) {
              --genomeFastaFiles $genome \\
              --sjdbOverhang $overhang
         """
+    }
+
+    indexed_genome_to_map.set {
+      index_to_map
     }
   }
 
