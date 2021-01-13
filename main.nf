@@ -384,7 +384,7 @@ process decompress {
     path "$genome_name" optional true into genome_to_index
     path "$annotation_name" optional true into (
       reference_annotation_to_index,
-      reference_annotation_to_get_direction,
+      reference_annotation_to_direction,
       reference_annotation_to_assemble,
       reference_annotation_to_combine,
       reference_annotation_to_quantify,
@@ -417,7 +417,7 @@ process sort {
     tuple val(prefix), path(map, stageAs: 'input') from mapped_reads_to_sort
 
   output:
-    tuple val(prefix), path('*.bam') into maps_to_get_direction
+    tuple val(prefix), path('*.bam') into maps_to_direction
     tuple val(prefix), path('*.bam') into maps_to_control_contigs
     tuple val(prefix), path('*.bam') into maps_to_control_metrics
     tuple val(prefix), path('*.bam') into maps_to_control_flags
@@ -449,7 +449,7 @@ if (number_of_raw_reads > 0) {
 
     output:
       path '*_trimming_report.txt' into trim_to_report
-      path '* (trimmed)*' into trimmed_reads_to_get_overhang
+      path '* (trimmed)*' into trimmed_reads_to_overhang
       path '* (trimmed)*' into trimmed_reads_to_control_quality
       tuple val(prefix), path('* (trimmed)*') into trimmed_reads_to_map
 
@@ -530,10 +530,10 @@ if (number_of_raw_reads > 0) {
   // ############
   if (!index) {
 
-    process get_overhang {
+    process overhang {
 
       input:
-        path read from trimmed_reads_to_get_overhang.flatten()
+        path read from trimmed_reads_to_overhang.flatten()
 
       output:
         env overhang into overhangs_to_index
@@ -597,7 +597,7 @@ if (number_of_raw_reads > 0) {
     output:
       path '*.bam'
       path '*.Log.final.out' into map_to_report
-      tuple val(prefix), path('*.bam') into mapped_reads_to_get_direction
+      tuple val(prefix), path('*.bam') into mapped_reads_to_direction
       tuple val(prefix), path('*.bam') into mapped_reads_to_control_contigs
       tuple val(prefix), path('*.bam') into mapped_reads_to_control_metrics
       tuple val(prefix), path('*.bam') into mapped_reads_to_control_flags
@@ -616,12 +616,12 @@ if (number_of_raw_reads > 0) {
       """
   }
 
-  reference_annotation_to_get_direction.combine(
-    maps_to_get_direction.concat(
-      mapped_reads_to_get_direction
+  reference_annotation_to_direction.combine(
+    maps_to_direction.concat(
+      mapped_reads_to_direction
     )
   ).set {
-    maps_to_get_direction
+    maps_to_direction
   }
 
   maps_to_control_contigs.concat(
@@ -643,10 +643,10 @@ if (number_of_raw_reads > 0) {
   }
 
 } else {
-  reference_annotation_to_get_direction.combine(
-    maps_to_get_direction
+  reference_annotation_to_direction.combine(
+    maps_to_direction
   ).set {
-    maps_to_get_direction
+    maps_to_direction
   }
 
   Channel.empty().into {
@@ -708,13 +708,13 @@ process control_flags {
 
 // Get read directions from maps
 // #############################
-process get_direction {
+process direction {
 
   input:
-    tuple path(annotation), val(prefix), path(map) from maps_to_get_direction
+    tuple path(annotation), val(prefix), path(map) from maps_to_direction
 
   output:
-    tuple val(prefix), env(direction), path(map) into maps_to_get_length
+    tuple val(prefix), env(direction), path(map) into maps_to_length
     tuple val(prefix), env(direction), path(map) into maps_to_coverage
 
   script:
@@ -729,10 +729,10 @@ process get_direction {
 
 // Get read lengths from maps
 // ##########################
-process get_length {
+process length {
 
   input:
-    tuple val(prefix), val(direction), path(map) from maps_to_get_length
+    tuple val(prefix), val(direction), path(map) from maps_to_length
 
   output:
     tuple val(prefix), env(length), val(direction), path(map) into maps_to_merge
