@@ -86,8 +86,9 @@ if (genome) {
     genome_to_decompress
   }
 } else {
-  Channel.empty().set {
+  Channel.empty().into {
     genome_to_decompress
+    genome_feelnc_codpot
   }
 }
 
@@ -389,7 +390,9 @@ process decompress {
       reference_annotation_to_combine,
       reference_annotation_to_quantify,
       reference_annotation_to_control_elements,
-      reference_annotation_to_control_exons
+      reference_annotation_to_control_exons,
+      reference_annotation_to_annotate_lnc,
+      reference_annotation_to_classify_lnc
     )
 
   script:
@@ -907,11 +910,82 @@ process assemble {
 
   output:
     path '*.gff' into assemblies_to_combine
+    path '*.gff' into assemblies_to_combine_feelnc_filter
 
   script:
     """
     stringtie $map $direction -G $annotation -o "$prefix".gff
     """
+}
+
+
+// Annotate lncRnas (FeelNC)
+
+process filter_exons {
+  input:
+    path annotation from reference_annotation_to_annotate_lnc
+
+  output:
+    path 'reference_exons.gtf' into reference_exons_feelNCfilter
+    path 'reference_exons.gtf' into reference_exons_feelNCcodpot
+
+  script:
+    """
+    awk '/^#/ || \$3=="exon"' $annotation > reference_exons.gtf
+    """
+}
+
+process feelNC_filter {
+  publishDir "$output/lnc", mode: 'copy'
+	label 'memory_16'
+	input:
+		path assemblies from assemblies_to_combine_feelnc_filter.collect()
+		path annotation from reference_exons_feelNCfilter
+
+	output:
+		path 'candidate_lncRNA.gtf' into candidates_lncrna
+
+	script:
+		"""
+		FEELnc_filter.pl -a  $annotation -i $assemblies -b transcript_biotype=protein_coding > candidate_lncRNA.gtf
+		"""
+}
+
+process feelNC_codpot {
+  publishDir "$output/lnc", mode: 'copy'
+	label 'memory_16'
+	input:
+		path candidates from candidates_lncrna
+    path genome from genome_feelnc_codpot
+    path annotation from reference_exons_feelNCcodpot
+
+	output:
+		path 'lst_lnc.lncRNA.gtf' into feelnc_lncrnas
+    path 'lst_lnc.mRNA.gtf' into feelnc_mrnas
+
+	script:
+		"""
+    export FEELNCPATH=/opt/conda/envs/rnaseq/
+    FEELnc_codpot.pl -i $candidates -a $annotation -g $genome --outname="lst_lnc" --outdir="." --mode=shuffle -k "1,2,3,6,9,12"
+    # --spethres=0.98,0.98 --seed=201
+		"""
+}
+
+process feelNC_classifier {
+  publishDir "$output/lnc", mode: 'copy'
+  label 'memory_16'
+  input:
+    path annotation from reference_annotation_to_classify_lnc
+    path lncrnas from feelnc_lncrnas
+
+  output:
+    path 'lncRNA_classes.txt' into feelnc_lnc_classes
+    path 'lst_lnc.lncRNA.feelncclassifier.log' into feelnc_classifier_log
+
+  script:
+  """
+  FEELnc_classifier.pl -i $lncrnas -a  $annotation > lncRNA_classes.txt
+  """
 }
 
 // Combine assemblies
