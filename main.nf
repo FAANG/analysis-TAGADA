@@ -909,10 +909,10 @@ process assemble {
     """
 }
 
-
-// Annotate lncRnas (FeelNC)
-
+// Annotate long non-coding RNAs
+// #############################
 process filter_exons {
+
   input:
     path annotation from reference_annotation_to_annotate_lnc
 
@@ -927,8 +927,11 @@ process filter_exons {
 }
 
 process feelNC_filter {
+
   publishDir "$output/lnc", mode: 'copy'
+
 	label 'memory_16'
+
 	input:
 		path assemblies from assemblies_to_combine_feelnc_filter.collect()
 		path annotation from reference_exons_feelNCfilter
@@ -938,13 +941,16 @@ process feelNC_filter {
 
 	script:
 		"""
-		FEELnc_filter.pl -a  $annotation -i $assemblies -b transcript_biotype=protein_coding > candidate_lncRNA.gtf
+		FEELnc_filter.pl -a $annotation -i $assemblies -b transcript_biotype=protein_coding > candidate_lncRNA.gtf
 		"""
 }
 
 process feelNC_codpot {
+
   publishDir "$output/lnc", mode: 'copy'
+
 	label 'memory_16'
+
 	input:
 		path candidates from candidates_lncrna
     path genome from genome_feelnc_codpot
@@ -963,8 +969,11 @@ process feelNC_codpot {
 }
 
 process feelNC_classifier {
+
   publishDir "$output/lnc", mode: 'copy'
+
   label 'memory_16'
+
   input:
     path annotation from reference_annotation_to_classify_lnc
     path lncrnas from feelnc_lncrnas
@@ -974,9 +983,9 @@ process feelNC_classifier {
     path 'lst_lnc.lncRNA.feelncclassifier.log' into feelnc_classifier_log
 
   script:
-  """
-  FEELnc_classifier.pl -i $lncrnas -a  $annotation > lncRNA_classes.txt
-  """
+    """
+    FEELnc_classifier.pl -i $lncrnas -a  $annotation > lncRNA_classes.txt
+    """
 }
 
 // Combine assemblies
