@@ -111,9 +111,6 @@ while (( "$#" )); do
           ln -sf "$2" "$symlink"
           # Replace path with glob to symlink
           paths="$workdir"/temp/input/"$option"/*
-        elif [[ -f "$2" || -d "$2" ]]; then
-          # Get complete path
-          values+=$(readlink -m "$2"),
         else
           # Join values with commas
           values+="$2",
