@@ -12,33 +12,9 @@ error = ''
 
 if (!output) error += 'No --output provided\n'
 
-if (!reads) {
-  error += 'No --reads provided\n'
-} else {
+if (!reads) error += 'No --reads provided\n'
 
-  if (reads.endsWith('.txt')) {
-    Channel.fromPath(reads, checkIfExists: true).splitText().map {
-      file(it.strip(), checkIfExists: true)
-    }.into {
-      reads_to_count
-      reads_to_split
-    }
-  } else {
-    Channel.fromPath(reads, checkIfExists: true).into {
-      reads_to_count
-      reads_to_split
-    }
-  }
-
-  number_of_raw_reads = reads_to_count.filter { path ->
-    filename = path.getName()
-    return filename =~ /\.(fastq|fq)(\.gz)?$/
-  }.count().get()
-
-  if (number_of_raw_reads > 0 && !genome && !index) {
-    error += 'No --genome or --index provided\n'
-  }
-}
+if (!genome) error += 'No --genome provided\n'
 
 if (!annotation) error += 'No --annotation provided\n'
 
@@ -71,25 +47,18 @@ if (index) {
   }
 }
 
-if (genome) {
-  Channel.fromPath(
-    genome,
-    checkIfExists: true
-  ).map { path ->
-    filename = path.getName()
-    if (filename.endsWith('.gz'))
-      filename = filename.substring(0, filename.length() - 3)
-    if (filename.endsWith('.tar'))
-      filename = filename.substring(0, filename.length() - 4)
-    return [path, filename]
-  }.set {
-    genome_to_decompress
-  }
-} else {
-  Channel.empty().into {
-    genome_to_decompress
-    genome_feelnc_codpot
-  }
+Channel.fromPath(
+  genome,
+  checkIfExists: true
+).map { path ->
+  filename = path.getName()
+  if (filename.endsWith('.gz'))
+    filename = filename.substring(0, filename.length() - 3)
+  if (filename.endsWith('.tar'))
+    filename = filename.substring(0, filename.length() - 4)
+  return [path, filename]
+}.set {
+  genome_to_decompress
 }
 
 Channel.fromPath(
@@ -126,6 +95,25 @@ if (metadata) {
 
 // Split reads into R1/R2/single/mapped
 // ####################################
+if (reads.endsWith('.txt')) {
+  Channel.fromPath(reads, checkIfExists: true).splitText().map {
+    file(it.strip(), checkIfExists: true)
+  }.into {
+    reads_to_count
+    reads_to_split
+  }
+} else {
+  Channel.fromPath(reads, checkIfExists: true).into {
+    reads_to_count
+    reads_to_split
+  }
+}
+
+number_of_raw_reads = reads_to_count.filter { path ->
+  filename = path.getName()
+  return filename =~ /\.(fastq|fq)(\.gz)?$/
+}.count().get()
+
 reads_to_split.map { path ->
 
   filename = path.getName()
@@ -382,7 +370,10 @@ process decompress {
 
   output:
     path "$index_name" optional true into index_to_map
-    path "$genome_name" optional true into genome_to_index
+    path "$genome_name" optional true into (
+      genome_to_index,
+      genome_feelnc_codpot
+    )
     path "$annotation_name" optional true into (
       reference_annotation_to_index,
       reference_annotation_to_direction,
