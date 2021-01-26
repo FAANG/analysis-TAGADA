@@ -30,8 +30,8 @@ The `./nextflow-run` launcher script replaces the `nextflow run` command and gra
 | __`--output`__ | `<directory>` | Output directory where<br>all temporary files, logs,<br>and results are written. | Required |
 | __`--reads`__ | `<reads.fq>` `<*.bam>` `...` | Input `fastq` file(s)<br>and/or `bam` file(s).<br><br>For single-end reads,<br>name your files:<br>`name.fq[.gz]`<br><br>For paired-end reads,<br>name your files:<br>`name_[R]{1,2}.fq[.gz]`<br><br>For mapped reads,<br>name your files:<br>`name.bam`<br><br>You may also provide urls<br>of files to be downloaded.<br><br>If the files are numerous,<br>you may provide a `.txt`<br>sheet with one path or url<br>per line. | Required |
 | __`--annotation`__ | `<annotation.gtf[[.tar].gz]>` | Input reference<br>annotation file or url. | Required |
-| __`--genome`__ | `<genome.fa[[.tar].gz]>` | Input genome<br>sequence file or url. | Required if `fastq`<br>files are provided<br>and `--index` is<br>absent. |
-| __`--index`__ | `<directory[[.tar].gz]>` | Input genome index<br>directory or url.<br>Overrides `--genome`. | Required if `fastq`<br>files are provided<br>and `--genome` is<br>absent. |
+| __`--genome`__ | `<genome.fa[[.tar].gz]>` | Input genome<br>sequence file or url. | Required |
+| __`--index`__ | `<directory[[.tar].gz]>` | Input genome index<br>directory or url. | Optional to skip<br>genome indexing. |
 | __`--metadata`__ | `<metadata.tsv>` | Input tabulated<br>metadata file or url. | Required if `--merge`<br>is provided. |
 | __`--merge`__ | `<factor1>` `<factor2>` `...` | Factor(s) to merge<br>mapped reads. See<br>the [merge factors](https://github.com/FAANG/proj-gs-rna-seq#merge-factors)<br>section for details. | Optional |
 | __`--max-cpus`__ | `<16>` | Maximum number of<br>CPU cores that can be<br>used for each process.<br>This is a limit, not the<br>actual number of<br>requested CPU cores. | Optional |
