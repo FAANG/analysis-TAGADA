@@ -372,7 +372,7 @@ process decompress {
     path "$index_name" optional true into index_to_map
     path "$genome_name" optional true into (
       genome_to_index,
-      genome_feelnc_codpot
+      genome_to_detect_lncRNA
     )
     path "$annotation_name" optional true into (
       reference_annotation_to_index,
@@ -380,10 +380,9 @@ process decompress {
       reference_annotation_to_assemble,
       reference_annotation_to_combine,
       reference_annotation_to_quantify,
+      reference_annotation_to_detect_lncRNA,
       reference_annotation_to_control_elements,
-      reference_annotation_to_control_exons,
-      reference_annotation_to_annotate_lnc,
-      reference_annotation_to_classify_lnc
+      reference_annotation_to_control_exons
     )
 
   script:
@@ -901,90 +900,10 @@ process assemble {
 
   output:
     path '*.gff' into assemblies_to_combine
-    path '*.gff' into assemblies_to_combine_feelnc_filter
 
   script:
     """
     stringtie $map $direction -G $annotation -o "$prefix".gff
-    """
-}
-
-// Annotate long non-coding RNAs
-// #############################
-process filter_exons {
-
-  input:
-    path annotation from reference_annotation_to_annotate_lnc
-
-  output:
-    path 'reference_exons.gtf' into reference_exons_feelNCfilter
-    path 'reference_exons.gtf' into reference_exons_feelNCcodpot
-
-  script:
-    """
-    awk '/^#/ || \$3=="exon"' $annotation > reference_exons.gtf
-    """
-}
-
-process feelNC_filter {
-
-  publishDir "$output/lnc", mode: 'copy'
-
-	label 'memory_16'
-
-	input:
-		path assemblies from assemblies_to_combine_feelnc_filter.collect()
-		path annotation from reference_exons_feelNCfilter
-
-	output:
-		path 'candidate_lncRNA.gtf' into candidates_lncrna
-
-	script:
-		"""
-		FEELnc_filter.pl -a $annotation -i $assemblies -b transcript_biotype=protein_coding > candidate_lncRNA.gtf
-		"""
-}
-
-process feelNC_codpot {
-
-  publishDir "$output/lnc", mode: 'copy'
-
-	label 'memory_16'
-
-	input:
-		path candidates from candidates_lncrna
-    path genome from genome_feelnc_codpot
-    path annotation from reference_exons_feelNCcodpot
-
-	output:
-		path 'lst_lnc.lncRNA.gtf' into feelnc_lncrnas
-    path 'lst_lnc.mRNA.gtf' into feelnc_mrnas
-
-	script:
-		"""
-    export FEELNCPATH=/opt/conda/envs/rnaseq/
-    FEELnc_codpot.pl -i $candidates -a $annotation -g $genome --outname="lst_lnc" --outdir="." --mode=shuffle -k "1,2,3,6,9,12"
-    # --spethres=0.98,0.98 --seed=201
-		"""
-}
-
-process feelNC_classifier {
-
-  publishDir "$output/lnc", mode: 'copy'
-
-  label 'memory_16'
-
-  input:
-    path annotation from reference_annotation_to_classify_lnc
-    path lncrnas from feelnc_lncrnas
-
-  output:
-    path 'lncRNA_classes.txt' into feelnc_lnc_classes
-    path 'lst_lnc.lncRNA.feelncclassifier.log' into feelnc_classifier_log
-
-  script:
-    """
-    FEELnc_classifier.pl -i $lncrnas -a  $annotation > lncRNA_classes.txt
     """
 }
 
@@ -999,13 +918,65 @@ process combine {
     path assemblies from assemblies_to_combine.collect()
 
   output:
-    path '*.gff' into assembly_annotation_to_quantify
-    path '*.gff' into assembly_annotation_to_control_elements
-    path '*.gff' into assembly_annotation_to_control_exons
+    path '*.gff' into (
+      assembly_annotation_to_detect_lncRNA,
+      assembly_annotation_to_quantify,
+      assembly_annotation_to_control_elements,
+      assembly_annotation_to_control_exons
+    )
 
   script:
     """
     stringtie --merge $assemblies -G $annotation -o assembly.gff
+    """
+}
+
+// Detect long non-coding RNAs
+// #############################
+process detect_lncRNA {
+
+  label 'memory_16'
+
+  publishDir "$output", mode: 'copy', saveAs: { filename ->
+    if (filename == 'lncRNA.txt') "assembly/$filename"
+    else if (filename.endsWith('.gtf')) "assembly/$filename"
+    else "control/lnc/$filename"
+  }
+
+  input:
+    path reference_annotation from reference_annotation_to_detect_lncRNA
+    path assembly_annotation from assembly_annotation_to_detect_lncRNA
+    path genome from genome_to_detect_lncRNA
+
+  output:
+    path '*.txt'
+    path 'exons.lncRNA.gtf'
+    path '*.feelncclassifier.log'
+    path '*.png'
+
+  script:
+    """
+    script=\$(which FEELnc_codpot.pl)
+    export FEELNCPATH=\${script%/*}/..
+
+    FEELnc_filter.pl -a $reference_annotation \\
+                     -i $assembly_annotation \\
+                     -b transcript_biotype=protein_coding \\
+                     > candidate_transcripts.gtf
+
+    awk '/^#/ || \$3=="exon"' $reference_annotation > reference_exons.gtf
+
+    FEELnc_codpot.pl -g $genome \\
+                     -a reference_exons.gtf \\
+                     -i candidate_transcripts.gtf \\
+                     -k "1,2,3,6,9,12" \\
+                     --outdir . \\
+                     --outname exons \\
+                     --mode shuffle
+
+    FEELnc_classifier.pl -a $reference_annotation \\
+                         -i exons.lncRNA.gtf \\
+                         > lncRNA.txt
     """
 }
 
