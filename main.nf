@@ -964,11 +964,11 @@ process detect_lncRNA {
                      -b transcript_biotype=protein_coding \\
                      > candidate_transcripts.gtf
 
-    awk '/^#/ || \$3=="exon"' $reference_annotation > reference_exons.gtf
-
     FEELnc_codpot.pl -g $genome \\
-                     -a reference_exons.gtf \\
+                     -a $reference_annotation \\
                      -i candidate_transcripts.gtf \\
+                     --numtx=5000 \\
+                     -b transcript_biotype=protein_coding \\
                      -k "1,2,3,6,9,12" \\
                      --outdir . \\
                      --outname exons \\
