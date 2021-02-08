@@ -967,7 +967,7 @@ process detect_lncRNA {
     FEELnc_codpot.pl -g $genome \\
                      -a $reference_annotation \\
                      -i candidate_transcripts.gtf \\
-                     --numtx=5000 \\
+                     --numtx=5000,5000 \\
                      -b transcript_biotype=protein_coding \\
                      -k "1,2,3,6,9,12" \\
                      --outdir . \\
