@@ -23,6 +23,10 @@ if (merge && !metadata) {
   error += 'No --metadata provided to execute --merge\n'
 }
 
+if (!(lncMode in ['shuffle','intergenic'])){
+  error += "--lncMode should be 'shuffle' or 'intergenic'"
+}
+
 if (error) exit 1, error
 
 // Check index, genome, annotation, metadata
