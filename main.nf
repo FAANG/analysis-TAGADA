@@ -7,6 +7,7 @@ index = params.containsKey('index') ? params.index : ''
 annotation = params.containsKey('annotation') ? params.annotation : ''
 metadata = params.containsKey('metadata') ? params.metadata : ''
 merge = params.containsKey('merge') ? params.merge.tokenize(',') : ''
+lncMode = params.containsKey('lncMode') ? params.lncMode : 'shuffle'
 
 error = ''
 
@@ -972,7 +973,7 @@ process detect_lncRNA {
                      -k "1,2,3,6,9,12" \\
                      --outdir . \\
                      --outname exons \\
-                     --mode shuffle
+                     --mode=${lncMode}
 
     FEELnc_classifier.pl -a $reference_annotation \\
                          -i exons.lncRNA.gtf \\
