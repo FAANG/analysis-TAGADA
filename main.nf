@@ -955,7 +955,7 @@ process detect_lncRNA {
 
   output:
     path '*.txt'
-    path 'exons.lncRNA.gtf'
+    path 'exons.lncRNA.gtf' into lnc_exons_to_control_elements
     path '*.feelncclassifier.log'
     path '*.png'
 
@@ -1091,6 +1091,7 @@ process control_elements {
     path assembly_annotation from assembly_annotation_to_control_elements
     path formatted_transcripts from formatted_transcripts_to_control_elements
     path formatted_genes from formatted_genes_to_control_elements
+    path lnc_exons from lnc_exons_to_control_elements
 
   output:
     path '*.png'
@@ -1098,6 +1099,39 @@ process control_elements {
 
   script:
     """
+    # Count lnc features
+    awk -F "\t" '\$3 == "transcript" {print \$9}' $reference_annotation   |
+       awk -F '[;\t]' '
+        NR == 1 {
+          print "Annotation","Number of transcripts","Number of genes"
+        }
+        {
+          for (i=1; i <=NF; i++){
+            if (\$i ~ /gene_biotype "lncRNA"/) {
+              biotypeCol = i
+            } else if (\$i ~ /transcript_id/){
+              tCol = i
+            } else if (\$i ~ /gene_id/){
+              gCol = i
+            }
+          }
+        if (\$biotypeCol ~ /lncRNA/){
+          t[\$tCol]++
+          g[\$gCol]++
+        }
+      }
+        END {
+          print "Reference annotation",length(t),length(g)
+        }
+     ' > detected_lnc_numbers.tsv
+
+    # Append numbers of newly annotated lncRNAs
+    awk '
+      BEGIN {OFS = "\\t"}
+      {g[\$10]++ ; t[\$12]++}
+      END {print "Newly annotated", length(t), length(g)}
+    '  $lnc_exons >> detected_lnc_numbers.tsv
+
     detected_elements_sumstats.sh \\
       $reference_annotation \\
       $assembly_annotation \\
@@ -1191,6 +1225,8 @@ process control_elements {
         print \$1, \$6, \$11-\$6, \$16-\$11, \$3-\$16, \$2-\$3;
       }
     ' Tables/prediction_sets_eval_wrt_ref_for_table.txt > differences_transcripts.tsv
+
+
     """
 }
 
