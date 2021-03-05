@@ -8,7 +8,7 @@ dependencies:
   - bioconductor-edger=3.30.0
   - bioconductor-gostats=2.54.0
   - bioconductor-hgu95av2.db=3.2.3
-  - cutadapt=2.10
+  - cutadapt=3.3
   - fastqc=0.11.9
   - feelnc=0.2
   - gawk=5.1.0
