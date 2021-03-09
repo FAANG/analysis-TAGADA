@@ -99,12 +99,16 @@ while (( "$#" )); do
       args+=("$1")
       [[ "$1" == --* ]] && glob=true || glob=false
       option="${1#--}"
+      path=""
       paths=""
       values=""
       params=""
+      count=0
       while [[ -n "$2" && "$2" != -* ]]; do
+        count=$(( count + 1 ))
         if [[ $glob == true && (-f "$2" || -d "$2") ]]; then
           # Create symlink to original path
+          path="$2"
           symlink=$(basename "$2")
           symlink="$workdir"/temp/input/"$option"/"$symlink"
           mkdir -p "$workdir"/temp/input/"$option"
@@ -117,6 +121,9 @@ while (( "$#" )); do
         fi
         shift
       done
+      if [[ $count == 1 ]]; then
+        paths="$path"
+      fi
       params+="$values"
       params+="$paths"
       params="${params%,}"
