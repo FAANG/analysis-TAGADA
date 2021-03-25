@@ -406,7 +406,7 @@ process sort {
   label 'cpu_16'
   label 'memory_16'
 
-  publishDir "$output/maps", mode: 'copyNoFollow'
+  publishDir "$output/maps", mode: 'copyNoFollow', overwrite: false
 
   input:
     tuple val(prefix), path(map, stageAs: 'input') from mapped_reads_to_sort
