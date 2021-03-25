@@ -8,6 +8,7 @@ annotation = params.containsKey('annotation') ? params.annotation : ''
 metadata = params.containsKey('metadata') ? params.metadata : ''
 merge = params.containsKey('merge') ? params.merge.tokenize(',') : ''
 feelnc_args = params.containsKey('feelnc-args') ? params.'feelnc-args' : ''
+skip_feelnc = params.containsKey('skip-feelnc') ? true : false
 
 error = ''
 
@@ -944,6 +945,9 @@ process detect_lncRNA {
     else if (filename.endsWith('.gtf')) "assembly/$filename"
     else "control/lnc/$filename"
   }
+
+  when:
+    !skip_feelnc
 
   input:
     path reference_annotation from reference_annotation_to_detect_lncRNA
