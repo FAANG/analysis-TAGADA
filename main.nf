@@ -7,7 +7,7 @@ index = params.containsKey('index') ? params.index : ''
 annotation = params.containsKey('annotation') ? params.annotation : ''
 metadata = params.containsKey('metadata') ? params.metadata : ''
 merge = params.containsKey('merge') ? params.merge.tokenize(',') : ''
-lncMode = params.containsKey('lncMode') ? params.lncMode : 'shuffle'
+feelnc_args = params.containsKey('feelnc-args') ? params.'feelnc-args' : ''
 
 error = ''
 
@@ -21,10 +21,6 @@ if (!annotation) error += 'No --annotation provided\n'
 
 if (merge && !metadata) {
   error += 'No --metadata provided to execute --merge\n'
-}
-
-if (!(lncMode in ['shuffle','intergenic'])){
-  error += "--lncMode should be 'shuffle' or 'intergenic'"
 }
 
 if (error) exit 1, error
@@ -368,6 +364,7 @@ single_reads_to_control_quality.concat(
 // Decompress index, genome, annotation
 // ####################################
 process decompress {
+
   input:
     tuple path(index), val(index_name) from index_to_decompress.ifEmpty([file('   '),''])
     tuple path(genome), val(genome_name) from genome_to_decompress.ifEmpty([file('  '),''])
@@ -964,23 +961,24 @@ process detect_lncRNA {
     script=\$(which FEELnc_codpot.pl)
     export FEELNCPATH=\${script%/*}/..
 
-    FEELnc_filter.pl -a $reference_annotation \\
-                     -i $assembly_annotation \\
-                     -b transcript_biotype=protein_coding \\
+    FEELnc_filter.pl --mRNAfile $reference_annotation \\
+                     --infile $assembly_annotation \\
+                     --biotype transcript_biotype=protein_coding \\
                      > candidate_transcripts.gtf
 
-    FEELnc_codpot.pl -g $genome \\
-                     -a $reference_annotation \\
-                     -i candidate_transcripts.gtf \\
-                     --numtx=5000,5000 \\
-                     -b transcript_biotype=protein_coding \\
-                     -k "1,2,3,6,9,12" \\
+    FEELnc_codpot.pl --genome $genome \\
+                     --mRNAfile $reference_annotation \\
+                     --infile candidate_transcripts.gtf \\
+                     --biotype transcript_biotype=protein_coding \\
+                     --numtx 5000,5000 \\
+                     --kmer 1,2,3,6,9,12 \\
                      --outdir . \\
                      --outname exons \\
-                     --mode=${lncMode}
+                     --mode shuffle \\
+                     $feelnc_args
 
-    FEELnc_classifier.pl -a $reference_annotation \\
-                         -i exons.lncRNA.gtf \\
+    FEELnc_classifier.pl --mrna $reference_annotation \\
+                         --lncrna exons.lncRNA.gtf \\
                          > lncRNA.txt
     """
 }
