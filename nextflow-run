@@ -30,10 +30,11 @@ while (( "$#" )); do
       fi
       shift
       ;;
-    # Parse keep temp files option
-    --keep-temp)
+    # Parse resume option
+    --resume|-resume)
       command+=("$1")
-      keeptemp=true
+      args+=("-resume")
+      resume=true
       shift
       ;;
     # Parse overridden nextflow options
@@ -46,7 +47,7 @@ while (( "$#" )); do
       shift
       ;;
     # Parse nextflow options passed as pipeline options
-    --ansi-log|--bucket-dir|--cache|--config|--dump-channels|--dump-hashes|--e.?*|--entry|--help|--hub|--latest|--lib|--name|--offline|--params-file|--process.?*|--profile|--qs|--queue-size|--resume|--revision|--test|--user|--with-conda|--with-dag|--with-docker|--with-notification|--with-podman|--with-singularity|--with-tower|--with-trace|--with-weblog|--without-docker|--without-podman)
+    --ansi-log|--bucket-dir|--cache|--config|--dump-channels|--dump-hashes|--e.?*|--entry|--help|--hub|--latest|--lib|--name|--offline|--params-file|--process.?*|--profile|--qs|--queue-size|--revision|--test|--user|--with-conda|--with-dag|--with-docker|--with-notification|--with-podman|--with-singularity|--with-tower|--with-trace|--with-weblog|--without-docker|--without-podman)
       command+=("$1")
       args+=("${1#-}")
       shift
@@ -153,4 +154,4 @@ run "$pipeline" \
 --outdir "$output" \
 "${args[@]}" \
 && rm -rf "$output"/.nextflow \
-&& if [[ -z "$keeptemp" ]]; then rm -rf "$workdir"/temp; fi
+&& if [[ -z "$resume" ]]; then rm -rf "$workdir"/temp; fi
