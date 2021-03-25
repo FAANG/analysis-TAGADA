@@ -13,13 +13,13 @@ To use this pipeline, simply clone or download this repository, and install the 
 
 Try out this nextflow pipeline with:
 
-    ./nextflow-run proj-gs-rna-seq --output directory --profile test docker
+    ./nextflow-run FAANG/proj-gs-rna-seq --revision 0.3.1 --output directory --profile test docker
 
 The `./nextflow-run` launcher script replaces the `nextflow run` command and grants these benefits:
 - Options can receive multiple space-separated parameters and unquoted globs.
 - Long options are preceded by double dashes, following GNU conventions.
 - Temporary files and logs are written to the output directory, keeping the execution directory clean.
-- Temporary files are deleted after the pipeline has successfully completed.
+- Temporary files can be automatically deleted after the pipeline has successfully completed.
 - The pipeline can be resumed from any directory with the `--resume` option.
 
 ### Arguments
@@ -29,16 +29,17 @@ The `./nextflow-run` launcher script replaces the `nextflow run` command and gra
 | __`--profile`__ | `<profile1>` `<profile2>` `...` | Profile(s) to use when<br>running the pipeline.<br>Specify the profiles that<br>fit your infrastructure<br>among `singularity`,<br>`docker`, `kubernetes`,<br>`slurm`. | Required |
 | __`--output`__ | `<directory>` | Output directory where<br>all temporary files, logs,<br>and results are written. | Required |
 | __`--reads`__ | `<reads.fq>` `<*.bam>` `...` | Input `fastq` file(s)<br>and/or `bam` file(s).<br><br>For single-end reads,<br>name your files:<br>`name.fq[.gz]`<br><br>For paired-end reads,<br>name your files:<br>`name_[R]{1,2}.fq[.gz]`<br><br>For mapped reads,<br>name your files:<br>`name.bam`<br><br>You may also provide urls<br>of files to be downloaded.<br><br>If the files are numerous,<br>you may provide a `.txt`<br>sheet with one path or url<br>per line. | Required |
-| __`--annotation`__ | `<annotation.gtf[[.tar].gz]>` | Input reference<br>annotation file or url. | Required |
-| __`--genome`__ | `<genome.fa[[.tar].gz]>` | Input genome<br>sequence file or url. | Required |
-| __`--index`__ | `<directory[[.tar].gz]>` | Input genome index<br>directory or url. | Optional to skip<br>genome indexing. |
+| __`--annotation`__ | `<annotation.gtf[.gz]>` | Input reference<br>annotation file or url. | Required |
+| __`--genome`__ | `<genome.fa[.gz]>` | Input genome<br>sequence file or url. | Required |
+| __`--index`__ | `<directory[.tar.gz]>` | Input genome index<br>directory or url. | Optional to skip<br>genome indexing. |
 | __`--metadata`__ | `<metadata.tsv>` | Input tabulated<br>metadata file or url. | Required if `--merge`<br>is provided. |
 | __`--merge`__ | `<factor1>` `<factor2>` `...` | Factor(s) to merge<br>mapped reads. See<br>the [merge factors](https://github.com/FAANG/proj-gs-rna-seq#merge-factors)<br>section for details. | Optional |
 | __`--max-cpus`__ | `<16>` | Maximum number of<br>CPU cores that can be<br>used for each process.<br>This is a limit, not the<br>actual number of<br>requested CPU cores. | Optional |
 | __`--max-memory`__ | `<64GB>` | Maximum memory that<br>can be used for each<br>process. This is a limit,<br>not the actual amount<br>of alloted memory. | Optional |
 | __`--max-time`__ | `<12h>` | Maximum time that can<br>be spent on each<br>process. This is a limit<br>and has no effect on the<br>duration of each process.| Optional |
-| __`--resume`__ | | Resume the pipeline after<br>an interruption. Previously<br>completed processes will<br>be skipped. | Optional |
-| __`--keep-temp`__ | | Do not delete temporary<br>files upon completion. | Optional |
+| __`--resume`__ | | Preserve temporary files<br>and resume the pipeline<br>from the last completed<br>process. If this option is<br>absent, temporary files<br>will be deleted upon<br>completion, and the<br>pipeline will not be<br>resumable. | Optional |
+| __`--feelnc-args`__ | `'--mode shuffle ...'` | Custom arguments to<br>pass to FEELnc's<br>[coding potential](https://github.com/tderrien/FEELnc#2--feelnc_codpotpl) script<br>when detecting long<br>non-coding RNAs. | Optional |
+| __`--skip-feelnc`__ | | Skip the detection of long<br>non-coding RNAs with FEELnc. | Optional |
 
 ### Merge factors
 
@@ -89,7 +90,9 @@ The pipeline executes the following processes:
    See the [merge factors](#merge-factors) section for details.
 7. __Assemble__ transcripts and __combine__ them into a new assembly annotation with [StringTie](https://github.com/gpertea/stringtie).  
    Outputs the new assembly annotation to `output/assembly`.
-8. __Quantify__ genes and transcripts with [StringTie](https://github.com/gpertea/stringtie), and __format__ them into tabulated files.  
+8. __Detect__ long non-coding RNAs with [FEELnc](https://github.com/tderrien/FEELnc).  
+   Outputs the annotated long non-coding RNAs to `output/assembly`.
+9. __Quantify__ genes and transcripts with [StringTie](https://github.com/gpertea/stringtie), and __format__ them into tabulated files.  
    Outputs TPM values and read counts to `output/quantification` for the reference and assembly annotations.
 
 
