@@ -11,7 +11,7 @@ ENV PATH /opt/conda/envs/rnaseq/bin:$PATH
 RUN git clone --branch v2.1.4 --depth 1 https://github.com/gpertea/stringtie.git /usr/local/src/StringTie && \
     bash -c 'ln -s /usr/local/src/StringTie/prepDE.py /usr/local/bin'
 
-RUN git clone --depth 1 https://github.com/sdjebali/Scripts.git /usr/local/src/Scripts && \
+RUN git clone --branch v0.1 --depth 1 https://github.com/sdjebali/Scripts.git /usr/local/src/Scripts && \
     bash -c 'ln -s /usr/local/src/Scripts/* /usr/local/bin'
 
 RUN git clone --branch v1.3 --depth 1 https://github.com/sdjebali/Comptr.git /usr/local/src/Comptr && \
