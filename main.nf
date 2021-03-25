@@ -542,7 +542,7 @@ if (number_of_raw_reads > 0) {
     process index {
 
       label 'cpu_16'
-      label 'memory_32'
+      label 'memory_64'
 
       publishDir "$output", mode: 'copy'
 
