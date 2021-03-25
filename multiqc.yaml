@@ -46,7 +46,7 @@ module_order:
 custom_content:
   order:
     - metadata
-    - transcript_summary
+    - transcripts_summary
 
 custom_data:
   metadata:
@@ -54,37 +54,37 @@ custom_data:
     parent_name: 'Metadata'
     parent_description: 'Metadata input file.'
     plot_type: 'generalstats'
-  reference_transcripts:
-    parent_id: transcript_summary
-    parent_name: 'Transcript summary'
-    parent_description: 'Summarised comparison of novel transcripts to reference transcripts.'
+  transcripts_reference:
+    parent_id: transcripts_summary
+    parent_name: 'Transcripts summary'
+    parent_description: 'Comparison between reference annotation transcripts and novel annotation transcripts.'
     section_name: 'Reference transcripts'
     description: 'Transcripts in the reference annotation.'
     plot_type: 'generalstats'
-  novel_transcripts:
-    parent_id: transcript_summary
-    parent_name: 'Transcript summary'
-    parent_description: 'Summarised comparison of novel transcripts to reference transcripts.'
-    section_name: 'Novel transcripts'
+  transcripts_new:
+    parent_id: transcripts_summary
+    parent_name: 'Transcripts summary'
+    parent_description: 'Comparison between reference annotation transcripts and novel annotation transcripts.'
+    section_name: 'New transcripts'
     description: 'Transcripts exclusively in the novel annotation.'
     plot_type: 'generalstats'
-  differences_transcripts:
-    parent_id: transcript_summary
-    parent_name: 'Transcript summary'
-    parent_description: 'Summarised comparison of novel transcripts to reference transcripts.'
-    section_name: 'Novel annotation differences'
+  transcripts_types:
+    parent_id: transcripts_summary
+    parent_name: 'Transcripts summary'
+    parent_description: 'Comparison between reference annotation transcripts and novel annotation transcripts.'
+    section_name: 'Transcript types'
     description: 'Types of transcripts in the novel annotation relative to the reference annotation.'
     plot_type: 'bargraph'
 
 sp:
   metadata:
     fn: 'metadata_mqc.tsv'
-  reference_transcripts:
-    fn: 'reference_transcripts_mqc.tsv'
-  novel_transcripts:
-    fn: 'novel_transcripts_mqc.tsv'
-  differences_transcripts:
-    fn: 'differences_transcripts_mqc.tsv'
+  transcripts_reference:
+    fn: 'transcripts_reference_mqc.tsv'
+  transcripts_new:
+    fn: 'transcripts_new_mqc.tsv'
+  transcripts_types:
+    fn: 'transcripts_types_mqc.tsv'
 
 fn_clean_exts:
   - '.gz'

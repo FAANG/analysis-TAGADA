@@ -1092,7 +1092,7 @@ process control_elements {
 
   output:
     path '*.png'
-    path '*_transcripts.tsv' into control_elements_to_report
+    path 'transcripts_*.tsv' into control_elements_to_report
 
   script:
     """
@@ -1162,19 +1162,19 @@ process control_elements {
         print "Detected transcripts", \$3, \$4"%";
         print "Expressed transcripts (TPM >= 0.1 in at least 2 samples)", \$5, \$6"%";
       }
-    ' detected_transcripts_genes_numbers.tsv > reference_transcripts.tsv
+    ' detected_transcripts_genes_numbers.tsv > transcripts_reference.tsv
 
     awk '
       BEGIN {OFS = "\\t"}
       NR == 1 {
         print "Novel annotation subset", "Number of transcripts",
-        "Number of transcripts / All transcripts";
+        "Number of transcripts / All new transcripts";
       }
       NR == 2 {
         print "All new transcripts", \$7, "";
         print "Expressed new transcripts (TPM >= 0.1 in at least 2 samples)", \$8, \$9"%";
       }
-    ' detected_transcripts_genes_numbers.tsv > novel_transcripts.tsv
+    ' detected_transcripts_genes_numbers.tsv > transcripts_new.tsv
 
     awk '
       BEGIN {OFS = "\\t"}
@@ -1188,7 +1188,7 @@ process control_elements {
         if (\$1 == "string_expr") \$1 = "Expressed transcripts";
         print \$1, \$6, \$11-\$6, \$16-\$11, \$3-\$16, \$2-\$3;
       }
-    ' Tables/prediction_sets_eval_wrt_ref_for_table.txt > differences_transcripts.tsv
+    ' Tables/prediction_sets_eval_wrt_ref_for_table.txt > transcripts_types.tsv
     """
 }
 
