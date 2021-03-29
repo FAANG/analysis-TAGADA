@@ -1,5 +1,4 @@
-# GENE-SWitCH project RNA-Seq analysis pipeline
-
+# TAGADA: Transcripts And Genes Assembly, Deconvolution, Analysis
 
 ## Installation
 
@@ -13,7 +12,7 @@ To use this pipeline, simply clone or download this repository, and install the 
 
 Try out this nextflow pipeline with:
 
-    ./nextflow-run FAANG/proj-gs-rna-seq --revision 0.3.1 --output directory --profile test docker
+    ./nextflow-run FAANG/analysis-TAGADA --revision 0.3.1 --output directory --profile test docker
 
 The `./nextflow-run` launcher script replaces the `nextflow run` command and grants these benefits:
 - Options can receive multiple space-separated parameters and unquoted globs.
@@ -33,7 +32,7 @@ The `./nextflow-run` launcher script replaces the `nextflow run` command and gra
 | __`--genome`__ | `<genome.fa[.gz]>` | Input genome<br>sequence file or url. | Required |
 | __`--index`__ | `<directory[.tar.gz]>` | Input genome index<br>directory or url. | Optional to skip<br>genome indexing. |
 | __`--metadata`__ | `<metadata.tsv>` | Input tabulated<br>metadata file or url. | Required if `--merge`<br>is provided. |
-| __`--merge`__ | `<factor1>` `<factor2>` `...` | Factor(s) to merge<br>mapped reads. See<br>the [merge factors](https://github.com/FAANG/proj-gs-rna-seq#merge-factors)<br>section for details. | Optional |
+| __`--merge`__ | `<factor1>` `<factor2>` `...` | Factor(s) to merge<br>mapped reads. See<br>the [merge factors](https://github.com/FAANG/analysis-TAGADA#merge-factors)<br>section for details. | Optional |
 | __`--max-cpus`__ | `<16>` | Maximum number of<br>CPU cores that can be<br>used for each process.<br>This is a limit, not the<br>actual number of<br>requested CPU cores. | Optional |
 | __`--max-memory`__ | `<64GB>` | Maximum memory that<br>can be used for each<br>process. This is a limit,<br>not the actual amount<br>of alloted memory. | Optional |
 | __`--max-time`__ | `<12h>` | Maximum time that can<br>be spent on each<br>process. This is a limit<br>and has no effect on the<br>duration of each process.| Optional |
