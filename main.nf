@@ -956,7 +956,7 @@ process detect_lncRNA {
 
   output:
     path '*.txt'
-    path 'exons.lncRNA.gtf'
+    path 'exons.*.gtf'
     path '*.feelncclassifier.log'
     path '*.png'
 
@@ -979,6 +979,7 @@ process detect_lncRNA {
                      --outdir . \\
                      --outname exons \\
                      --mode shuffle \\
+                     --spethres=0.98,0.98 \\
                      $feelnc_args
 
     FEELnc_classifier.pl --mrna $reference_annotation \\
