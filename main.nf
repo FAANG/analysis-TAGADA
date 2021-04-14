@@ -990,31 +990,29 @@ process detect_lncRNA {
     # Enrich assembled annotation with new biotypes
     cp $assembly_annotation assembly.coding_info.gff
     for biotype in lncRNA mRNA noORF
-      do if [ -f exons.$biotype.gtf ] ; then
-        awk -v biotype=$biotype '
+      do if [ -f exons.\$biotype.gtf ] ; then
+        awk -v biotype=\$biotype '
         BEGIN { FS = "\t" }
         NR==FNR {
-        match($9,/transcript_id "([^;]*)";*/,tId)
+        match(\$9,/transcript_id "([^;]*)";*/,tId)
               transcripts[tId[1]]=0
               next
         }
-        #(substr($1,1,1)=="#"){print $0}
-        {match($9,/transcript_id "([^;]*)";*/,tId)
+        #(substr(\$1,1,1)=="#"){print \$0}
+        {match(\$9,/transcript_id "([^;]*)";*/,tId)
         if (tId[1] in transcripts) {
               # Check if there is already a biotype in the annotation
-              match($9,/biotype=([^;]*)*/,oldBiotype)
+              match(\$9,/biotype=([^;]*)*/,oldBiotype)
               if (oldBiotype[1]){
-                      print $0
+                      print \$0
               } else {
-                      print $0"transcript_biotype \""biotype"\""
+                      print \$0"transcript_biotype \""biotype"\""
               }
-        } else { print $0 }
-      }' exons."$biotype".gtf assembly.coding_info.gff > tmp.gff
+        } else { print \$0 }
+      }' exons."\$biotype".gtf assembly.coding_info.gff > tmp.gff
       mv tmp.gff assembly.coding_info.gff
       fi
     done
-
-
 
     """
 }
