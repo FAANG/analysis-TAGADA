@@ -1086,6 +1086,7 @@ process control_elements {
 
   publishDir "$output/control/elements", mode: 'copy', saveAs: { filename ->
     if (filename.endsWith('.png')) filename
+    if (filename == 'Plots' || filename == 'Tables') filename
   }
 
   input:
@@ -1096,6 +1097,8 @@ process control_elements {
 
   output:
     path '*.png'
+    path 'Plots'
+    path 'Tables'
     path 'transcripts_*.tsv' into control_elements_to_report
 
   script:
