@@ -1024,7 +1024,7 @@ process detect_lncRNA {
               if (oldBiotype[1]){
                       print \$0
               } else {
-                      print \$0 " feelnc_biotype \\"" biotype "\\""
+                      print \$0"feelnc_class \""biotype"\""
               }
         } else { print \$0 }
       }' exons."\$biotype".gtf assembly.feelnc_biotype.gff > tmp.gff
