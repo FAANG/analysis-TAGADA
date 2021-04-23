@@ -914,7 +914,7 @@ process assemble {
 // ##################
 process combine {
 
-  publishDir "$output/assembly", mode: 'copy'
+  publishDir "$output/annotation", mode: 'copy'
 
   input:
     path annotation from reference_annotation_to_combine
@@ -922,15 +922,15 @@ process combine {
 
   output:
     path '*.gff' into (
-      assembly_annotation_to_detect_lncRNA,
-      assembly_annotation_to_quantify,
-      assembly_annotation_to_control_elements,
-      assembly_annotation_to_control_exons
+      novel_annotation_to_detect_lncRNA,
+      novel_annotation_to_quantify,
+      novel_annotation_to_control_elements,
+      novel_annotation_to_control_exons
     )
 
   script:
     """
-    stringtie --merge $assemblies -G $annotation -o assembly.gff
+    stringtie --merge $assemblies -G $annotation -o novel.gff
     """
 }
 
@@ -941,8 +941,8 @@ process detect_lncRNA {
   label 'memory_16'
 
   publishDir "$output", mode: 'copy', saveAs: { filename ->
-    if (filename == 'lncRNA.txt') "assembly/$filename"
-    else if (filename.endsWith('.gtf')) "assembly/$filename"
+    if (filename == 'lncRNA.txt') "annotation/$filename"
+    else if (filename.endsWith('.gtf')) "annotation/$filename"
     else "control/lnc/$filename"
   }
 
@@ -951,7 +951,7 @@ process detect_lncRNA {
 
   input:
     path reference_annotation from reference_annotation_to_detect_lncRNA
-    path assembly_annotation from assembly_annotation_to_detect_lncRNA
+    path novel_annotation from novel_annotation_to_detect_lncRNA
     path genome from genome_to_detect_lncRNA
 
   output:
@@ -966,7 +966,7 @@ process detect_lncRNA {
     export FEELNCPATH=\${script%/*}/..
 
     FEELnc_filter.pl --mRNAfile $reference_annotation \\
-                     --infile $assembly_annotation \\
+                     --infile $novel_annotation \\
                      --biotype transcript_biotype=protein_coding \\
                      > candidate_transcripts.gtf
 
@@ -990,7 +990,7 @@ process detect_lncRNA {
 // Quantify genes and transcripts
 // ##############################
 reference_annotation_to_quantify.combine(Channel.of('reference')).concat(
-  assembly_annotation_to_quantify.combine(Channel.of('assembly'))
+  novel_annotation_to_quantify.combine(Channel.of('novel'))
 ).combine(maps_to_quantify).set {
   maps_to_quantify
 }
@@ -1005,10 +1005,10 @@ process quantify {
     path('*.reference_genes_counts.tsv') optional true into reference_genes_counts_to_format
     path('*.reference_transcripts_TPM.tsv') optional true into reference_transcripts_TPM_to_format
     path('*.reference_transcripts_counts.tsv') optional true into reference_transcripts_counts_to_format
-    path('*.assembly_genes_TPM.tsv') optional true into assembly_genes_TPM_to_format
-    path('*.assembly_genes_counts.tsv') optional true into assembly_genes_counts_to_format
-    path('*.assembly_transcripts_TPM.tsv') optional true into assembly_transcripts_TPM_to_format
-    path('*.assembly_transcripts_counts.tsv') optional true into assembly_transcripts_counts_to_format
+    path('*.novel_genes_TPM.tsv') optional true into novel_genes_TPM_to_format
+    path('*.novel_genes_counts.tsv') optional true into novel_genes_counts_to_format
+    path('*.novel_transcripts_TPM.tsv') optional true into novel_transcripts_TPM_to_format
+    path('*.novel_transcripts_counts.tsv') optional true into novel_transcripts_counts_to_format
 
   script:
     """
@@ -1050,10 +1050,10 @@ reference_genes_TPM_to_format.tap {
   reference_genes_counts_to_format,
   reference_transcripts_TPM_to_format,
   reference_transcripts_counts_to_format,
-  assembly_genes_TPM_to_format,
-  assembly_genes_counts_to_format,
-  assembly_transcripts_TPM_to_format,
-  assembly_transcripts_counts_to_format,
+  novel_genes_TPM_to_format,
+  novel_genes_counts_to_format,
+  novel_transcripts_TPM_to_format,
+  novel_transcripts_counts_to_format,
 ).set {
   quantifications_to_format
 }
@@ -1069,8 +1069,8 @@ process format {
 
   output:
     path '*.tsv'
-    path 'assembly_transcripts_TPM.tsv' optional true into formatted_transcripts_to_control_elements
-    path 'assembly_genes_TPM.tsv' optional true into formatted_genes_to_control_elements
+    path 'novel_transcripts_TPM.tsv' optional true into formatted_transcripts_to_control_elements
+    path 'novel_genes_TPM.tsv' optional true into formatted_genes_to_control_elements
     path 'reference_genes_TPM.tsv' optional true into formatted_genes_tpm_to_control_expression
     path 'reference_genes_counts.tsv' optional true into formatted_genes_counts_to_control_expression
 
@@ -1091,7 +1091,7 @@ process control_elements {
 
   input:
     path reference_annotation from reference_annotation_to_control_elements
-    path assembly_annotation from assembly_annotation_to_control_elements
+    path novel_annotation from novel_annotation_to_control_elements
     path formatted_transcripts from formatted_transcripts_to_control_elements
     path formatted_genes from formatted_genes_to_control_elements
 
@@ -1105,7 +1105,7 @@ process control_elements {
     """
     detected_elements_sumstats.sh \\
       $reference_annotation \\
-      $assembly_annotation \\
+      $novel_annotation \\
       $formatted_transcripts \\
       $formatted_genes
 
@@ -1230,7 +1230,7 @@ process control_expression {
 // Control exonic reads counts
 // ###########################
 reference_annotation_to_control_exons.combine(Channel.of('reference')).concat(
-  assembly_annotation_to_control_exons.combine(Channel.of('assembly'))
+  novel_annotation_to_control_exons.combine(Channel.of('novel'))
 ).set {
   annotations_to_control_exons
 }
