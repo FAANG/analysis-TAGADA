@@ -921,7 +921,7 @@ process combine {
     path assemblies from assemblies_to_combine.collect()
 
   output:
-    path '*.gff' into (
+    path 'novel.gff' into (
       novel_annotation_to_detect_lncRNA,
       novel_annotation_to_quantify,
       novel_annotation_to_control_elements,
@@ -930,7 +930,24 @@ process combine {
 
   script:
     """
-    stringtie --merge $assemblies -G $annotation -o novel.gff
+    stringtie --merge $assemblies -G $annotation -o novel_no_biotype.gff
+
+    # Write transcript biotype in merged assembly
+    awk 'BEGIN { FS = "\t" }
+        NR==FNR {
+                match(\$9,/transcript_id "([^;]*)";*/,tId)
+                match(\$9,/transcript_biotype "([^;]*)";*/,biotype)
+                biotypes[tId[1]]=biotype[1]
+                next
+        }
+        {
+            match(\$9,/transcript_id "([^;]*)";*/,tId)
+            if (tId[1] in biotypes) {
+              print \$0 "; transcript_biotype \\""biotypes[tId[1]]"\\""
+            } else {
+              print \$0
+            }
+        }   ' $annotation novel_no_biotype.gff > novel.gff
     """
 }
 
