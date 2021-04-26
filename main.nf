@@ -334,7 +334,7 @@ r1_reads_to_pair.map {
 }.set {
   r1_reads_to_pair
 }
-
+..
 r2_reads_to_pair.map {
   [it['prefix'], it['path']]
 }.set {
@@ -941,8 +941,9 @@ process detect_lncRNA {
   label 'memory_16'
 
   publishDir "$output", mode: 'copy', saveAs: { filename ->
-    if (filename == 'lncRNA.txt') "annotation/$filename"
-    else if (filename.endsWith('.gtf')) "annotation/$filename"
+    if (filename == 'lncRNA.txt') "assembly/$filename"
+    else if (filename.endsWith('.gtf')) "assembly/$filename"
+    else if (filename.endsWith('.gff')) "assembly/$filename"
     else "control/lnc/$filename"
   }
 
@@ -959,7 +960,7 @@ process detect_lncRNA {
     path 'exons.*.gtf'
     path '*.feelncclassifier.log'
     path '*.png'
-    path 'assembly.coding_info.gff'
+    path 'assembly.feelnc_biotype.gff' into assembly_annotation_with_coding_potential
 
   script:
     """
@@ -988,8 +989,8 @@ process detect_lncRNA {
                          > lncRNA.txt
 
     # Enrich assembled annotation with new biotypes
-    cp $assembly_annotation assembly.coding_info.gff
-    for biotype in lncRNA mRNA noORF
+    cp $assembly_annotation assembly.feelnc_biotype.gff
+    for biotype in lncRNA mRNA noORF TUCp
       do if [ -f exons.\$biotype.gtf ] ; then
         awk -v biotype=\$biotype '
         BEGIN { FS = "\t" }
@@ -1006,11 +1007,11 @@ process detect_lncRNA {
               if (oldBiotype[1]){
                       print \$0
               } else {
-                      print \$0"transcript_biotype \""biotype"\""
+                      print \$0 " feelnc_biotype \\"" biotype "\\""
               }
         } else { print \$0 }
-      }' exons."\$biotype".gtf assembly.coding_info.gff > tmp.gff
-      mv tmp.gff assembly.coding_info.gff
+      }' exons."\$biotype".gtf assembly.feelnc_biotype.gff > tmp.gff
+      mv tmp.gff assembly.feelnc_biotype.gff
       fi
     done
 
