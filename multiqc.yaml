@@ -54,37 +54,37 @@ custom_data:
     parent_name: 'Metadata'
     parent_description: 'Metadata input file.'
     plot_type: 'generalstats'
-  transcripts_reference:
-    parent_id: transcripts_summary
-    parent_name: 'Transcripts summary'
-    parent_description: 'Comparison between reference annotation transcripts and novel annotation transcripts.'
-    section_name: 'Reference transcripts'
-    description: 'Transcripts in the reference annotation.'
+  reference_annotation:
+    parent_id: annotation_comparison
+    parent_name: 'Annotation comparison'
+    parent_description: 'Comparison between reference annotation and novel annotation.'
+    section_name: 'Reference annotation'
+    description: 'Genes and transcripts in the reference annotation. Elements with TPM ≥ 0.1 in at least 2 samples are in the expressed category.'
     plot_type: 'generalstats'
-  transcripts_new:
-    parent_id: transcripts_summary
-    parent_name: 'Transcripts summary'
-    parent_description: 'Comparison between reference annotation transcripts and novel annotation transcripts.'
-    section_name: 'New transcripts'
-    description: 'Transcripts exclusively in the novel annotation.'
+  novel_annotation:
+    parent_id: annotation_comparison
+    parent_name: 'Annotation comparison'
+    parent_description: 'Comparison between reference annotation and novel annotation.'
+    section_name: 'Novel annotation'
+    description: 'Genes and transcripts in the novel annotation. Elements with TPM ≥ 0.1 in at least 2 samples are in the expressed category.'
     plot_type: 'generalstats'
-  transcripts_types:
-    parent_id: transcripts_summary
-    parent_name: 'Transcripts summary'
-    parent_description: 'Comparison between reference annotation transcripts and novel annotation transcripts.'
+  transcripts_comparison_annotation:
+    parent_id: annotation_comparison
+    parent_name: 'Annotation comparison'
+    parent_description: 'Comparison between reference annotation and novel annotation.'
     section_name: 'Transcript types'
-    description: 'Types of transcripts in the novel annotation relative to the reference annotation.'
+    description: 'Types of transcripts in the novel annotation relative to the reference annotation. Extended transcripts: at least one more intron on the extremities. Shortened transcripts: at least one less intron on the extremities.'
     plot_type: 'bargraph'
 
 sp:
   metadata:
     fn: 'metadata_mqc.tsv'
-  transcripts_reference:
-    fn: 'transcripts_reference_mqc.tsv'
-  transcripts_new:
-    fn: 'transcripts_new_mqc.tsv'
-  transcripts_types:
-    fn: 'transcripts_types_mqc.tsv'
+  reference_annotation:
+    fn: 'reference_annotation_mqc.tsv'
+  novel_annotation:
+    fn: 'novel_annotation_mqc.tsv'
+  transcripts_comparison_annotation:
+    fn: 'transcripts_comparison_annotation_mqc.tsv'
 
 fn_clean_exts:
   - '.gz'

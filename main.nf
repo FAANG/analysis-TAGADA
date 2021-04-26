@@ -1085,8 +1085,12 @@ process format {
 process control_elements {
 
   publishDir "$output/control/elements", mode: 'copy', saveAs: { filename ->
-    if (filename.endsWith('.png')) filename
-    if (filename == 'Plots' || filename == 'Tables') filename
+    if (
+      filename.endsWith('.png') ||
+      filename.endsWith('.txt') ||
+      filename == 'Plots' ||
+      filename == 'Tables'
+    ) filename
   }
 
   input:
@@ -1099,7 +1103,8 @@ process control_elements {
     path '*.png'
     path 'Plots'
     path 'Tables'
-    path 'transcripts_*.tsv' into control_elements_to_report
+    path '*_expressed_*.txt'
+    path '*_annotation.tsv' into control_elements_to_report
 
   script:
     """
@@ -1158,30 +1163,67 @@ process control_elements {
             +repage \\
             transcript_cdna_length_and_TSStorefgeneTSS_distance_for_exact_transcripts.png
 
-    awk '
-      BEGIN {OFS = "\\t"}
-      NR == 1 {
-        print "Reference annotation subset", "Number of transcripts",
-        "Number of transcripts / All transcripts";
-      }
-      NR == 2 {
-        print "All transcripts", \$2, "";
-        print "Detected transcripts", \$3, \$4"%";
-        print "Expressed transcripts (TPM >= 0.1 in at least 2 samples)", \$5, \$6"%";
-      }
-    ' detected_transcripts_genes_numbers.tsv > transcripts_reference.tsv
+    reference_genes=\$(awk 'NR == 3 {print \$2}' detected_transcripts_genes_numbers.tsv)
+    novel_genes=\$(awk 'NR == 3 {print \$2 + \$7}' detected_transcripts_genes_numbers.tsv)
+    reference_transcripts=\$(awk 'NR == 2 {print \$2}' detected_transcripts_genes_numbers.tsv)
+    novel_transcripts=\$(awk 'NR == 2 {print \$2 + \$7}' detected_transcripts_genes_numbers.tsv)
 
-    awk '
-      BEGIN {OFS = "\\t"}
-      NR == 1 {
-        print "Novel annotation subset", "Number of transcripts",
-        "Number of transcripts / All new transcripts";
-      }
-      NR == 2 {
-        print "All new transcripts", \$7, "";
-        print "Expressed new transcripts (TPM >= 0.1 in at least 2 samples)", \$8, \$9"%";
-      }
-    ' detected_transcripts_genes_numbers.tsv > transcripts_new.tsv
+    perl -pe 's/^"([^"]+)".+\$/\$1/g' \
+      ref_expr/ref.annot.tpm0.1.2samples.exons_complete_gnid_nbtr.txt \
+      > reference_expressed_genes.txt
+    reference_expressed_genes=\$(wc -l reference_expressed_genes.txt | awk '{print \$1}')
+
+    perl -pe 's/^"([^"]+)".+\$/\$1/g' \
+      string_expr/stringtie.annot.tpm0.1.2samples.exons_complete_gnid_nbtr.txt \
+      > novel_expressed_genes.txt
+    novel_expressed_genes=\$(wc -l novel_expressed_genes.txt | awk '{print \$1}')
+
+    perl -pe 's/^"([^"]+)".+\$/\$1/g' \
+      ref_expr/ref.annot.tpm0.1.2samples.exons_complete_trid_nbex.txt \
+      > reference_expressed_transcripts.txt
+    reference_expressed_transcripts=\$(wc -l reference_expressed_transcripts.txt | awk '{print \$1}')
+
+    perl -pe 's/^"([^"]+)".+\$/\$1/g' \
+      string_expr/stringtie.annot.tpm0.1.2samples.exons_complete_trid_nbex.txt \
+      > novel_expressed_transcripts.txt
+    novel_expressed_transcripts=\$(wc -l novel_expressed_transcripts.txt | awk '{print \$1}')
+
+    percent_novel_expressed_genes=\$(
+      echo | \
+      awk -v expressed=\$novel_expressed_genes \
+          -v all=\$novel_genes \
+          '{print 100 * expressed / all}'
+    )
+    percent_reference_expressed_genes=\$(
+      echo | \
+      awk -v expressed=\$reference_expressed_genes \
+          -v all=\$reference_genes \
+          '{print 100 * expressed / all}'
+    )
+    percent_novel_expressed_transcripts=\$(
+      echo | \
+      awk -v expressed=\$novel_expressed_transcripts \
+          -v all=\$novel_transcripts \
+          '{print 100 * expressed / all}'
+    )
+    percent_reference_expressed_transcripts=\$(
+      echo | \
+      awk -v expressed=\$reference_expressed_transcripts \
+          -v all=\$reference_transcripts \
+          '{print 100 * expressed / all}'
+    )
+
+    echo -e "Category\tTotal\tPercentage" > reference_annotation.tsv
+    echo -e "Genes\t\$reference_genes\t" >> reference_annotation.tsv
+    echo -e "Expressed genes\t\$reference_expressed_genes\t\$percent_reference_expressed_genes" >> reference_annotation.tsv
+    echo -e "Transcripts\t\$reference_transcripts\t" >> reference_annotation.tsv
+    echo -e "Expressed transcripts\t\$reference_expressed_transcripts\t\$percent_reference_expressed_transcripts" >> reference_annotation.tsv
+
+    echo -e "Category\tTotal\tPercentage" > novel_annotation.tsv
+    echo -e "Genes\t\$novel_genes\t" >> novel_annotation.tsv
+    echo -e "Expressed genes\t\$novel_expressed_genes\t\$percent_novel_expressed_genes" >> novel_annotation.tsv
+    echo -e "Transcripts\t\$novel_transcripts\t" >> novel_annotation.tsv
+    echo -e "Expressed transcripts\t\$novel_expressed_transcripts\t\$percent_novel_expressed_transcripts" >> novel_annotation.tsv
 
     awk '
       BEGIN {OFS = "\\t"}
@@ -1195,7 +1237,7 @@ process control_elements {
         if (\$1 == "string_expr") \$1 = "Expressed transcripts";
         print \$1, \$6, \$11-\$6, \$16-\$11, \$3-\$16, \$2-\$3;
       }
-    ' Tables/prediction_sets_eval_wrt_ref_for_table.txt > transcripts_types.tsv
+    ' Tables/prediction_sets_eval_wrt_ref_for_table.txt > transcripts_comparison_annotation.tsv
     """
 }
 
