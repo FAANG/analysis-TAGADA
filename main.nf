@@ -932,22 +932,33 @@ process combine {
     """
     stringtie --merge $assemblies -G $annotation -o novel_no_biotype.gff
 
+    # Add lines for genes
+    awk -f compute_boundaries.awk -v toadd=gene -v fldno=10 -v keys=gene_name,ref_gene_id novel_no_biotype.gff > genes.gff
+
+    cat genes.gff novel_no_biotype.gff | sort -k1,1 -k4,4n -k5,5rn > novel.genes.gff
+
     # Write transcript biotype in merged assembly
     awk 'BEGIN { FS = "\t" }
         NR==FNR {
-                match(\$9,/transcript_id "([^;]*)";*/,tId)
-                match(\$9,/transcript_biotype "([^;]*)";*/,biotype)
-                biotypes[tId[1]]=biotype[1]
-                next
+          match(\$9,/transcript_id "([^;]*)";*/,tId)
+          match(\$9,/transcript_biotype "([^;]*)";*/,biotype)
+          biotypes[tId[1]]=biotype[1]
+          next
         }
         {
+          if (substr(\$1,1,1)!="#") {
             match(\$9,/transcript_id "([^;]*)";*/,tId)
             if (tId[1] in biotypes) {
-              print \$0 "; transcript_biotype \\""biotypes[tId[1]]"\\""
+              print \$0 "transcript_biotype \\""biotypes[tId[1]]"\\";"
             } else {
               print \$0
             }
-        }   ' $annotation novel_no_biotype.gff > novel.gff
+          } else {
+            print \$0
+          }
+        }  ' $annotation novel.genes.gff > novel.gff
+
+
     """
 }
 
@@ -1024,7 +1035,7 @@ process detect_lncRNA {
               if (oldBiotype[1]){
                       print \$0
               } else {
-                      print \$0"feelnc_class \""biotype"\""
+                      print \$0 " feelnc_biotype \\"" biotype "\\";"
               }
         } else { print \$0 }
       }' exons."\$biotype".gtf assembly.feelnc_biotype.gff > tmp.gff
