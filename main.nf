@@ -969,7 +969,8 @@ process detect_lncRNA {
   label 'memory_16'
 
   publishDir "$output", mode: 'copy', saveAs: { filename ->
-    if (filename == 'lncRNA.txt') "assembly/$filename"
+    if (filename == 'lncRNA.txt') "assembly/lnc_classification/$filename"
+    else if (filename.startsWith('exons.')) "assembly/lnc_classification/$filename"
     else if (filename.endsWith('.gtf')) "assembly/$filename"
     else if (filename.endsWith('.gff')) "assembly/$filename"
     else "control/lnc/$filename"
@@ -984,10 +985,11 @@ process detect_lncRNA {
     path genome from genome_to_detect_lncRNA
 
   output:
-    path '*.txt'
+    path '*.txt' into feelnc_classes_to_report
     path 'exons.*.gtf'
-    path '*.feelncclassifier.log'
-    path '*.png'
+    path 'exons_RF_summary.txt' into feelnc_rf_summary_to_report
+    path '*.feelncclassifier.log' into feelnc_classifier_log_to_report
+    path '*.png' into feelnc_roc_to_report
     path 'assembly.feelnc_biotype.gff' into assembly_annotation_with_coding_potential
 
   script:
@@ -1386,6 +1388,10 @@ process report {
     path '*' from control_contigs_to_report.flatten().collect().ifEmpty([])
     path '*' from control_metrics_to_report.flatten().collect().ifEmpty([])
     path '*' from control_flags_to_report.flatten().collect().ifEmpty([])
+    path '*' from feelnc_roc_to_report.flatten().collect().ifEmpty([])
+    path '*' from feelnc_classifier_log_to_report.flatten().collect().ifEmpty([])
+    path '*' from feelnc_classes_to_report.flatten().collect().ifEmpty([])
+    path '*' from feelnc_rf_summary_to_report.flatten().collect().ifEmpty([])
 
   output:
     path 'multiqc_report.html'
