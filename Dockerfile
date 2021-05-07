@@ -23,3 +23,8 @@ RUN git clone --branch v1.0 --depth 1 https://github.com/sdjebali/Overlap.git /u
     cd /usr/local/src/Overlap && \
     make && \
     bash -c 'ln -s /usr/local/src/Overlap/overlap /usr/local/bin'
+
+RUN git clone https://github.com/cguyomar/multiqc_feelnc /usr/local/src/multiqc_feelnc && \
+    cd /usr/local/src/multiqc_feelnc && \
+    python setup.py install
+
