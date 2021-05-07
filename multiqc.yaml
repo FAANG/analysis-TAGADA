@@ -11,6 +11,7 @@ run_modules:
   - star
   - samtools
   - featureCounts
+  - multiqc_feelnc
 
 module_order:
   - custom_content
@@ -75,6 +76,11 @@ custom_data:
     section_name: 'Transcript types'
     description: 'Types of transcripts in the novel annotation relative to the reference annotation. Extended transcripts: at least one more intron on the extremities. Shortened transcripts: at least one less intron on the extremities.'
     plot_type: 'bargraph'
+  FeelNC:
+    name: 'Classification of long non coding RNAs'
+    target: 'feelnc'
+    info: ''
+
 
 sp:
   metadata:

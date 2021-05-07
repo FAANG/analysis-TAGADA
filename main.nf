@@ -969,7 +969,7 @@ process detect_lncRNA {
   label 'memory_16'
 
   publishDir "$output", mode: 'copy', saveAs: { filename ->
-    if (filename == 'lncRNA.txt') "assembly/lnc_classification/$filename"
+    if (filename == 'lncRNA_classes.txt') "assembly/lnc_classification/$filename"
     else if (filename.startsWith('exons.')) "assembly/lnc_classification/$filename"
     else if (filename.endsWith('.gtf')) "assembly/$filename"
     else if (filename.endsWith('.gff')) "assembly/$filename"
@@ -985,7 +985,7 @@ process detect_lncRNA {
     path genome from genome_to_detect_lncRNA
 
   output:
-    path '*.txt' into feelnc_classes_to_report
+    path '*classes.txt' into feelnc_classes_to_report
     path 'exons.*.gtf'
     path 'exons_RF_summary.txt' into feelnc_rf_summary_to_report
     path '*.feelncclassifier.log' into feelnc_classifier_log_to_report
@@ -1016,7 +1016,7 @@ process detect_lncRNA {
 
     FEELnc_classifier.pl --mrna $reference_annotation \\
                          --lncrna exons.lncRNA.gtf \\
-                         > lncRNA.txt
+                         > lncRNA_classes.txt
 
     # Enrich assembled annotation with new biotypes
     cp $assembly_annotation assembly.feelnc_biotype.gff
