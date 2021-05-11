@@ -1122,8 +1122,8 @@ process control_elements {
       Plots/InternalExonLength/*.png \\
       Plots/5pExonLength_Gn/*.png \\
       Plots/DistinctInternalExonLength/*.png \\
+      Plots/Exact_tr_dist_to_Genc_TSS/*.png \\
       Plots/TrLength/*.png \\
-      Plots/cDNALength/*.png; \\
     do
       [ -f "\$f" ] || continue
       convert "\$f" -crop 1400x2100+0+0 +repage "\${f%.png}"_cropped.png
@@ -1156,9 +1156,9 @@ process control_elements {
             +repage \\
             5p_internal_3p_exon_length_per_gene.png
 
-    convert Plots/TrLength/*_cropped.png \\
-            Plots/cDNALength/*_cropped.png \\
-            Plots/Exact_tr_dist_to_Genc_TSS/*.png \\
+    convert Plots/Exact_tr_dist_to_Genc_TSS/*_cropped.png \\
+            Plots/TrLength/*_cropped.png \\
+            Plots/cDNALength/*.png \\
             +append \\
             +repage \\
             transcript_cdna_length_and_TSStorefgeneTSS_distance_for_exact_transcripts.png
@@ -1168,48 +1168,48 @@ process control_elements {
     reference_transcripts=\$(awk 'NR == 2 {print \$2}' detected_transcripts_genes_numbers.tsv)
     novel_transcripts=\$(awk 'NR == 2 {print \$2 + \$7}' detected_transcripts_genes_numbers.tsv)
 
-    perl -pe 's/^"([^"]+)".+\$/\$1/g' \
-      ref_expr/ref.annot.tpm0.1.2samples.exons_complete_gnid_nbtr.txt \
+    perl -pe 's/^"([^"]+)".+\$/\$1/g' \\
+      ref_expr/ref.annot.tpm0.1.2samples.exons_complete_gnid_nbtr.txt \\
       > reference_expressed_genes.txt
     reference_expressed_genes=\$(wc -l reference_expressed_genes.txt | awk '{print \$1}')
 
-    perl -pe 's/^"([^"]+)".+\$/\$1/g' \
-      string_expr/stringtie.annot.tpm0.1.2samples.exons_complete_gnid_nbtr.txt \
+    perl -pe 's/^"([^"]+)".+\$/\$1/g' \\
+      string_expr/stringtie.annot.tpm0.1.2samples.exons_complete_gnid_nbtr.txt \\
       > novel_expressed_genes.txt
     novel_expressed_genes=\$(wc -l novel_expressed_genes.txt | awk '{print \$1}')
 
-    perl -pe 's/^"([^"]+)".+\$/\$1/g' \
-      ref_expr/ref.annot.tpm0.1.2samples.exons_complete_trid_nbex.txt \
+    perl -pe 's/^"([^"]+)".+\$/\$1/g' \\
+      ref_expr/ref.annot.tpm0.1.2samples.exons_complete_trid_nbex.txt \\
       > reference_expressed_transcripts.txt
     reference_expressed_transcripts=\$(wc -l reference_expressed_transcripts.txt | awk '{print \$1}')
 
-    perl -pe 's/^"([^"]+)".+\$/\$1/g' \
-      string_expr/stringtie.annot.tpm0.1.2samples.exons_complete_trid_nbex.txt \
+    perl -pe 's/^"([^"]+)".+\$/\$1/g' \\
+      string_expr/stringtie.annot.tpm0.1.2samples.exons_complete_trid_nbex.txt \\
       > novel_expressed_transcripts.txt
     novel_expressed_transcripts=\$(wc -l novel_expressed_transcripts.txt | awk '{print \$1}')
 
     percent_novel_expressed_genes=\$(
-      echo | \
-      awk -v expressed=\$novel_expressed_genes \
-          -v all=\$novel_genes \
+      echo | \\
+      awk -v expressed=\$novel_expressed_genes \\
+          -v all=\$novel_genes \\
           '{print 100 * expressed / all}'
     )
     percent_reference_expressed_genes=\$(
-      echo | \
-      awk -v expressed=\$reference_expressed_genes \
-          -v all=\$reference_genes \
+      echo | \\
+      awk -v expressed=\$reference_expressed_genes \\
+          -v all=\$reference_genes \\
           '{print 100 * expressed / all}'
     )
     percent_novel_expressed_transcripts=\$(
-      echo | \
-      awk -v expressed=\$novel_expressed_transcripts \
-          -v all=\$novel_transcripts \
+      echo | \\
+      awk -v expressed=\$novel_expressed_transcripts \\
+          -v all=\$novel_transcripts \\
           '{print 100 * expressed / all}'
     )
     percent_reference_expressed_transcripts=\$(
-      echo | \
-      awk -v expressed=\$reference_expressed_transcripts \
-          -v all=\$reference_transcripts \
+      echo | \\
+      awk -v expressed=\$reference_expressed_transcripts \\
+          -v all=\$reference_transcripts \\
           '{print 100 * expressed / all}'
     )
 
