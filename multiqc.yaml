@@ -11,7 +11,7 @@ run_modules:
   - star
   - samtools
   - featureCounts
-  - multiqc_feelnc
+  - feelnc
 
 module_order:
   - custom_content
@@ -43,6 +43,9 @@ module_order:
       name: 'Exonic reads'
       target: 'FeatureCounts'
       info: 'results for each quantified bam file.'
+  - feelnc:
+      name: 'Annotation of novel lnc transcripts'
+      target: 'feelnc'
 
 custom_content:
   order:
