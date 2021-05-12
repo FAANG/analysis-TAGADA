@@ -334,7 +334,7 @@ r1_reads_to_pair.map {
 }.set {
   r1_reads_to_pair
 }
-..
+
 r2_reads_to_pair.map {
   [it['prefix'], it['path']]
 }.set {
@@ -933,7 +933,7 @@ process combine {
     stringtie --merge $assemblies -G $annotation -o novel_no_biotype.gff
 
     # Add lines for genes
-    awk -f compute_boundaries.awk -v toadd=gene -v fldno=10 -v keys=gene_name,ref_gene_id novel_no_biotype.gff > genes.gff
+    awk -f /usr/local/src/Scripts/compute_boundaries.awk -v toadd=gene -v fldno=10 -v keys=gene_name,ref_gene_id novel_no_biotype.gff > genes.gff
 
     cat genes.gff novel_no_biotype.gff | sort -k1,1 -k4,4n -k5,5rn > novel.genes.gff
 
@@ -989,7 +989,6 @@ process detect_lncRNA {
     path 'exons.*.gtf'
     path 'exons_RF_summary.txt' into feelnc_rf_summary_to_report
     path '*.feelncclassifier.log' into feelnc_classifier_log_to_report
-    path '*.png' into feelnc_roc_to_report
     path 'assembly.feelnc_biotype.gff' into assembly_annotation_with_coding_potential
 
   script:
@@ -1019,7 +1018,7 @@ process detect_lncRNA {
                          > lncRNA_classes.txt
 
     # Enrich assembled annotation with new biotypes
-    cp $assembly_annotation assembly.feelnc_biotype.gff
+    cp $novel_annotation assembly.feelnc_biotype.gff
     for biotype in lncRNA mRNA noORF TUCp
       do if [ -f exons.\$biotype.gtf ] ; then
         awk -v biotype=\$biotype '
@@ -1388,7 +1387,6 @@ process report {
     path '*' from control_contigs_to_report.flatten().collect().ifEmpty([])
     path '*' from control_metrics_to_report.flatten().collect().ifEmpty([])
     path '*' from control_flags_to_report.flatten().collect().ifEmpty([])
-    path '*' from feelnc_roc_to_report.flatten().collect().ifEmpty([])
     path '*' from feelnc_classifier_log_to_report.flatten().collect().ifEmpty([])
     path '*' from feelnc_classes_to_report.flatten().collect().ifEmpty([])
     path '*' from feelnc_rf_summary_to_report.flatten().collect().ifEmpty([])
