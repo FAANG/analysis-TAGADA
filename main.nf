@@ -1014,10 +1014,6 @@ process detect_lncRNA {
                      --spethres=0.98,0.98 \\
                      $feelnc_args
 
-    FEELnc_classifier.pl --mrna $reference_annotation \\
-                         --lncrna exons.lncRNA.gtf \\
-                         > lncRNA_classes.txt
-
     # Enrich assembled annotation with new biotypes
     cp $novel_annotation assembly.feelnc_biotype.gff
     for biotype in lncRNA mRNA noORF TUCp
@@ -1063,6 +1059,13 @@ process detect_lncRNA {
           print "Not evaluated by FEELnc (coding transcripts)",nb_coding
           print "Not evaluated by FEELnc (other reason)",feelnc_classes[""]
       }' assembly.feelnc_biotype.gff > feelnc_classification_summary.txt
+
+    # Filter coding transcripts for lnc-messenger interactions
+    grep -E '#|transcript_biotype "protein_coding"|feelnc_biotype "mRNA"' $novel_annotation > coding_transcripts.gtf
+
+    FEELnc_classifier.pl --mrna coding_transcripts.gtf \\
+                         --lncrna exons.lncRNA.gtf \\
+                         > lncRNA_classes.txt
 
 
 
