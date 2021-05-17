@@ -990,6 +990,7 @@ process detect_lncRNA {
     path 'exons_RF_summary.txt' into feelnc_rf_summary_to_report
     path '*.feelncclassifier.log' into feelnc_classifier_log_to_report
     path 'assembly.feelnc_biotype.gff' into assembly_annotation_with_coding_potential
+    path 'feelnc_classification_summary.txt' into feelnc_classification_summary_to_report
 
   script:
     """
@@ -1043,6 +1044,27 @@ process detect_lncRNA {
       mv tmp.gff assembly.feelnc_biotype.gff
       fi
     done
+
+    # Make a summary of the FEELnc classification
+    awk '
+     BEGIN { FS="\t" ; OFS="\t"}
+     \$3=="transcript" {
+          ++nb_transcripts
+          match(\$9,/transcript_biotype "([^;]*)";*/,transcript_biotype)
+          match(\$9,/feelnc_biotype "([^;]*)";*/,feelnc_biotype)
+          if (transcript_biotype[1]=="protein_coding") { ++nb_coding }
+          else {++feelnc_classes[feelnc_biotype[1]] }
+      }
+      END {
+          print "Lnc transcripts",nb_lnc
+          print "Coding transcripts from FEELnc classification",feelnc_classes["mRNA"]
+          print "Transcripts with no ORF",feelnc_classes["noORF"]
+          print "Transcripts of unknown coding potential",feelnc_classes["TUCp"]
+          print "Not evaluated by FEELnc (coding transcripts)",nb_coding
+          print "Not evaluated by FEELnc (other reason)",feelnc_classes[""]
+      }' assembly.feelnc_biotype.gff > feelnc_classification_summary.txt
+
+
 
     """
 }
@@ -1390,6 +1412,7 @@ process report {
     path '*' from feelnc_classifier_log_to_report.flatten().collect().ifEmpty([])
     path '*' from feelnc_classes_to_report.flatten().collect().ifEmpty([])
     path '*' from feelnc_rf_summary_to_report.flatten().collect().ifEmpty([])
+    path '*' from feelnc_classification_summary_to_report.flatten().collect().ifEmpty([])
 
   output:
     path 'multiqc_report.html'
