@@ -969,10 +969,10 @@ process detect_lncRNA {
   label 'memory_16'
 
   publishDir "$output", mode: 'copy', saveAs: { filename ->
-    if (filename == 'lncRNA_classes.txt') "assembly/lnc_classification/$filename"
-    else if (filename.startsWith('exons.')) "assembly/lnc_classification/$filename"
-    else if (filename.endsWith('.gtf')) "assembly/$filename"
-    else if (filename.endsWith('.gff')) "assembly/$filename"
+    if (filename == 'lncRNA_classes.txt') "annotation/lnc_classification/$filename"
+    else if (filename.startsWith('exons.')) "annotation/lnc_classification/$filename"
+    else if (filename.endsWith('.gtf')) "annotation/$filename"
+    else if (filename.endsWith('.gff')) "annotation/$filename"
     else "control/lnc/$filename"
   }
 
@@ -989,7 +989,7 @@ process detect_lncRNA {
     path 'exons.*.gtf'
     path 'exons_RF_summary.txt' into feelnc_rf_summary_to_report
     path '*.feelncclassifier.log' into feelnc_classifier_log_to_report
-    path 'assembly.feelnc_biotype.gff' into assembly_annotation_with_coding_potential
+    path 'novel.feelnc_biotype.gff' into novel_annotation_with_coding_potential
     path 'feelnc_classification_summary.txt' into feelnc_classification_summary_to_report
 
   script:
@@ -1015,7 +1015,7 @@ process detect_lncRNA {
                      $feelnc_args
 
     # Enrich assembled annotation with new biotypes
-    cp $novel_annotation assembly.feelnc_biotype.gff
+    cp $novel_annotation novel.feelnc_biotype.gff
     for biotype in lncRNA mRNA noORF TUCp
       do if [ -f exons.\$biotype.gtf ] ; then
         awk -v biotype=\$biotype '
@@ -1036,8 +1036,8 @@ process detect_lncRNA {
                       print \$0 " feelnc_biotype \\"" biotype "\\";"
               }
         } else { print \$0 }
-      }' exons."\$biotype".gtf assembly.feelnc_biotype.gff > tmp.gff
-      mv tmp.gff assembly.feelnc_biotype.gff
+      }' exons."\$biotype".gtf novel.feelnc_biotype.gff > tmp.gff
+      mv tmp.gff novel.feelnc_biotype.gff
       fi
     done
 
@@ -1058,7 +1058,7 @@ process detect_lncRNA {
           print "Transcripts of unknown coding potential",feelnc_classes["TUCp"]
           print "Not evaluated by FEELnc (coding transcripts)",nb_coding
           print "Not evaluated by FEELnc (other reason)",feelnc_classes[""]
-      }' assembly.feelnc_biotype.gff > feelnc_classification_summary.txt
+      }' novel.feelnc_biotype.gff > feelnc_classification_summary.txt
 
     # Filter coding transcripts for lnc-messenger interactions
     grep -E '#|transcript_biotype "protein_coding"|feelnc_biotype "mRNA"' $novel_annotation > coding_transcripts.gtf
