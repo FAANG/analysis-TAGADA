@@ -1043,7 +1043,11 @@ process detect_lncRNA {
 
     # Make a summary of the FEELnc classification
     awk '
-     BEGIN { FS="\t" ; OFS="\t"}
+     BEGIN {
+        FS="\t"
+        OFS="\t"
+        feelnc_classes["lncRNA"] = feelnc_classes["noORF"] = feelnc_classes["mRNA"] = feelnc_classes["TUCp"] = feelnc_classes[""] = 0
+        }
      \$3=="transcript" {
           ++nb_transcripts
           match(\$9,/transcript_biotype "([^;]*)";*/,transcript_biotype)
@@ -1052,7 +1056,7 @@ process detect_lncRNA {
           else {++feelnc_classes[feelnc_biotype[1]] }
       }
       END {
-          print "Lnc transcripts",nb_lnc
+          print "Lnc transcripts",feelnc_classes["lncRNA"]
           print "Coding transcripts from FEELnc classification",feelnc_classes["mRNA"]
           print "Transcripts with no ORF",feelnc_classes["noORF"]
           print "Transcripts of unknown coding potential",feelnc_classes["TUCp"]
@@ -1066,8 +1070,6 @@ process detect_lncRNA {
     FEELnc_classifier.pl --mrna coding_transcripts.gtf \\
                          --lncrna exons.lncRNA.gtf \\
                          > lncRNA_classes.txt
-
-
 
     """
 }
