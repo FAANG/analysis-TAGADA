@@ -1397,6 +1397,8 @@ config_to_report = Channel.fromPath("$baseDir/multiqc.yaml", checkIfExists: true
 
 process report {
 
+  label 'memory_8'
+
   publishDir "$output/control", mode: 'copy'
 
   input:
