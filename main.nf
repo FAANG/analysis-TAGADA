@@ -987,10 +987,10 @@ process detect_lncRNA {
   output:
     path '*classes.txt' into feelnc_classes_to_report
     path 'exons.*.gtf'
-    path 'exons_RF_summary.txt' into feelnc_rf_summary_to_report
-    path '*.feelncclassifier.log' into feelnc_classifier_log_to_report
+    path '*.feelncclassifier.log'
     path 'novel.feelnc_biotype.gff' into novel_annotation_with_coding_potential
     path 'feelnc_classification_summary.txt' into feelnc_classification_summary_to_report
+    path '*feelncfilter.log' into feelnc_filter_log_to_report
 
   script:
     """
@@ -1050,18 +1050,14 @@ process detect_lncRNA {
         }
      \$3=="transcript" {
           ++nb_transcripts
-          match(\$9,/transcript_biotype "([^;]*)";*/,transcript_biotype)
           match(\$9,/feelnc_biotype "([^;]*)";*/,feelnc_biotype)
-          if (transcript_biotype[1]=="protein_coding") { ++nb_coding }
-          else {++feelnc_classes[feelnc_biotype[1]] }
+          ++feelnc_classes[feelnc_biotype[1]]
       }
       END {
           print "Lnc transcripts",feelnc_classes["lncRNA"]
           print "Coding transcripts from FEELnc classification",feelnc_classes["mRNA"]
           print "Transcripts with no ORF",feelnc_classes["noORF"]
           print "Transcripts of unknown coding potential",feelnc_classes["TUCp"]
-          print "Not evaluated by FEELnc (coding transcripts)",nb_coding
-          print "Not evaluated by FEELnc (other reason)",feelnc_classes[""]
       }' novel.feelnc_biotype.gff > feelnc_classification_summary.txt
 
     # Filter coding transcripts for lnc-messenger interactions
@@ -1414,10 +1410,9 @@ process report {
     path '*' from control_contigs_to_report.flatten().collect().ifEmpty([])
     path '*' from control_metrics_to_report.flatten().collect().ifEmpty([])
     path '*' from control_flags_to_report.flatten().collect().ifEmpty([])
-    path '*' from feelnc_classifier_log_to_report.flatten().collect().ifEmpty([])
     path '*' from feelnc_classes_to_report.flatten().collect().ifEmpty([])
-    path '*' from feelnc_rf_summary_to_report.flatten().collect().ifEmpty([])
     path '*' from feelnc_classification_summary_to_report.flatten().collect().ifEmpty([])
+    path '*' from feelnc_filter_log_to_report.flatten().collect().ifEmpty([])
 
   output:
     path 'multiqc_report.html'
