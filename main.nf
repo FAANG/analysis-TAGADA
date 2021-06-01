@@ -1217,7 +1217,7 @@ process control_elements {
       Plots/5pExonLength_Gn/*.png \\
       Plots/DistinctInternalExonLength/*.png \\
       Plots/Exact_tr_dist_to_Genc_TSS/*.png \\
-      Plots/TrLength/*.png \\
+      Plots/TrLength/*.png
     do
       [ -f "\$f" ] || continue
       convert "\$f" -crop 1400x2100+0+0 +repage "\${f%.png}"_cropped.png
