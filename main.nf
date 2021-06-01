@@ -933,7 +933,7 @@ process combine {
     stringtie --merge $assemblies -G $annotation -o novel_no_biotype.gff
 
     # Add lines for genes
-    awk -f compute_boundaries.awk \\
+    awk -f \$(which compute_boundaries.awk) \\
         -v toadd=gene \\
         -v fldno=10 \\
         -v keys=gene_name,ref_gene_id \\
