@@ -933,32 +933,38 @@ process combine {
     stringtie --merge $assemblies -G $annotation -o novel_no_biotype.gff
 
     # Add lines for genes
-    awk -f /usr/local/src/Scripts/compute_boundaries.awk -v toadd=gene -v fldno=10 -v keys=gene_name,ref_gene_id novel_no_biotype.gff > genes.gff
+    awk -f compute_boundaries.awk \\
+        -v toadd=gene \\
+        -v fldno=10 \\
+        -v keys=gene_name,ref_gene_id \\
+        novel_no_biotype.gff > genes.gff
 
     cat genes.gff novel_no_biotype.gff | sort -k1,1 -k4,4n -k5,5rn > novel.genes.gff
 
     # Write transcript biotype in merged assembly
-    awk 'BEGIN { FS = "\t" }
-        NR==FNR {
-          match(\$9,/transcript_id "([^;]*)";*/,tId)
-          match(\$9,/transcript_biotype "([^;]*)";*/,biotype)
-          biotypes[tId[1]]=biotype[1]
-          next
-        }
-        {
-          if (substr(\$1,1,1)!="#" && \$3!="gene") {
-            match(\$9,/transcript_id "([^;]*)";*/,tId)
-            if (tId[1] in biotypes) {
-              print \$0 "transcript_biotype \\""biotypes[tId[1]]"\\";"
-            } else {
-              print \$0
-            }
+    awk '
+      BEGIN {
+        FS = "\t"
+      }
+      NR == FNR {
+        match(\$9, /transcript_id "([^;]*)";*/, tId)
+        match(\$9, /transcript_biotype "([^;]*)";*/, biotype)
+        biotypes[tId[1]] = biotype[1]
+        next
+      }
+      {
+        if (substr(\$1,1,1) != "#" && \$3 != "gene") {
+          match(\$9, /transcript_id "([^;]*)";*/, tId)
+          if (tId[1] in biotypes) {
+            print \$0 "transcript_biotype \\""biotypes[tId[1]]"\\";"
           } else {
             print \$0
           }
-        }  ' $annotation novel.genes.gff > novel.gff
-
-
+        } else {
+          print \$0
+        }
+      }
+    ' $annotation novel.genes.gff > novel.gff
     """
 }
 
@@ -1016,49 +1022,54 @@ process detect_lncRNA {
 
     # Enrich assembled annotation with new biotypes
     cp $novel_annotation novel.feelnc_biotype.gff
-    for biotype in lncRNA mRNA noORF TUCp
-      do if [ -f exons.\$biotype.gtf ] ; then
+    for biotype in lncRNA mRNA noORF TUCp; do
+      if [ -f exons.\$biotype.gtf ]; then
         awk -v biotype=\$biotype '
-        BEGIN { FS = "\t" }
-        NR==FNR {
-        match(\$9,/transcript_id "([^;]*)";*/,tId)
-              transcripts[tId[1]]=0
-              next
-        }
-        #(substr(\$1,1,1)=="#"){print \$0}
-        {match(\$9,/transcript_id "([^;]*)";*/,tId)
-        if (tId[1] in transcripts) {
+          BEGIN {
+            FS = "\t"
+          }
+          NR == FNR {
+            match(\$9, /transcript_id "([^;]*)";*/, tId)
+            transcripts[tId[1]] = 0
+            next
+          }
+          {
+            match(\$9, /transcript_id "([^;]*)";*/, tId)
+            if (tId[1] in transcripts) {
               # Check if there is already a biotype in the annotation
-              match(\$9,/biotype=([^;]*)*/,oldBiotype)
-              if (oldBiotype[1]){
-                      print \$0
+              match(\$9, /biotype=([^;]*)*/, oldBiotype)
+              if (oldBiotype[1]) {
+                print \$0
               } else {
-                      print \$0 " feelnc_biotype \\"" biotype "\\";"
+                print \$0 " feelnc_biotype \\"" biotype "\\";"
               }
-        } else { print \$0 }
-      }' exons."\$biotype".gtf novel.feelnc_biotype.gff > tmp.gff
-      mv tmp.gff novel.feelnc_biotype.gff
+            } else {
+              print \$0
+            }
+          }
+        ' exons."\$biotype".gtf novel.feelnc_biotype.gff > tmp.gff
+        mv tmp.gff novel.feelnc_biotype.gff
       fi
     done
 
     # Make a summary of the FEELnc classification
     awk '
-     BEGIN {
-        FS="\t"
-        OFS="\t"
+      BEGIN {
+        FS = OFS = "\t"
         feelnc_classes["lncRNA"] = feelnc_classes["noORF"] = feelnc_classes["mRNA"] = feelnc_classes["TUCp"] = feelnc_classes[""] = 0
-        }
-     \$3=="transcript" {
-          ++nb_transcripts
-          match(\$9,/feelnc_biotype "([^;]*)";*/,feelnc_biotype)
-          ++feelnc_classes[feelnc_biotype[1]]
+      }
+      \$3 == "transcript" {
+        ++nb_transcripts
+        match(\$9, /feelnc_biotype "([^;]*)";*/, feelnc_biotype)
+        ++feelnc_classes[feelnc_biotype[1]]
       }
       END {
-          print "Lnc transcripts",feelnc_classes["lncRNA"]
-          print "Coding transcripts from FEELnc classification",feelnc_classes["mRNA"]
-          print "Transcripts with no ORF",feelnc_classes["noORF"]
-          print "Transcripts of unknown coding potential",feelnc_classes["TUCp"]
-      }' novel.feelnc_biotype.gff > feelnc_classification_summary.txt
+        print "Lnc transcripts",feelnc_classes["lncRNA"]
+        print "Coding transcripts from FEELnc classification",feelnc_classes["mRNA"]
+        print "Transcripts with no ORF",feelnc_classes["noORF"]
+        print "Transcripts of unknown coding potential",feelnc_classes["TUCp"]
+      }
+    ' novel.feelnc_biotype.gff > feelnc_classification_summary.txt
 
     # Filter coding transcripts for lnc-messenger interactions
     grep -E '#|transcript_biotype "protein_coding"|feelnc_biotype "mRNA"' $novel_annotation > coding_transcripts.gtf
