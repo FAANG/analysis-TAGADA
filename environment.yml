@@ -1,8 +1,7 @@
 name: rnaseq
 channels:
-  - bioconda
   - conda-forge
-  - defaults
+  - bioconda
 dependencies:
   - bedtools=2.29.2
   - bioconductor-edger=3.30.0
