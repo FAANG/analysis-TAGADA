@@ -988,7 +988,7 @@ process detect_lncRNA {
     path '*classes.txt' into feelnc_classes_to_report
     path 'exons.*.gtf'
     path '*.feelncclassifier.log'
-    path 'novel.feelnc_biotype.gff' into novel_annotation_with_coding_potential
+    path 'novel.feelnc_biotype.gff'
     path 'feelnc_classification_summary.txt' into feelnc_classification_summary_to_report
     path '*feelncfilter.log' into feelnc_filter_log_to_report
 
