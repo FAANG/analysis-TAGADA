@@ -1258,9 +1258,9 @@ process control_elements {
             transcript_cdna_length_and_TSStorefgeneTSS_distance_for_exact_transcripts.png
 
     reference_genes=\$(awk 'NR == 3 {print \$2}' detected_transcripts_genes_numbers.tsv)
-    novel_genes=\$(awk 'NR == 3 {print \$2 + \$7}' detected_transcripts_genes_numbers.tsv)
+    novel_genes=\$(wc -l string/novel_gnid_nbtr.txt | awk '{print \$1}')
     reference_transcripts=\$(awk 'NR == 2 {print \$2}' detected_transcripts_genes_numbers.tsv)
-    novel_transcripts=\$(awk 'NR == 2 {print \$2 + \$7}' detected_transcripts_genes_numbers.tsv)
+    novel_transcripts=\$(wc -l string/novel_trid_nbex.txt | awk '{print \$1}')
 
     perl -pe 's/^"([^"]+)".+\$/\$1/g' \\
       ref_expr/ref.annot.tpm0.1.2samples.exons_complete_gnid_nbtr.txt \\
