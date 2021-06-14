@@ -11,7 +11,7 @@ To use this pipeline, simply clone or download this repository, and install the 
 
 Try out this nextflow pipeline with:
 
-    ./nextflow-run FAANG/analysis-TAGADA --revision 1.0.0 --output directory --profile test docker
+    ./nextflow-run FAANG/analysis-TAGADA --revision 1.0.1 --output directory --profile test docker
 
 The `./nextflow-run` launcher script replaces the `nextflow run` command and grants these benefits:
 - Options can receive multiple space-separated parameters and unquoted globs.
