@@ -11,7 +11,7 @@ To use this pipeline, simply clone or download this repository, and install the 
 
 Try out this nextflow pipeline with:
 
-    ./nextflow-run FAANG/analysis-TAGADA --revision 1.0.1 --output directory --profile test docker
+    ./nextflow-run FAANG/analysis-TAGADA --revision 1.0.2 --output directory --profile test docker
 
 The `./nextflow-run` launcher script replaces the `nextflow run` command and grants these benefits:
 - Options can receive multiple space-separated parameters and unquoted globs.
@@ -90,7 +90,7 @@ The pipeline executes the following main processes:
    The annotations of long non-coding RNAs are saved to `output/annotation`.
 9. __Quantify__ genes and transcripts with [StringTie](https://github.com/gpertea/stringtie), and __format__ them into tabulated files.  
    The TPM values and read counts for each annotation are saved to `output/quantification`.
-10. Aggregates quality controls into a __report__ with [MultiQC](https://github.com/ewels/MultiQC).  
+10. Aggregate quality controls into a __report__ with [MultiQC](https://github.com/ewels/MultiQC).  
     The report is saved to `output/control`.
 
 
