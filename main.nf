@@ -7,10 +7,14 @@ index = params.containsKey('index') ? params.index : ''
 annotation = params.containsKey('annotation') ? params.annotation : ''
 metadata = params.containsKey('metadata') ? params.metadata : ''
 merge = params.containsKey('merge') ? params.merge.tokenize(',') : ''
+merge_mapping = params.containsKey('merge_mapping') ? params.merge_mapping.tokenize(',') : ''
+merge_assembly = params.containsKey('merge_assembly') ? params.merge_assembly.tokenize(',') : ''
+merge = params.containsKey('merge') ? params.merge.tokenize(',') : ''
 feelnc_args = params.containsKey('feelnc-args') ? params.'feelnc-args' : ''
 skip_feelnc = params.containsKey('skip-feelnc') ? true : false
 
 error = ''
+warning = ''
 
 if (!output) error += 'No --output provided\n'
 
@@ -20,7 +24,18 @@ if (!genome) error += 'No --genome provided\n'
 
 if (!annotation) error += 'No --annotation provided\n'
 
-if (merge && !metadata) {
+if (merge_mapping && merge_assembly && merge){
+  warning += 'Parameter merge ignored because --merge_mapping and --merge_assembly are supplied'
+}
+if (merge && !merge_assembly){
+    merge_assembly = merge
+}
+if (merge && !merge_mapping){
+    merge_mapping = merge
+}
+
+
+if ((merge_mapping || merge_assembly) && !metadata) {
   error += 'No --metadata provided to execute --merge\n'
 }
 
@@ -85,13 +100,15 @@ if (metadata) {
     metadata_to_report
   }.splitCsv(header: true, sep: '\t').into {
     metadata_to_check
-    metadata_to_merge
+    metadata_to_merge_assembly
+    metadata_to_merge_mapping
   }
 } else {
   Channel.empty().into {
     metadata_to_report
     metadata_to_check
-    metadata_to_merge
+    metadata_to_merge_assembly
+    metadata_to_merge_mapping
   }
 }
 
@@ -235,7 +252,7 @@ if (duplicated.size() > 0) {
 
 // Check metadata
 // ##############
-if (merge && metadata) {
+if ((merge_mapping || merge_assembly) && metadata) {
 
   metadata_to_check = metadata_to_check.toList().get()
 
@@ -261,9 +278,12 @@ if (merge && metadata) {
   // ##############################
   metadata_columns = metadata_to_check[0].keySet()
 
-  missing_columns = merge.findAll {
+  missing_columns = merge_mapping.findAll {
     !(it in metadata_columns)
   }
+  missing_columns.addAll(merge_assembly.findAll {
+    !(it in metadata_columns)
+  })
 
   if (missing_columns.size() > 0) {
     s = missing_columns.size() > 1 ? 's' : ''
@@ -273,11 +293,13 @@ if (merge && metadata) {
 
   // Check missing metadata values
   // #############################
+  print(metadata_to_check)
+
   missing_values = metadata_to_check.findAll {
     it.values()[0] in inputs.collect{it['prefix']}
   }.inject([], { result, row ->
     factors = []
-    merge.each { factor ->
+    merge_assembly.each { factor ->
       if (!row[factor]) factors += factor
     }
     if (factors) {
@@ -285,6 +307,7 @@ if (merge && metadata) {
     }
     return result
   })
+  print(missing_values.size())
 
   if (missing_values.size() > 0) {
     s = missing_values.size() > 1 ? 's' : ''
@@ -303,26 +326,50 @@ if (error) exit 1, error
 
 if (warning) log.warn warning
 
-// Determine merge groups
+// Determine merge groups for mapping
 // ######################
-if (merge && metadata) {
+if (merge_mapping && metadata) {
 
-  metadata_to_merge.filter {
+  metadata_to_merge_mapping.filter {
     it.values()[0] in inputs.collect{it['prefix']}
   }.map {
-    factors = it.subMap(merge).values()
+    factors = it.subMap(merge_mapping).values()
     id = '' in factors ? 'NA_' + it.values()[0] : factors.join('_')
     [id, it.values()[0]]
   }.groupTuple().into {
-    groups_to_merge
-    groups_to_log
+    groups_to_merge_mapping
+    groups_to_log_mapping
   }
 
-  groups_to_log = groups_to_log.toList().get().sort { a, b -> a[0] <=> b[0] }
+  groups_to_log_mapping = groups_to_log_mapping.toList().get().sort { a, b -> a[0] <=> b[0] }
 
-  s = groups_to_log.size() > 1 ? 's' : ''
-  info = "The following merge group$s will be created:\n  "
-  info += groups_to_log.collect{ it[0] + ': ' + it[1].join('  ') }.join('\n  ')
+  s = groups_to_log_mapping.size() > 1 ? 's' : ''
+  info = "The following merge group$s will be created for mapping:\n  "
+  info += groups_to_log_mapping.collect{ it[0] + ': ' + it[1].join('  ') }.join('\n  ')
+
+  log.info info
+}
+
+// Determine merge groups for assembly
+// ######################
+if (merge_assembly && metadata) {
+
+  metadata_to_merge_assembly.filter {
+    it.values()[0] in inputs.collect{it['prefix']}
+  }.map {
+    factors = it.subMap(merge_assembly).values()
+    id = '' in factors ? 'NA_' + it.values()[0] : factors.join('_')
+    [id, it.values()[0]]
+  }.groupTuple().into {
+    groups_to_merge_assembly
+    groups_to_log_assembly
+  }
+
+  groups_to_log_assembly = groups_to_log_assembly.toList().get().sort { a, b -> a[0] <=> b[0] }
+
+  s = groups_to_log_assembly.size() > 1 ? 's' : ''
+  info = "The following merge group$s will be created for assembly:\n  "
+  info += groups_to_log_assembly.collect{ it[0] + ': ' + it[1].join('  ') }.join('\n  ')
 
   log.info info
 }
@@ -749,6 +796,7 @@ maps_to_merge.tap {
 }.set {
   maps_to_merge
 }
+maps_to_merge.into {maps_to_merge_mapping; maps_to_merge_assembly}
 
 maps_to_log = maps_to_log.toList().get().sort { a, b -> a[0] <=> b[0] }
 
@@ -790,15 +838,15 @@ process coverage {
 
 // Process merge groups
 // ####################
-if (merge) {
+if (merge_mapping) {
 
   // Add maps to merge groups
   // ########################
-  groups_to_merge = groups_to_merge.toList().get()
+  groups_to_merge_mapping = groups_to_merge_mapping.toList().get()
 
-  maps_to_merge.map { map ->
+  maps_to_merge_mapping.map { map ->
     [
-      groups_to_merge.find { group ->
+      groups_to_merge_mapping.find { group ->
         map[0] in group[1]
       }[0]
     ] + map
@@ -807,7 +855,23 @@ if (merge) {
   }.map {
     [it[0], (it[2].sum()/it[2].size()).toInteger(), it[3][0], it[4]]
   }.set {
-    maps_to_merge
+    maps_to_merge_mapping
+  }
+
+  groups_to_merge_assembly = groups_to_merge_assembly.toList().get()
+
+  maps_to_merge_assembly.map { map ->
+    [
+      groups_to_merge_assembly.find { group ->
+        map[0] in group[1]
+      }[0]
+    ] + map
+  }.groupTuple().tap {
+    maps_to_check
+  }.map {
+    [it[0], (it[2].sum()/it[2].size()).toInteger(), it[3][0], it[4]]
+  }.set {
+    maps_to_merge_assembly
   }
 
   // Check differing read lengths and directions
@@ -863,10 +927,9 @@ if (merge) {
     label 'cpu_16'
 
     input:
-      tuple val(prefix), val(length), val(direction), path(maps) from maps_to_merge
+      tuple val(prefix), val(length), val(direction), path(maps) from maps_to_merge_mapping
 
     output:
-      tuple val(prefix), val(direction), path('*.bam') into maps_to_assemble
       tuple val(prefix), val(length), val(direction), path('*.bam') into maps_to_quantify
       path '*.bam' into maps_to_control_exons
 
@@ -877,12 +940,12 @@ if (merge) {
   }
 
 } else {
-  maps_to_merge.tap {
+  maps_to_merge_mapping.tap {
     maps_to_quantify
   }.map {
     [it[0], it[2], it[3]]
   }.tap {
-    maps_to_assemble
+    maps_to_merge_assembly
   }.map {
     it[2]
   }.set {
@@ -892,14 +955,14 @@ if (merge) {
 
 // Assemble transcripts
 // ####################
-reference_annotation_to_assemble.combine(maps_to_assemble).set {
-  maps_to_assemble
+reference_annotation_to_assemble.combine(maps_to_merge_assembly).set {
+  maps_to_merge_assembly
 }
 
 process assemble {
 
   input:
-    tuple path(annotation), val(prefix), val(direction), path(map) from maps_to_assemble
+    tuple path(annotation), val(prefix), val(length), val(direction), path(map) from maps_to_merge_assembly
 
   output:
     path '*.gff' into assemblies_to_combine
