@@ -28,3 +28,7 @@ USER root
 RUN git clone --branch v1.0.2 --depth 1 https://github.com/cguyomar/multiqc_feelnc /usr/local/src/multiqc_feelnc && \
     cd /usr/local/src/multiqc_feelnc && \
     python setup.py install
+
+RUN git clone --branch v0.1 --depth 1 https://github.com/cguyomar/custom_images_mqc_plugin /usr/local/src/multiqc_custom_images && \
+    cd /usr/local/src/multiqc_custom_images && \
+    python setup.py install

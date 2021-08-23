@@ -6,6 +6,7 @@ skip_generalstats: True
 
 run_modules:
   - custom_content
+  - custom_images
   - fastqc
   - cutadapt
   - star
@@ -43,6 +44,10 @@ module_order:
       name: 'Exonic reads'
       target: 'FeatureCounts'
       info: 'results for each quantified bam file.'
+  - custom_images:
+      name: 'Additional figures'
+      target: 'custom_images'
+      info: "Control plots"
   - feelnc:
       name: 'Annotation of novel lnc transcripts'
       target: 'feelnc'

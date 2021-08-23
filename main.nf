@@ -1019,7 +1019,7 @@ if (!skip_assembly) {
   Channel.empty().into {
     novel_annotation_to_control_elements
     novel_annotation_to_control_exons
-  } 
+  }
 }
 
 // Detect long non-coding RNAs
@@ -1388,7 +1388,7 @@ process TAGADA_control_elements {
       novel_annotation_present=true
     fi
 
-   
+
     if \$novel_annotation_present ; then
       detected_elements_sumstats.sh \\
         $reference_annotation \\
@@ -1454,7 +1454,7 @@ process TAGADA_control_elements {
 
     reference_genes=\$(awk 'NR == 3 {print \$2}' detected_transcripts_genes_numbers.tsv)
     reference_transcripts=\$(awk 'NR == 2 {print \$2}' detected_transcripts_genes_numbers.tsv)
-    
+
     # Stats for the novel annotation
     if \$novel_annotation_present ; then
       novel_genes=\$(wc -l string/novel_gnid_nbtr.txt | awk '{print \$1}')
@@ -1476,7 +1476,7 @@ process TAGADA_control_elements {
           -v all=\$novel_genes \\
           '{print 100 * expressed / all}'
       )
-        
+
       percent_novel_expressed_transcripts=\$(
       echo | \\
       awk -v expressed=\$novel_expressed_transcripts \\
@@ -1497,7 +1497,7 @@ q
           print \$1, \$6, \$11-\$6, \$16-\$11, \$3-\$16, \$2-\$3;
         }
       ' Tables/prediction_sets_eval_wrt_ref_for_table.txt > transcripts_comparison_annotation.tsv
-      
+
     fi
 
     # Stats for the reference annotation
@@ -1510,7 +1510,7 @@ q
       ref_expr/ref.annot.tpm0.1.2samples.exons_complete_trid_nbex.txt \\
       > reference_expressed_transcripts.txt
     reference_expressed_transcripts=\$(wc -l reference_expressed_transcripts.txt | awk '{print \$1}')
-   
+
     percent_reference_expressed_genes=\$(
       echo | \\
       awk -v expressed=\$reference_expressed_genes \\
@@ -1553,7 +1553,7 @@ process TAGADA_control_expression {
     path formatted_genes_counts from formatted_genes_counts_to_control_expression
 
   output:
-    path '*.png'
+    path '*.png' into control_expression_images
 
   script:
     """
@@ -1612,6 +1612,7 @@ process TAGADA_control_exons {
 // Create multiqc report
 // #####################
 config_to_report = Channel.fromPath("$baseDir/multiqc.yaml", checkIfExists: true)
+config_custom_images = Channel.fromPath("$baseDir/allqc_plots_not_in_main_custom_images.tsv", checkIfExists: true)
 
 process MULTIQC_report {
 
@@ -1621,6 +1622,7 @@ process MULTIQC_report {
 
   input:
     path config from config_to_report
+    path config_custom_images from config_custom_images
     path '*' from metadata_to_report.flatten().collect().ifEmpty([])
     path '*' from control_quality_to_report.flatten().collect().ifEmpty([])
     path '*' from trim_to_report.flatten().collect().ifEmpty([])
@@ -1633,13 +1635,19 @@ process MULTIQC_report {
     path '*' from feelnc_classes_to_report.flatten().collect().ifEmpty([])
     path '*' from feelnc_classification_summary_to_report.flatten().collect().ifEmpty([])
     path '*' from feelnc_filter_log_to_report.flatten().collect().ifEmpty([])
+    path '*' from control_elements_images
+    path '*' from control_expression_images
 
   output:
     path 'multiqc_report.html'
 
   script:
     """
-    for f in *.tsv *.png; do
+    for f in *.tsv ; do
+      if [[ "\$f" == $config_custom_images ]]
+      then
+        continue
+      fi
       [ -f "\$f" ] || continue
       mv "\$f" "\${f%.*}"_mqc."\${f##*.}"
     done
