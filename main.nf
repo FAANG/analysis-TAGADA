@@ -276,12 +276,9 @@ if ((merge_mapping || merge_assembly) && metadata) {
   // ##############################
   metadata_columns = metadata_to_check[0].keySet()
 
-  missing_columns = merge_mapping.findAll {
+  missing_columns = (merge_mapping+merge_assembly).findAll {
     !(it in metadata_columns)
   }
-  missing_columns.addAll(merge_assembly.findAll {
-    !(it in metadata_columns)
-  })
 
   if (missing_columns.size() > 0) {
     s = missing_columns.size() > 1 ? 's' : ''
