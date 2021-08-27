@@ -865,7 +865,7 @@ if (merge_mapping) {
   }.groupTuple().tap {
     maps_to_check
   }.map {
-    [it[0], (it[2].sum()/it[2].size()).toInteger(), it[3][0], it[4]]
+    [it[0], it[3][0], it[4]]
   }.set {
     maps_to_merge_assembly
   }
@@ -958,7 +958,7 @@ reference_annotation_to_assemble.combine(maps_to_merge_assembly).set {
 process assemble {
 
   input:
-    tuple path(annotation), val(prefix), val(length), val(direction), path(map) from maps_to_merge_assembly
+    tuple path(annotation), val(prefix), val(direction), path(map) from maps_to_merge_assembly
 
   output:
     path '*.gff' into assemblies_to_combine
