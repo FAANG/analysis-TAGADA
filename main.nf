@@ -14,7 +14,6 @@ feelnc_args = params.containsKey('feelnc-args') ? params.'feelnc-args' : ''
 skip_feelnc = params.containsKey('skip-feelnc') ? true : false
 
 error = ''
-warning = ''
 
 if (!output) error += 'No --output provided\n'
 
@@ -25,13 +24,12 @@ if (!genome) error += 'No --genome provided\n'
 if (!annotation) error += 'No --annotation provided\n'
 
 if (merge_mapping && merge_assembly && merge){
-  warning += 'Parameter merge ignored because --merge_mapping and --merge_assembly are supplied'
-}
-if (merge && !merge_assembly){
-    merge_assembly = merge
-}
-if (merge && !merge_mapping){
-    merge_mapping = merge
+  log.warn 'Parameter --merge ignored because --quantify-by and --assemble-by are supplied'
+} else if (merge && !merge_assembly && !merge_mapping){
+    log.warn "Option --merge is a legacy option. Interpreting --merge ${merge[0]}" +
+    " as --assemble-by ${merge[0]} --quantify-by ${merge[0]}"
+} else if (merge && (merge_assembly || merge_mapping)) {
+  error += "--merge is a legacy option and should not be used in conjunction with --assemble-by and --quantify-by"
 }
 
 
