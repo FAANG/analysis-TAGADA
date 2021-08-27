@@ -288,7 +288,6 @@ if ((merge_mapping || merge_assembly) && metadata) {
 
   // Check missing metadata values
   // #############################
-  print(metadata_to_check)
 
   missing_values = metadata_to_check.findAll {
     it.values()[0] in inputs.collect{it['prefix']}
@@ -302,7 +301,6 @@ if ((merge_mapping || merge_assembly) && metadata) {
     }
     return result
   })
-  print(missing_values.size())
 
   if (missing_values.size() > 0) {
     s = missing_values.size() > 1 ? 's' : ''
@@ -339,7 +337,7 @@ if (merge_mapping && metadata) {
   groups_to_log_mapping = groups_to_log_mapping.toList().get().sort { a, b -> a[0] <=> b[0] }
 
   s = groups_to_log_mapping.size() > 1 ? 's' : ''
-  info = "The following merge group$s will be created for mapping:\n  "
+  info = "Quantification will be done separately in each of the following group$s:\n  "
   info += groups_to_log_mapping.collect{ it[0] + ': ' + it[1].join('  ') }.join('\n  ')
 
   log.info info
@@ -363,7 +361,7 @@ if (merge_assembly && metadata) {
   groups_to_log_assembly = groups_to_log_assembly.toList().get().sort { a, b -> a[0] <=> b[0] }
 
   s = groups_to_log_assembly.size() > 1 ? 's' : ''
-  info = "The following merge group$s will be created for assembly:\n  "
+  info = "Transcripts assembly will be done separately in each of the following group$s:\n  "
   info += groups_to_log_assembly.collect{ it[0] + ': ' + it[1].join('  ') }.join('\n  ')
 
   log.info info
