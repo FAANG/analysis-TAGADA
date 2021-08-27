@@ -296,6 +296,9 @@ if ((merge_mapping || merge_assembly) && metadata) {
     merge_assembly.each { factor ->
       if (!row[factor]) factors += factor
     }
+    merge_mapping.each { factor ->
+      if (!row[factor]) factors += factor
+    }
     if (factors) {
       result += [[row.values()[0]] + factors]
     }
