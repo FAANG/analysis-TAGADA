@@ -7,8 +7,8 @@ index = params.containsKey('index') ? params.index : ''
 annotation = params.containsKey('annotation') ? params.annotation : ''
 metadata = params.containsKey('metadata') ? params.metadata : ''
 merge = params.containsKey('merge') ? params.merge.tokenize(',') : ''
-merge_mapping = params.containsKey('merge_mapping') ? params.merge_mapping.tokenize(',') : ''
-merge_assembly = params.containsKey('merge_assembly') ? params.merge_assembly.tokenize(',') : ''
+merge_mapping = params.containsKey('quantify-by') ? params.'quantify-by'.tokenize(',') : ''
+merge_assembly = params.containsKey('assemble-by') ? params.'assemble-by'.tokenize(',') : ''
 merge = params.containsKey('merge') ? params.merge.tokenize(',') : ''
 feelnc_args = params.containsKey('feelnc-args') ? params.'feelnc-args' : ''
 skip_feelnc = params.containsKey('skip-feelnc') ? true : false
@@ -36,7 +36,7 @@ if (merge && !merge_mapping){
 
 
 if ((merge_mapping || merge_assembly) && !metadata) {
-  error += 'No --metadata provided to execute --merge\n'
+  error += 'No --metadata provided to execute --quantify-by or --assemble-by\n'
 }
 
 if (error) exit 1, error
