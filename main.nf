@@ -1126,22 +1126,7 @@ if (merge_quantification) {
 
   differing_lengths = maps_to_check_before_quantification.findAll {
     it[2].subsequences().findAll {
-      it.size() == 2ssembly = groups_to_merge_for_assembly.toList().get()
-
-  maps_to_merge_for_assembly.map { map ->
-    [
-      groups_to_merge_for_assembly.find { group ->
-        map[0] in group[1]
-      }[0]
-    ] + map
-  }.groupTuple().tap {
-    maps_to_check_before_assembly
-  }.map {
-    [it[0], it[3][0], it[4]]
-  }.set {
-    maps_to_merge_for_assembly
-  }
-
+      it.size() == 2
     }.collect {
       (it[0] - it[1]).abs()
     }.findAll {
