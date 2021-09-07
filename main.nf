@@ -9,7 +9,6 @@ metadata = params.containsKey('metadata') ? params.metadata : ''
 merge = params.containsKey('merge') ? params.merge.tokenize(',') : ''
 merge_quantification = params.containsKey('quantify-by') ? params.'quantify-by'.tokenize(',') : ''
 merge_assembly = params.containsKey('assemble-by') ? params.'assemble-by'.tokenize(',') : ''
-merge = params.containsKey('merge') ? params.merge.tokenize(',') : ''
 feelnc_args = params.containsKey('feelnc-args') ? params.'feelnc-args' : ''
 skip_feelnc = params.containsKey('skip-feelnc') ? true : false
 
@@ -25,11 +24,11 @@ if (!annotation) error += 'No --annotation provided\n'
 
 if (merge_quantification && merge_assembly && merge){
   log.warn 'Parameter --merge ignored because --quantify-by and --assemble-by are supplied'
-} else if (merge && !merge_assembly && !merge_quantification){
-    log.warn "Option --merge is a legacy option. Interpreting --merge ${merge[0]}" +
-    " as --assemble-by ${merge[0]} --quantify-by ${merge[0]}"
+} else if (merge && !merge_assembly && !merge_quantification) {
+  log.warn "Option --merge is a legacy option. Interpreting --merge ${merge[0]}" +
+  " as --assemble-by ${merge.join(' ')} --quantify-by ${merge[0]}"
 } else if (merge && (merge_assembly || merge_quantification)) {
-  error += "--merge is a legacy option and should not be used in conjunction with --assemble-by and --quantify-by"
+  error += "--merge is a legacy option and must not be used in conjunction with --assemble-by and --quantify-by"
 }
 
 
@@ -276,7 +275,7 @@ if ((merge_quantification || merge_assembly) && metadata) {
   // ##############################
   metadata_columns = metadata_to_check[0].keySet()
 
-  missing_columns = (merge_quantification+merge_assembly).findAll {
+  missing_columns = (merge_quantification.toList() + merge_assembly.toList()).findAll {
     !(it in metadata_columns)
   }
 
@@ -789,10 +788,9 @@ maps_to_merge.tap {
   else if (it[2] == 'RF') direction = '--rf'
   else direction = ''
   [it[0], it[1].toInteger(), direction, it[3]]
-}.set {
-  maps_to_merge
+}.into {
+  maps_to_merge_for_quantification; maps_to_merge_for_assembly
 }
-maps_to_merge.into {maps_to_merge_for_quantification; maps_to_merge_for_assembly}
 
 maps_to_log = maps_to_log.toList().get().sort { a, b -> a[0] <=> b[0] }
 
