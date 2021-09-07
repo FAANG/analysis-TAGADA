@@ -322,8 +322,8 @@ if (error) exit 1, error
 
 if (warning) log.warn warning
 
-// Determine merge groups for mapping
-// ######################
+// Determine merge groups for quantification
+// #########################################
 if (merge_quantification && metadata) {
 
   metadata_to_merge_for_quantification.filter {
@@ -334,20 +334,20 @@ if (merge_quantification && metadata) {
     [id, it.values()[0]]
   }.groupTuple().into {
     groups_to_merge_for_quantification
-    groups_to_log_mapping
+    groups_to_log_for_quantification
   }
 
-  groups_to_log_mapping = groups_to_log_mapping.toList().get().sort { a, b -> a[0] <=> b[0] }
+  groups_to_log_for_quantification = groups_to_log_for_quantification.toList().get().sort { a, b -> a[0] <=> b[0] }
 
-  s = groups_to_log_mapping.size() > 1 ? 's' : ''
+  s = groups_to_log_for_quantification.size() > 1 ? 's' : ''
   info = "Quantification will be done separately in each of the following group$s:\n  "
-  info += groups_to_log_mapping.collect{ it[0] + ': ' + it[1].join('  ') }.join('\n  ')
+  info += groups_to_log_for_quantification.collect{ it[0] + ': ' + it[1].join('  ') }.join('\n  ')
 
   log.info info
 }
 
 // Determine merge groups for assembly
-// ######################
+// ###################################
 if (merge_assembly && metadata) {
 
   metadata_to_merge_for_assembly.filter {
@@ -358,14 +358,14 @@ if (merge_assembly && metadata) {
     [id, it.values()[0]]
   }.groupTuple().into {
     groups_to_merge_for_assembly
-    groups_to_log_assembly
+    groups_to_log_for_assembly
   }
 
-  groups_to_log_assembly = groups_to_log_assembly.toList().get().sort { a, b -> a[0] <=> b[0] }
+  groups_to_log_for_assembly = groups_to_log_for_assembly.toList().get().sort { a, b -> a[0] <=> b[0] }
 
-  s = groups_to_log_assembly.size() > 1 ? 's' : ''
+  s = groups_to_log_for_assembly.size() > 1 ? 's' : ''
   info = "Transcripts assembly will be done separately in each of the following group$s:\n  "
-  info += groups_to_log_assembly.collect{ it[0] + ': ' + it[1].join('  ') }.join('\n  ')
+  info += groups_to_log_for_assembly.collect{ it[0] + ': ' + it[1].join('  ') }.join('\n  ')
 
   log.info info
 }
@@ -832,27 +832,12 @@ process coverage {
     """
 }
 
-// Process merge groups
-// ####################
-if (merge_quantification) {
+// Process merge groups for assembly
+// #################################
+if (merge_assembly) {
 
   // Add maps to merge groups
   // ########################
-  groups_to_merge_for_quantification = groups_to_merge_for_quantification.toList().get()
-
-  maps_to_merge_for_quantification.map { map ->
-    [
-      groups_to_merge_for_quantification.find { group ->
-        map[0] in group[1]
-      }[0]
-    ] + map
-  }.groupTuple().tap {
-    maps_to_check
-  }.map {
-    [it[0], (it[2].sum()/it[2].size()).toInteger(), it[3][0], it[4]]
-  }.set {
-    maps_to_merge_for_quantification
-  }
 
   groups_to_merge_for_assembly = groups_to_merge_for_assembly.toList().get()
 
@@ -863,43 +848,20 @@ if (merge_quantification) {
       }[0]
     ] + map
   }.groupTuple().tap {
-    maps_to_check
+    maps_to_check_before_assembly
   }.map {
     [it[0], it[3][0], it[4]]
   }.set {
     maps_to_merge_for_assembly
   }
 
-  // Check differing read lengths and directions
-  // ###########################################
+  // Check differing read directions for assembly merge groups
+  // #########################################################
   error = ''
 
-  maps_to_check = maps_to_check.toList().get().sort { a, b -> a[0] <=> b[0] }
+  maps_to_check_before_assembly = maps_to_check_before_assembly.toList().get().sort { a, b -> a[0] <=> b[0] }
 
-  differing_lengths = maps_to_check.findAll {
-    it[2].subsequences().findAll {
-      it.size() == 2
-    }.collect {
-      (it[0] - it[1]).abs()
-    }.findAll {
-      it > 10
-    }.size() > 0
-  }.collectEntries { group ->
-    [
-      (group[0]): group[1].withIndex().collect { it, i ->
-        it + ' (' + group[2][i] + ')'
-      }
-    ]
-  }
-
-  if (differing_lengths.size() > 0) {
-    error += 'Cannot merge differing read lengths:\n  '
-    error += differing_lengths.collect {
-      it.key + ': ' + it.value.join('  ')
-    }.join('\n  ') + '\n'
-  }
-
-  differing_directions = maps_to_check.findAll {
+  differing_directions = maps_to_check_before_assembly.findAll {
     it[3].toUnique().size() > 1
   }.collectEntries { group ->
     [
@@ -910,24 +872,23 @@ if (merge_quantification) {
   }
 
   if (differing_directions.size() > 0) {
-    error += 'Cannot merge differing read directions:\n  '
+    error += 'Cannot merge differing read directions for assembly:\n  '
     error += differing_directions.collect{ it.key + ': ' + it.value.join('  ') }.join('\n  ') + '\n'
   }
 
   if (error) exit 1, error
 
-  // Merge maps
-  // ##########
-  process merge {
+  // Merge maps for assembly
+  // #######################
+  process merge_assembly {
 
     label 'cpu_16'
 
     input:
-      tuple val(prefix), val(length), val(direction), path(maps) from maps_to_merge_for_quantification
+      tuple val(prefix), val(direction), path(maps) from maps_to_merge_for_assembly
 
     output:
-      tuple val(prefix), val(length), val(direction), path('*.bam') into maps_to_quantify
-      path '*.bam' into maps_to_control_exons
+      tuple val(prefix), val(direction), path('*.bam') into maps_to_assemble
 
     script:
       """
@@ -936,29 +897,23 @@ if (merge_quantification) {
   }
 
 } else {
-  maps_to_merge_for_quantification.tap {
-    maps_to_quantify
-  }.map {
-    [it[0], it[2], it[3]]
-  }.tap {
-    maps_to_merge_for_assembly
+  maps_to_merge_for_assembly.tap {
+    maps_to_assemble
   }.map {
     it[2]
-  }.set {
-    maps_to_control_exons
   }
 }
 
 // Assemble transcripts
 // ####################
-reference_annotation_to_assemble.combine(maps_to_merge_for_assembly).set {
-  maps_to_merge_for_assembly
+reference_annotation_to_assemble.combine(maps_to_assemble).set {
+  maps_to_assemble
 }
 
 process assemble {
 
   input:
-    tuple path(annotation), val(prefix), val(direction), path(map) from maps_to_merge_for_assembly
+    tuple path(annotation), val(prefix), val(direction), path(map) from maps_to_assemble
 
   output:
     path '*.gff' into assemblies_to_combine
@@ -1139,6 +1094,122 @@ process detect_lncRNA {
 
     """
 }
+
+// Process merge groups for quantification
+// #######################################
+
+if (merge_quantification) {
+
+  // Add maps to merge groups
+  // ########################
+  groups_to_merge_for_quantification = groups_to_merge_for_quantification.toList().get()
+
+  maps_to_merge_for_quantification.map { map ->
+    [
+      groups_to_merge_for_quantification.find { group ->
+        map[0] in group[1]
+      }[0]
+    ] + map
+  }.groupTuple().tap {
+    maps_to_check_before_quantification
+  }.map {
+    [it[0], (it[2].sum()/it[2].size()).toInteger(), it[3][0], it[4]]
+  }.set {
+    maps_to_merge_for_quantification
+  }
+
+  // Check differing read lengths and directions for quantification groups
+  // #####################################################################
+  error = ''
+
+  maps_to_check_before_quantification = maps_to_check_before_quantification.toList().get().sort { a, b -> a[0] <=> b[0] }
+
+  differing_lengths = maps_to_check_before_quantification.findAll {
+    it[2].subsequences().findAll {
+      it.size() == 2ssembly = groups_to_merge_for_assembly.toList().get()
+
+  maps_to_merge_for_assembly.map { map ->
+    [
+      groups_to_merge_for_assembly.find { group ->
+        map[0] in group[1]
+      }[0]
+    ] + map
+  }.groupTuple().tap {
+    maps_to_check_before_assembly
+  }.map {
+    [it[0], it[3][0], it[4]]
+  }.set {
+    maps_to_merge_for_assembly
+  }
+
+    }.collect {
+      (it[0] - it[1]).abs()
+    }.findAll {
+      it > 10
+    }.size() > 0
+  }.collectEntries { group ->
+    [
+      (group[0]): group[1].withIndex().collect { it, i ->
+        it + ' (' + group[2][i] + ')'
+      }
+    ]
+  }
+
+  if (differing_lengths.size() > 0) {
+    error += 'Cannot merge differing read lengths for quantification:\n  '
+    error += differing_lengths.collect {
+      it.key + ': ' + it.value.join('  ')
+    }.join('\n  ') + '\n'
+  }
+
+  differing_directions = maps_to_check_before_quantification.findAll {
+    it[3].toUnique().size() > 1
+  }.collectEntries { group ->
+    [
+      (group[0]): group[1].withIndex().collect { it, i ->
+        it + ' (' + group[3][i] + ')'
+      }
+    ]
+  }
+
+  if (differing_directions.size() > 0) {
+    error += 'Cannot merge differing read directions for quantification:\n  '
+    error += differing_directions.collect{ it.key + ': ' + it.value.join('  ') }.join('\n  ') + '\n'
+  }
+
+  if (error) exit 1, error
+
+
+  // Merge maps for quantification
+  // #############################
+  process merge_quantification {
+
+    label 'cpu_16'
+
+    input:
+      tuple val(prefix), val(length), val(direction), path(maps) from maps_to_merge_for_quantification
+
+    output:
+      tuple val(prefix), val(length), val(direction), path('*.bam') into maps_to_quantify
+      path '*.bam' into maps_to_control_exons
+
+    script:
+      """
+      samtools merge "$prefix".bam $maps --threads ${task.cpus}
+      """
+  }
+
+} else {
+  maps_to_merge_for_quantification.tap {
+    maps_to_quantify
+  }.map {
+    [it[0], it[2], it[3]]
+  }.set {
+    maps_to_control_exons
+  }
+}
+
+
 
 // Quantify genes and transcripts
 // ##############################
