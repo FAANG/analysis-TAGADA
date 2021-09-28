@@ -7,8 +7,8 @@ index = params.containsKey('index') ? params.index : ''
 annotation = params.containsKey('annotation') ? params.annotation : ''
 metadata = params.containsKey('metadata') ? params.metadata : ''
 merge = params.containsKey('merge') ? params.merge.tokenize(',') : ''
-merge_quantification = params.containsKey('quantify-by') ? params.'quantify-by'.tokenize(',') : ''
-merge_assembly = params.containsKey('assemble-by') ? params.'assemble-by'.tokenize(',') : ''
+quantify_by = params.containsKey('quantify-by') ? params.'quantify-by'.tokenize(',') : ''
+assemble_by = params.containsKey('assemble-by') ? params.'assemble-by'.tokenize(',') : ''
 feelnc_args = params.containsKey('feelnc-args') ? params.'feelnc-args' : ''
 skip_feelnc = params.containsKey('skip-feelnc') ? true : false
 
@@ -22,17 +22,17 @@ if (!genome) error += 'No --genome provided\n'
 
 if (!annotation) error += 'No --annotation provided\n'
 
-if (merge_quantification && merge_assembly && merge){
+if (quantify_by && assemble_by && merge){
   log.warn 'Parameter --merge ignored because --quantify-by and --assemble-by are supplied'
-} else if (merge && !merge_assembly && !merge_quantification) {
+} else if (merge && !assemble_by && !quantify_by) {
   log.warn "Option --merge is a legacy option. Interpreting --merge ${merge[0]}" +
   " as --assemble-by ${merge.join(' ')} --quantify-by ${merge[0]}"
-} else if (merge && (merge_assembly || merge_quantification)) {
+} else if (merge && (assemble_by || quantify_by)) {
   error += "--merge is a legacy option and must not be used in conjunction with --assemble-by and --quantify-by"
 }
 
 
-if ((merge_quantification || merge_assembly) && !metadata) {
+if ((quantify_by || assemble_by) && !metadata) {
   error += 'No --metadata provided to execute --quantify-by or --assemble-by\n'
 }
 
@@ -249,7 +249,7 @@ if (duplicated.size() > 0) {
 
 // Check metadata
 // ##############
-if ((merge_quantification || merge_assembly) && metadata) {
+if ((quantify_by || assemble_by) && metadata) {
 
   metadata_to_check = metadata_to_check.toList().get()
 
@@ -275,7 +275,7 @@ if ((merge_quantification || merge_assembly) && metadata) {
   // ##############################
   metadata_columns = metadata_to_check[0].keySet()
 
-  missing_columns = (merge_quantification.toList() + merge_assembly.toList()).findAll {
+  missing_columns = (quantify_by.toList() + assemble_by.toList()).findAll {
     !(it in metadata_columns)
   }
 
@@ -292,10 +292,10 @@ if ((merge_quantification || merge_assembly) && metadata) {
     it.values()[0] in inputs.collect{it['prefix']}
   }.inject([], { result, row ->
     factors = []
-    merge_assembly.each { factor ->
+    assemble_by.each { factor ->
       if (!row[factor]) factors += factor
     }
-    merge_quantification.each { factor ->
+    quantify_by.each { factor ->
       if (!row[factor]) factors += factor
     }
     if (factors) {
@@ -323,12 +323,12 @@ if (warning) log.warn warning
 
 // Determine merge groups for quantification
 // #########################################
-if (merge_quantification && metadata) {
+if (quantify_by && metadata) {
 
   metadata_to_merge_for_quantification.filter {
     it.values()[0] in inputs.collect{it['prefix']}
   }.map {
-    factors = it.subMap(merge_quantification).values()
+    factors = it.subMap(quantify_by).values()
     id = '' in factors ? 'NA_' + it.values()[0] : factors.join('_')
     [id, it.values()[0]]
   }.groupTuple().into {
@@ -347,12 +347,12 @@ if (merge_quantification && metadata) {
 
 // Determine merge groups for assembly
 // ###################################
-if (merge_assembly && metadata) {
+if (assemble_by && metadata) {
 
   metadata_to_merge_for_assembly.filter {
     it.values()[0] in inputs.collect{it['prefix']}
   }.map {
-    factors = it.subMap(merge_assembly).values()
+    factors = it.subMap(assemble_by).values()
     id = '' in factors ? 'NA_' + it.values()[0] : factors.join('_')
     [id, it.values()[0]]
   }.groupTuple().into {
@@ -832,7 +832,7 @@ process coverage {
 
 // Process merge groups for assembly
 // #################################
-if (merge_assembly) {
+if (assemble_by) {
 
   // Add maps to merge groups
   // ########################
@@ -1096,7 +1096,7 @@ process detect_lncRNA {
 // Process merge groups for quantification
 // #######################################
 
-if (merge_quantification) {
+if (quantify_by) {
 
   // Add maps to merge groups
   // ########################
