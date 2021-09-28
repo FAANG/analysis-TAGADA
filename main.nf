@@ -22,9 +22,7 @@ if (!genome) error += 'No --genome provided\n'
 
 if (!annotation) error += 'No --annotation provided\n'
 
-if (quantify_by && assemble_by && merge){
-  log.warn 'Parameter --merge ignored because --quantify-by and --assemble-by are supplied'
-} else if (merge && !assemble_by && !quantify_by) {
+if (merge && !assemble_by && !quantify_by) {
   log.warn "Option --merge is a legacy option. Interpreting --merge ${merge[0]}" +
   " as --assemble-by ${merge.join(' ')} --quantify-by ${merge[0]}"
 } else if (merge && (assemble_by || quantify_by)) {
@@ -292,10 +290,7 @@ if ((quantify_by || assemble_by) && metadata) {
     it.values()[0] in inputs.collect{it['prefix']}
   }.inject([], { result, row ->
     factors = []
-    assemble_by.each { factor ->
-      if (!row[factor]) factors += factor
-    }
-    quantify_by.each { factor ->
+    (assemble_by + quantify_by).each { factor ->
       if (!row[factor]) factors += factor
     }
     if (factors) {
@@ -895,12 +890,13 @@ if (assemble_by) {
   }
 
 } else {
-  maps_to_merge_for_assembly.tap {
+  maps_to_merge_for_assembly.map {
+    [it[0], it[2], it[3]]
+  }.tap {
     maps_to_assemble
-  }.map {
-    it[2]
   }
 }
+
 
 // Assemble transcripts
 // ####################
@@ -1186,7 +1182,7 @@ if (quantify_by) {
   maps_to_merge_for_quantification.tap {
     maps_to_quantify
   }.map {
-    [it[0], it[2], it[3]]
+    it[3]
   }.set {
     maps_to_control_exons
   }
