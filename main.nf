@@ -7,8 +7,8 @@ index = params.containsKey('index') ? params.index : ''
 annotation = params.containsKey('annotation') ? params.annotation : ''
 metadata = params.containsKey('metadata') ? params.metadata : ''
 merge = params.containsKey('merge') ? params.merge.tokenize(',') : ''
-quantify_by = params.containsKey('quantify-by') ? params.'quantify-by'.tokenize(',') : ''
 assemble_by = params.containsKey('assemble-by') ? params.'assemble-by'.tokenize(',') : ''
+quantify_by = params.containsKey('quantify-by') ? params.'quantify-by'.tokenize(',') : ''
 feelnc_args = params.containsKey('feelnc-args') ? params.'feelnc-args' : ''
 skip_feelnc = params.containsKey('skip-feelnc') ? true : false
 
@@ -23,14 +23,14 @@ if (!genome) error += 'No --genome provided\n'
 if (!annotation) error += 'No --annotation provided\n'
 
 if (merge && !assemble_by && !quantify_by) {
-  log.warn "Option --merge is a legacy option. Interpreting --merge ${merge[0]}" +
-  " as --assemble-by ${merge.join(' ')} --quantify-by ${merge[0]}"
+  log.warn "Option --merge is a legacy option. Interpreting --merge ${params.merge} as --assemble-by ${params.merge} --quantify-by ${params.merge}"
+  assemble_by = merge
+  quantify_by = merge
 } else if (merge && (assemble_by || quantify_by)) {
   error += "--merge is a legacy option and must not be used in conjunction with --assemble-by and --quantify-by"
 }
 
-
-if ((quantify_by || assemble_by) && !metadata) {
+if ((assemble_by || quantify_by) && !metadata) {
   error += 'No --metadata provided to execute --quantify-by or --assemble-by\n'
 }
 
