@@ -11,6 +11,7 @@ assemble_by = params.containsKey('assemble-by') ? params.'assemble-by'.tokenize(
 quantify_by = params.containsKey('quantify-by') ? params.'quantify-by'.tokenize(',') : ''
 feelnc_args = params.containsKey('feelnc-args') ? params.'feelnc-args' : ''
 skip_feelnc = params.containsKey('skip-feelnc') ? true : false
+skip_assembly = params.containsKey('skip-assembly') ? true : false
 
 error = ''
 
@@ -827,7 +828,7 @@ process coverage {
 
 // Process merge groups for assembly
 // #################################
-if (assemble_by) {
+if (assemble_by && !skip_assembly) {
 
   // Add maps to merge groups
   // ########################
@@ -912,6 +913,9 @@ process assemble {
   output:
     path '*.gff' into assemblies_to_combine
 
+  when:
+  !skip_assembly
+
   script:
     """
     stringtie $map $direction -G $annotation -o "$prefix".gff
@@ -935,6 +939,9 @@ process combine {
       novel_annotation_to_control_elements,
       novel_annotation_to_control_exons
     )
+
+  when:
+  !skip_assembly
 
   script:
     """
@@ -974,6 +981,12 @@ process combine {
       }
     ' $annotation novel.genes.gff > novel.gff
     """
+}
+
+if (skip_assembly){
+  annotation from reference_annotation_to_combine.into (
+      novel_annotation_to_detect_lncRNA,
+  )
 }
 
 // Detect long non-coding RNAs
@@ -1192,10 +1205,16 @@ if (quantify_by) {
 
 // Quantify genes and transcripts
 // ##############################
-reference_annotation_to_quantify.combine(Channel.of('reference')).concat(
+if (!skip_assembly){
+  reference_annotation_to_quantify.combine(Channel.of('reference')).concat(
   novel_annotation_to_quantify.combine(Channel.of('novel'))
 ).combine(maps_to_quantify).set {
   maps_to_quantify
+  }
+} else {
+  reference_annotation_to_quantify.combine(Channel.of('reference')).combine(maps_to_quantify).set {
+  maps_to_quantify
+  }
 }
 
 process quantify {
@@ -1253,12 +1272,17 @@ reference_genes_TPM_to_format.tap {
   reference_genes_counts_to_format,
   reference_transcripts_TPM_to_format,
   reference_transcripts_counts_to_format,
-  novel_genes_TPM_to_format,
-  novel_genes_counts_to_format,
-  novel_transcripts_TPM_to_format,
-  novel_transcripts_counts_to_format,
 ).set {
   quantifications_to_format
+}
+
+if (!skip_assembly) {
+  quantifications_to_format = quantifications_to_format.concat(
+      novel_genes_TPM_to_format,
+    novel_genes_counts_to_format,
+    novel_transcripts_TPM_to_format,
+    novel_transcripts_counts_to_format
+  )
 }
 
 buffer = buffer.count().get()
