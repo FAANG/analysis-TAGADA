@@ -32,16 +32,19 @@ The `./nextflow-run` launcher script replaces the `nextflow run` command and gra
 | __`--index`__ | `directory[.tar.gz]` | Input genome index<br>directory or url. | Optional to skip<br>genome indexing. |
 | __`--metadata`__ | `metadata.tsv` | Input tabulated<br>metadata file or url. | Required if `--merge`<br>is provided. |
 | __`--merge`__ | `factor1` `factor2` `...` | Factor(s) to merge<br>mapped reads. See<br>the [merge factors](https://github.com/FAANG/analysis-TAGADA#merge-factors)<br>section for details. | Optional |
+| __`--assemble-by`__ | `factor1` `factor2` `...` | Factor(s) to merge<br>mapped reads for assembly of new transcripts. See<br>the [merge factors](https://github.com/FAANG/analysis-TAGADA#merge-factors)<br>section for details. | Optional |
+| __`--quantify-by`__ | `factor1` `factor2` `...` | Factor(s) to merge<br>mapped reads for quantification. See<br>the [merge factors](https://github.com/FAANG/analysis-TAGADA#merge-factors)<br>section for details. | Optional |
 | __`--max-cpus`__ | `16` | Maximum number of<br>CPU cores that can be<br>used for each process.<br>This is a limit, not the<br>actual number of<br>requested CPU cores. | Optional |
 | __`--max-memory`__ | `64GB` | Maximum memory that<br>can be used for each<br>process. This is a limit,<br>not the actual amount<br>of alloted memory. | Optional |
 | __`--max-time`__ | `12h` | Maximum time that can<br>be spent on each<br>process. This is a limit<br>and has no effect on the<br>duration of each process.| Optional |
 | __`--resume`__ | | Preserve temporary files<br>and resume the pipeline<br>from the last completed<br>process. If this option is<br>absent, temporary files<br>will be deleted upon<br>completion, and the<br>pipeline will not be<br>resumable. | Optional |
 | __`--feelnc-args`__ | `'--mode shuffle ...'` | Custom arguments to<br>pass to FEELnc's<br>[coding potential](https://github.com/tderrien/FEELnc#2--feelnc_codpotpl) script<br>when detecting long<br>non-coding RNAs. | Optional |
 | __`--skip-feelnc`__ | | Skip the detection of long<br>non-coding RNAs with FEELnc. | Optional |
+| __`--skip-assembly`__ | | Skip the assembly of new transcripts using Stringtie. Only reference transcripts will be quantified. | Optional |
 
 ### Merge factors
 
-Use the `--merge` and `--metadata` options together to merge mapped reads. This results in genes and transcripts being quantified by __factors__ rather than by __inputs__.
+Use the `--assemble-by`,`--quantify-by`  and `--metadata` options together to merge mapped reads. This results in genes and transcripts being assembled and/or quantified by __factors__ rather than by __inputs__.
 
 The metadata file consists of tab-separated values describing your inputs. The first column must contain file names without extensions. There is no restriction on column names or number of columns.
 
@@ -57,18 +60,29 @@ Given the following tabulated metadata file:
 
 With the following arguments:
 
-    --reads A_R1.fq A_R2.fq B.fq C.fq D.bam --metadata metadata.tsv --merge diet
+    --reads A_R1.fq A_R2.fq B.fq C.fq D.bam --metadata metadata.tsv --assemble-by diet --quantify-by tissue
 
-- __A__ and __B__ mapped reads will be merged, resulting in gene and transcript counts for the __corn__ diet.
-- __C__ and __D__ mapped reads will be merged, resulting in gene and transcript counts for the __wheat__ diet.
+- For annotation: 
+
+   The mapped reads from __A__ / __B__ and __C__ / __D__ will be merged together. 
+   One annotation file is generated for each group.
+   The novel annotation `novel.gff` is obtained by merging the two annotation files (using `stringtie --merge`).
+- For quantification:
+   - __A__ and __B__ mapped reads will be merged, resulting in gene and transcript counts for the __corn__ diet.
+   - __C__ and __D__ mapped reads will be merged, resulting in gene and transcript counts for the __wheat__ diet.
 
 With the following arguments:
 
-    --reads A_R1.fq A_R2.fq B.fq C.fq D.bam --metadata metadata.tsv --merge diet tissue
+    --reads A_R1.fq A_R2.fq B.fq C.fq D.bam --metadata metadata.tsv --quantify-by diet tissue
 
-- __A__ and __B__ mapped reads will be merged, resulting in counts for the __corn__ diet and __liver__ tissue pair.
-- __C__ mapped reads will be left alone, resulting in counts for the __wheat__ diet and __liver__ tissue pair.
-- __D__ mapped reads will be left alone, resulting in counts for the __wheat__ diet and __muscle__ tissue pair.
+- For annotation: 
+
+   Since no merge factor is given, one annotation file is generated for each file.
+   The novel annotation `novel.gff` is obtained by merging all the annotation files (using `stringtie --merge`).
+- For quantification:
+   - __A__ and __B__ mapped reads will be merged, resulting in counts for the __corn__ diet and __liver__ tissue pair.
+   - __C__ mapped reads will be left alone, resulting in counts for the __wheat__ diet and __liver__ tissue pair.
+   - __D__ mapped reads will be left alone, resulting in counts for the __wheat__ diet and __muscle__ tissue pair.
 
 
 ## Workflow
