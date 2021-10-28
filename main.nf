@@ -897,13 +897,16 @@ if (assemble_by && !skip_assembly) {
   }
 }
 
+// Run assembly
+// ############
+if (!skip_assembly) {
 
-// Assemble transcripts
-// ####################
 reference_annotation_to_assemble.combine(maps_to_assemble).set {
   maps_to_assemble
 }
 
+// Assemble transcripts
+// ####################
 process assemble {
 
   input:
@@ -911,9 +914,6 @@ process assemble {
 
   output:
     path '*.gff' into assemblies_to_combine
-
-  when:
-  !skip_assembly
 
   script:
     """
@@ -938,9 +938,6 @@ process combine {
       novel_annotation_to_control_elements,
       novel_annotation_to_control_exons
     )
-
-  when:
-  !skip_assembly
 
   script:
     """
@@ -982,10 +979,11 @@ process combine {
     """
 }
 
-if (skip_assembly){
-  annotation from reference_annotation_to_combine.into (
-      novel_annotation_to_detect_lncRNA,
-  )
+} else {
+  reference_annotation_to_detect_lncRNA.into {
+    reference_annotation_to_detect_lncRNA
+    novel_annotation_to_detect_lncRNA
+  }
 }
 
 // Detect long non-coding RNAs
@@ -1006,9 +1004,9 @@ process detect_lncRNA {
     !skip_feelnc
 
   input:
-    path reference_annotation from reference_annotation_to_detect_lncRNA
-    path novel_annotation from novel_annotation_to_detect_lncRNA
-    path genome from genome_to_detect_lncRNA
+    path reference_annotation, stageAs: 'reference.gtf' from reference_annotation_to_detect_lncRNA
+    path novel_annotation, stageAs: 'novel.gtf' from novel_annotation_to_detect_lncRNA
+    path genome, stageAs: 'genome.fa' from genome_to_detect_lncRNA
 
   output:
     path '*classes.txt' into feelnc_classes_to_report
@@ -1200,19 +1198,17 @@ if (quantify_by) {
   }
 }
 
-
-
 // Quantify genes and transcripts
 // ##############################
-if (!skip_assembly){
+if (!skip_assembly) {
   reference_annotation_to_quantify.combine(Channel.of('reference')).concat(
-  novel_annotation_to_quantify.combine(Channel.of('novel'))
-).combine(maps_to_quantify).set {
-  maps_to_quantify
+    novel_annotation_to_quantify.combine(Channel.of('novel'))
+  ).combine(maps_to_quantify).set {
+    maps_to_quantify
   }
 } else {
   reference_annotation_to_quantify.combine(Channel.of('reference')).combine(maps_to_quantify).set {
-  maps_to_quantify
+    maps_to_quantify
   }
 }
 
