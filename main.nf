@@ -831,7 +831,6 @@ if (assemble_by && !skip_assembly) {
 
   // Add maps to merge groups
   // ########################
-
   groups_to_merge_for_assembly = groups_to_merge_for_assembly.toList().get()
 
   maps_to_merge_for_assembly.map { map ->
@@ -848,8 +847,8 @@ if (assemble_by && !skip_assembly) {
     maps_to_merge_for_assembly
   }
 
-  // Check differing read directions for assembly merge groups
-  // #########################################################
+  // Check differing read directions for assembly groups
+  // ###################################################
   error = ''
 
   maps_to_check_before_assembly = maps_to_check_before_assembly.toList().get().sort { a, b -> a[0] <=> b[0] }
@@ -901,83 +900,83 @@ if (assemble_by && !skip_assembly) {
 // ############
 if (!skip_assembly) {
 
-reference_annotation_to_assemble.combine(maps_to_assemble).set {
-  maps_to_assemble
-}
+  reference_annotation_to_assemble.combine(maps_to_assemble).set {
+    maps_to_assemble
+  }
 
-// Assemble transcripts
-// ####################
-process assemble {
+  // Assemble transcripts
+  // ####################
+  process assemble {
 
-  input:
-    tuple path(annotation), val(prefix), val(direction), path(map) from maps_to_assemble
+    input:
+      tuple path(annotation), val(prefix), val(direction), path(map) from maps_to_assemble
 
-  output:
-    path '*.gff' into assemblies_to_combine
+    output:
+      path '*.gff' into assemblies_to_combine
 
-  script:
-    """
-    stringtie $map $direction -G $annotation -o "$prefix".gff
-    """
-}
+    script:
+      """
+      stringtie $map $direction -G $annotation -o "$prefix".gff
+      """
+  }
 
-// Combine assemblies
-// ##################
-process combine {
+  // Combine assemblies
+  // ##################
+  process combine {
 
-  publishDir "$output/annotation", mode: 'copy'
+    publishDir "$output/annotation", mode: 'copy'
 
-  input:
-    path annotation from reference_annotation_to_combine
-    path assemblies from assemblies_to_combine.collect()
+    input:
+      path annotation from reference_annotation_to_combine
+      path assemblies from assemblies_to_combine.collect()
 
-  output:
-    path 'novel.gff' into (
-      novel_annotation_to_detect_lncRNA,
-      novel_annotation_to_quantify,
-      novel_annotation_to_control_elements,
-      novel_annotation_to_control_exons
-    )
+    output:
+      path 'novel.gff' into (
+        novel_annotation_to_detect_lncRNA,
+        novel_annotation_to_quantify,
+        novel_annotation_to_control_elements,
+        novel_annotation_to_control_exons
+      )
 
-  script:
-    """
-    stringtie --merge $assemblies -G $annotation -o novel_no_biotype.gff
+    script:
+      """
+      stringtie --merge $assemblies -G $annotation -o novel_no_biotype.gff
 
-    # Add lines for genes
-    awk -f \$(which compute_boundaries.awk) \\
-        -v toadd=gene \\
-        -v fldno=10 \\
-        -v keys=gene_name,ref_gene_id \\
-        novel_no_biotype.gff > genes.gff
+      # Add lines for genes
+      awk -f \$(which compute_boundaries.awk) \\
+          -v toadd=gene \\
+          -v fldno=10 \\
+          -v keys=gene_name,ref_gene_id \\
+          novel_no_biotype.gff > genes.gff
 
-    cat genes.gff novel_no_biotype.gff | sort -k1,1 -k4,4n -k5,5rn > novel.genes.gff
+      cat genes.gff novel_no_biotype.gff | sort -k1,1 -k4,4n -k5,5rn > novel.genes.gff
 
-    # Write transcript biotype in merged assembly
-    awk '
-      BEGIN {
-        FS = "\t"
-      }
-      NR == FNR {
-        match(\$9, /transcript_id "([^;]*)";*/, tId)
-        match(\$9, /transcript_biotype "([^;]*)";*/, biotype)
-        biotypes[tId[1]] = biotype[1]
-        next
-      }
-      {
-        if (substr(\$1,1,1) != "#" && \$3 != "gene") {
+      # Write transcript biotype in merged assembly
+      awk '
+        BEGIN {
+          FS = "\t"
+        }
+        NR == FNR {
           match(\$9, /transcript_id "([^;]*)";*/, tId)
-          if (tId[1] in biotypes) {
-            print \$0 " transcript_biotype \\""biotypes[tId[1]]"\\";"
+          match(\$9, /transcript_biotype "([^;]*)";*/, biotype)
+          biotypes[tId[1]] = biotype[1]
+          next
+        }
+        {
+          if (substr(\$1,1,1) != "#" && \$3 != "gene") {
+            match(\$9, /transcript_id "([^;]*)";*/, tId)
+            if (tId[1] in biotypes) {
+              print \$0 " transcript_biotype \\""biotypes[tId[1]]"\\";"
+            } else {
+              print \$0
+            }
           } else {
             print \$0
           }
-        } else {
-          print \$0
         }
-      }
-    ' $annotation novel.genes.gff > novel.gff
-    """
-}
+      ' $annotation novel.genes.gff > novel.gff
+      """
+  }
 
 } else {
   reference_annotation_to_detect_lncRNA.into {
@@ -1101,7 +1100,6 @@ process detect_lncRNA {
 
 // Process merge groups for quantification
 // #######################################
-
 if (quantify_by) {
 
   // Add maps to merge groups
@@ -1272,12 +1270,14 @@ reference_genes_TPM_to_format.tap {
 }
 
 if (!skip_assembly) {
-  quantifications_to_format = quantifications_to_format.concat(
-      novel_genes_TPM_to_format,
+  quantifications_to_format.concat(
+    novel_genes_TPM_to_format,
     novel_genes_counts_to_format,
     novel_transcripts_TPM_to_format,
     novel_transcripts_counts_to_format
-  )
+  ).set {
+    quantifications_to_format
+  }
 }
 
 buffer = buffer.count().get()
