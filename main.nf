@@ -286,12 +286,11 @@ if ((quantify_by || assemble_by) && metadata) {
 
   // Check missing metadata values
   // #############################
-
   missing_values = metadata_to_check.findAll {
     it.values()[0] in inputs.collect{it['prefix']}
   }.inject([], { result, row ->
     factors = []
-    (assemble_by + quantify_by).each { factor ->
+    (quantify_by.toList() + assemble_by.toList()).each { factor ->
       if (!row[factor]) factors += factor
     }
     if (factors) {
