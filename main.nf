@@ -406,7 +406,7 @@ single_reads_to_control_quality.concat(
 
 // Decompress index, genome, annotation
 // ####################################
-process decompress {
+process GZIP_decompress {
 
   input:
     tuple path(index), val(index_name) from index_to_decompress.ifEmpty([file('   '),''])
@@ -444,7 +444,7 @@ process decompress {
 
 // Sort input maps
 // ###############
-process sort {
+process SAMTOOLS_sort_maps {
 
   label 'cpu_16'
   label 'memory_16'
@@ -475,9 +475,9 @@ process sort {
 // #################
 if (number_of_raw_reads > 0) {
 
-  // Trim adaptators
+  // Trim adapters
   // ###############
-  process trim {
+  process TRIMGALORE_trim_adapters {
 
     label 'cpu_16'
     label 'memory_16'
@@ -537,7 +537,7 @@ if (number_of_raw_reads > 0) {
     reads_to_control_quality
   }
 
-  process control_quality {
+  process FASTQC_control_quality {
 
     input:
       tuple path(read), val(suffix) from reads_to_control_quality
@@ -568,7 +568,7 @@ if (number_of_raw_reads > 0) {
   // ############
   if (!index) {
 
-    process overhang {
+    process TAGADA_get_read_overhangs {
 
       input:
         path read from trimmed_reads_to_overhang.flatten()
@@ -582,7 +582,7 @@ if (number_of_raw_reads > 0) {
         """
     }
 
-    process index {
+    process STAR_index_genome {
 
       label 'cpu_16'
       label 'memory_64'
@@ -620,7 +620,7 @@ if (number_of_raw_reads > 0) {
     trimmed_reads_to_map
   }
 
-  process map {
+  process STAR_map_reads {
 
     label 'cpu_16'
     label 'memory_32'
@@ -696,7 +696,7 @@ if (number_of_raw_reads > 0) {
 
 // Control mapped reads per contig
 // ###############################
-process control_contigs {
+process SAMTOOLS_control_map_contigs {
 
   input:
     tuple val(prefix), path(map) from maps_to_control_contigs
@@ -713,7 +713,7 @@ process control_contigs {
 
 // Control mapping metrics
 // #######################
-process control_metrics {
+process SAMTOOLS_control_map_metrics {
 
   input:
     tuple val(prefix), path(map) from maps_to_control_metrics
@@ -729,7 +729,7 @@ process control_metrics {
 
 // Control mapping flags
 // #####################
-process control_flags {
+process SAMTOOLS_control_map_flags {
 
   input:
     tuple val(prefix), path(map) from maps_to_control_flags
@@ -746,7 +746,7 @@ process control_flags {
 
 // Get read directions from maps
 // #############################
-process direction {
+process TAGADA_get_read_directions {
 
   input:
     tuple path(annotation), val(prefix), path(map) from maps_to_direction
@@ -767,7 +767,7 @@ process direction {
 
 // Get read lengths from maps
 // ##########################
-process length {
+process TAGADA_get_read_lengths {
 
   input:
     tuple val(prefix), val(direction), path(map) from maps_to_length
@@ -804,7 +804,7 @@ log.info info
 
 // Get read coverage from maps
 // ###########################
-process coverage {
+process BEDTOOLS_compute_coverage {
 
   label 'memory_4'
 
@@ -877,7 +877,7 @@ if (assemble_by && !skip_assembly) {
 
   // Merge maps for assembly
   // #######################
-  process merge_assembly {
+  process SAMTOOLS_merge_maps_for_assembly {
 
     label 'cpu_16'
 
@@ -911,7 +911,7 @@ if (!skip_assembly) {
 
   // Assemble transcripts
   // ####################
-  process assemble {
+  process STRINGTIE_assemble_transcripts {
 
     input:
       tuple path(annotation), val(prefix), val(direction), path(map) from maps_to_assemble
@@ -927,7 +927,7 @@ if (!skip_assembly) {
 
   // Combine assemblies
   // ##################
-  process combine {
+  process STRINGTIE_merge_assemblies {
 
     publishDir "$output/annotation", mode: 'copy'
 
@@ -992,7 +992,7 @@ if (!skip_assembly) {
 
 // Detect long non-coding RNAs
 // #############################
-process detect_lncRNA {
+process FEELNC_classify_transcripts {
 
   label 'memory_16'
 
@@ -1173,7 +1173,7 @@ if (quantify_by) {
 
   // Merge maps for quantification
   // #############################
-  process merge_quantification {
+  process SAMTOOLS_merge_maps_for_quantification {
 
     label 'cpu_16'
 
@@ -1214,7 +1214,7 @@ if (!skip_assembly) {
   }
 }
 
-process quantify {
+process STRINGTIE_quantify {
 
   input:
     tuple path(annotation), val(type), val(prefix), val(length), val(direction), path(map) from maps_to_quantify
@@ -1286,7 +1286,7 @@ if (!skip_assembly) {
 
 buffer = buffer.count().get()
 
-process format {
+process STRINGTIE_format {
 
   publishDir "$output/quantification", mode: 'copy'
 
@@ -1308,7 +1308,7 @@ process format {
 
 // Control elements detected
 // #########################
-process control_elements {
+process TAGADA_control_elements {
 
   publishDir "$output/control/elements", mode: 'copy', saveAs: { filename ->
     if (
@@ -1469,7 +1469,7 @@ process control_elements {
 
 // Control reference gene expression detected
 // ##########################################
-process control_expression {
+process TAGADA_control_expression {
 
   publishDir "$output/control/expression", mode: 'copy'
 
@@ -1503,7 +1503,7 @@ reference_annotation_to_control_exons.combine(Channel.of('reference')).concat(
   annotations_to_control_exons
 }
 
-process control_exons {
+process TAGADA_control_exons {
 
   label 'cpu_16'
 
@@ -1538,7 +1538,7 @@ process control_exons {
 // #####################
 config_to_report = Channel.fromPath("$baseDir/multiqc.yaml", checkIfExists: true)
 
-process report {
+process MULTIQC_report {
 
   label 'memory_8'
 
