@@ -14,6 +14,7 @@ skip_feelnc = params.containsKey('skip-feelnc') ? true : false
 skip_assembly = params.containsKey('skip-assembly') ? true : false
 
 error = ''
+warning = ''
 
 if (!output) error += 'No --output provided\n'
 
@@ -24,18 +25,23 @@ if (!genome) error += 'No --genome provided\n'
 if (!annotation) error += 'No --annotation provided\n'
 
 if (merge && !assemble_by && !quantify_by) {
-  log.warn "Option --merge is a legacy option. Interpreting --merge ${params.merge} as --assemble-by ${params.merge} --quantify-by ${params.merge}"
+  warning += "--merge is a legacy option and is interpreted as `--assemble-by ${params.merge} --quantify-by ${params.merge}`\n"
   assemble_by = merge
   quantify_by = merge
 } else if (merge && (assemble_by || quantify_by)) {
-  error += "--merge is a legacy option and must not be used in conjunction with --assemble-by and --quantify-by"
+  error += "--merge is a legacy option and must not be used with --assemble-by or --quantify-by\n"
+}
+
+if (assemble_by && skip_assembly) {
+  error += "Ambiguous --assemble-by and --skip-assembly must not be used together\n"
 }
 
 if ((assemble_by || quantify_by) && !metadata) {
   error += 'No --metadata provided to execute --quantify-by or --assemble-by\n'
 }
 
-if (error) exit 1, error
+if (warning) log.warn warning.trim()
+if (error) exit 1, error.trim()
 
 // Check index, genome, annotation, metadata
 // #########################################
@@ -312,9 +318,8 @@ if ((quantify_by || assemble_by) && metadata) {
   }
 }
 
-if (error) exit 1, error
-
-if (warning) log.warn warning
+if (error) exit 1, error.trim()
+if (warning) log.warn warning.trim()
 
 // Determine merge groups for quantification
 // #########################################
@@ -868,7 +873,7 @@ if (assemble_by && !skip_assembly) {
     error += differing_directions.collect{ it.key + ': ' + it.value.join('  ') }.join('\n  ') + '\n'
   }
 
-  if (error) exit 1, error
+  if (error) exit 1, error.trim()
 
   // Merge maps for assembly
   // #######################
@@ -1164,8 +1169,7 @@ if (quantify_by) {
     error += differing_directions.collect{ it.key + ': ' + it.value.join('  ') }.join('\n  ') + '\n'
   }
 
-  if (error) exit 1, error
-
+  if (error) exit 1, error.trim()
 
   // Merge maps for quantification
   // #############################
