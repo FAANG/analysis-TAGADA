@@ -945,7 +945,9 @@ if (!skip_assembly) {
 
     script:
       """
-      stringtie --merge $assemblies -G $annotation -o novel_no_biotype.gtf
+      filter_rare_transcripts.py $assemblies -o filtered
+
+      stringtie --merge filtered/*.gtf -G $annotation -o novel_no_biotype.gtf
 
       # Add lines for genes
       awk -f \$(which compute_boundaries.awk) \\
