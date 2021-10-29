@@ -917,11 +917,11 @@ if (!skip_assembly) {
       tuple path(annotation), val(prefix), val(direction), path(map) from maps_to_assemble
 
     output:
-      path '*.gff' into assemblies_to_combine
+      path '*.gtf' into assemblies_to_combine
 
     script:
       """
-      stringtie $map $direction -G $annotation -o "$prefix".gff
+      stringtie $map $direction -G $annotation -o "$prefix".gtf
       """
   }
 
@@ -936,7 +936,7 @@ if (!skip_assembly) {
       path assemblies from assemblies_to_combine.collect()
 
     output:
-      path 'novel.gff' into (
+      path 'novel.gtf' into (
         novel_annotation_to_detect_lncRNA,
         novel_annotation_to_quantify,
         novel_annotation_to_control_elements,
@@ -945,16 +945,16 @@ if (!skip_assembly) {
 
     script:
       """
-      stringtie --merge $assemblies -G $annotation -o novel_no_biotype.gff
+      stringtie --merge $assemblies -G $annotation -o novel_no_biotype.gtf
 
       # Add lines for genes
       awk -f \$(which compute_boundaries.awk) \\
           -v toadd=gene \\
           -v fldno=10 \\
           -v keys=gene_name,ref_gene_id \\
-          novel_no_biotype.gff > genes.gff
+          novel_no_biotype.gtf > genes.gtf
 
-      cat genes.gff novel_no_biotype.gff | sort -k1,1 -k4,4n -k5,5rn > novel.genes.gff
+      cat genes.gtf novel_no_biotype.gtf | sort -k1,1 -k4,4n -k5,5rn > novel.genes.gtf
 
       # Write transcript biotype in merged assembly
       awk '
@@ -979,7 +979,7 @@ if (!skip_assembly) {
             print \$0
           }
         }
-      ' $annotation novel.genes.gff > novel.gff
+      ' $annotation novel.genes.gtf > novel.gtf
       """
   }
 
@@ -1000,7 +1000,6 @@ process FEELNC_classify_transcripts {
     if (filename == 'lncRNA_classes.txt') "annotation/lnc_classification/$filename"
     else if (filename.startsWith('exons.')) "annotation/lnc_classification/$filename"
     else if (filename.endsWith('.gtf')) "annotation/$filename"
-    else if (filename.endsWith('.gff')) "annotation/$filename"
     else "control/lnc/$filename"
   }
 
@@ -1016,7 +1015,7 @@ process FEELNC_classify_transcripts {
     path '*classes.txt' into feelnc_classes_to_report
     path 'exons.*.gtf'
     path '*.feelncclassifier.log'
-    path 'novel.feelnc_biotype.gff'
+    path 'novel.feelnc_biotype.gtf'
     path 'feelnc_classification_summary.txt' into feelnc_classification_summary_to_report
     path '*feelncfilter.log' into feelnc_filter_log_to_report
 
@@ -1043,7 +1042,7 @@ process FEELNC_classify_transcripts {
                      $feelnc_args
 
     # Enrich assembled annotation with new biotypes
-    cp $novel_annotation novel.feelnc_biotype.gff
+    cp $novel_annotation novel.feelnc_biotype.gtf
     for biotype in lncRNA mRNA noORF TUCp; do
       if [ -f exons.\$biotype.gtf ]; then
         awk -v biotype=\$biotype '
@@ -1069,8 +1068,8 @@ process FEELNC_classify_transcripts {
               print \$0
             }
           }
-        ' exons."\$biotype".gtf novel.feelnc_biotype.gff > tmp.gff
-        mv tmp.gff novel.feelnc_biotype.gff
+        ' exons."\$biotype".gtf novel.feelnc_biotype.gtf > tmp.gtf
+        mv tmp.gtf novel.feelnc_biotype.gtf
       fi
     done
 
@@ -1091,7 +1090,7 @@ process FEELNC_classify_transcripts {
         print "Transcripts with no ORF",feelnc_classes["noORF"]
         print "Transcripts of unknown coding potential",feelnc_classes["TUCp"]
       }
-    ' novel.feelnc_biotype.gff > feelnc_classification_summary.txt
+    ' novel.feelnc_biotype.gtf > feelnc_classification_summary.txt
 
     # Filter coding transcripts for lnc-messenger interactions
     grep -E '#|transcript_biotype "protein_coding"|feelnc_biotype "mRNA"' $novel_annotation > coding_transcripts.gtf
