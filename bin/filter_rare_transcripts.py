@@ -4,43 +4,51 @@ import os
 import re
 import csv
 import argparse
+import numpy as np
 import pandas as pd
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
   'inputs',
+  metavar = 'INPUTS',
   nargs = '+',
   help = 'Input files in GTF format.'
 )
 parser.add_argument(
   '-o',
   '--output',
+  metavar = 'OUTPUT',
   required = True,
   help = 'Output directory.'
 )
 parser.add_argument(
   '--min-overlap',
-  default = 50,
-  type = int,
-  help = 'Monoexonic transcripts with at least `--min-overlap` nucleotides' +
-         'in common are assumed to be the same transcript.'
+  metavar = 'MIN OVERLAP',
+  default = 0.5,
+  type = float,
+  help = 'Monoexonic transcripts are assumed to be the same transcript if ' +
+         'they both have an overlap percentage of at least `MIN OVERLAP`.'
 )
 parser.add_argument(
   '--min-count',
+  metavar = 'MIN COUNT',
   default = 2,
   type = int,
-  help = 'Delete transcripts that appear in less than `--min-count` inputs.'
+  help = 'Keep transcripts that appear in at least `MIN COUNT` inputs.'
 )
 parser.add_argument(
   '--min-tpm',
+  metavar = 'MIN TPM',
   default = 0.1,
   type = float,
-  help = 'Delete transcripts with all TPM values less than `--min-tpm`.'
+  help = 'Keep transcripts with at least one TPM greater or equal to `MIN TPM`.'
 )
 
 args = parser.parse_args()
 
 # Parse GTF inputs
+inputs = pd.DataFrame()
+
 columns = [
   'chromosome',
   'source',
@@ -52,7 +60,7 @@ columns = [
   'frame',
   'attribute'
 ]
-inputs = pd.DataFrame()
+
 for file in args.inputs:
   input = pd.read_csv(
     file,
@@ -74,11 +82,11 @@ transcripts = inputs[inputs['feature'] == 'exon'].sort_values(
 ).groupby(
   ['file', 'transcript', 'chromosome', 'strand']
 ).apply(
-  lambda table: zip(table['start'] - 1, table['end'] + 1)
+  lambda exons: zip(exons['start'] - 1, exons['end'] + 1)
 ).apply(
-  lambda exons: [str(x) for exon in exons for x in exon][1:-1]
+  lambda intervals: [str(x) for interval in intervals for x in interval][1:-1]
 ).apply(
-  lambda introns: 'multi_' + '_'.join(introns) if len(introns) else pd.NA
+  lambda positions: 'multi_' + '_'.join(positions) if positions else pd.NA
 ).reset_index(
   name = 'splicing'
 ).merge(
@@ -86,29 +94,66 @@ transcripts = inputs[inputs['feature'] == 'exon'].sort_values(
   on = ['file', 'transcript', 'chromosome', 'strand']
 )
 
-# Monoexonic transcripts with overlap of at least `--min-overlap` are the same
-transcripts = transcripts.sort_values(['chromosome', 'strand', 'start', 'end'])
-monoexonic = transcripts[transcripts['splicing'].isna()]
-transcripts.loc[transcripts['splicing'].isna(), 'splicing'] = 'mono_' + (
-  (monoexonic['chromosome'] != monoexonic['chromosome'].shift())
-  | (monoexonic['strand'] != monoexonic['strand'].shift())
-  | (monoexonic['start'] > monoexonic['end'].shift() - args.min_overlap)
-).cumsum().astype(str)
+# Monoexonic transcripts with at least `MIN OVERLAP` overlap are the same
+mono = transcripts[transcripts['splicing'].isna()]
+mono = mono.merge(mono, on = ['chromosome', 'strand'])
 
-# Keep transcripts that appear in at least `--min-count` files
-# Keep transcripts with at least one TPM greater or equal to `--min-tpm`
-transcripts = transcripts.groupby(['chromosome', 'strand', 'splicing']).agg(**{
+mono = mono[
+  (mono['start_x'] <= mono['end_y']) &
+  (mono['start_y'] <= mono['end_x'])
+]
+
+overlap = (
+  np.minimum(mono['end_x'], mono['end_y']) -
+  np.maximum(mono['start_x'], mono['start_y'])
+)
+
+mono = mono[
+  (overlap / (mono['end_x'] - mono['start_x']) >= args.min_overlap) &
+  (overlap / (mono['end_y'] - mono['start_y']) >= args.min_overlap)
+]
+
+mono = mono.rename(columns = {
+  'file_x': 'file',
+  'transcript_x': 'transcript',
+  'start_y': 'start',
+  'end_y': 'end',
+}).groupby(
+  ['file', 'transcript', 'chromosome', 'strand']
+).agg(**{
+  'start_min': ('start', 'min'),
+  'end_max': ('end', 'max'),
+}).reset_index().astype({
+  'start_min': str,
+  'end_max': str
+})
+
+transcripts = transcripts.merge(
+  mono,
+  on = ['file', 'transcript', 'chromosome', 'strand'],
+  how = 'left'
+)
+
+transcripts['splicing'] = transcripts['splicing'].fillna(
+  'mono_' + transcripts['start_min'] + '_' + transcripts['end_max']
+)
+
+# Keep transcripts that appear in at least `MIN COUNT` files
+# Keep transcripts with at least one TPM greater or equal to `MIN TPM`
+transcripts = transcripts.groupby(
+  ['chromosome', 'strand', 'splicing']
+).agg(**{
   'file': ('file', list),
   'transcript': ('transcript', list),
-  'start': ('start', 'first'),
-  'end': ('end', 'last'),
   'tpm_max': ('tpm', 'max'),
   'file_count': ('file', 'nunique')
-}).reset_index().explode(['file', 'transcript'])
+}).reset_index().explode(
+  ['file', 'transcript']
+)
 
 transcripts = transcripts[
-  (transcripts['file_count'] >= args.min_count)
-  & (transcripts['tpm_max'] >= args.min_tpm)
+  (transcripts['file_count'] >= args.min_count) &
+  (transcripts['tpm_max'] >= args.min_tpm)
 ]
 
 # Output filtered GTF
