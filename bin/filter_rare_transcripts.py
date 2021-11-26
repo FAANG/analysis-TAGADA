@@ -65,7 +65,15 @@ for file in args.inputs:
   input = pd.read_csv(
     file,
     dtype = {
-      i: str if i not in [3, 4] else int for i in range(8)
+      0: 'category',
+      1: 'category',
+      2: 'category',
+      3: 'uint32',
+      4: 'uint32',
+      5: 'float32',
+      6: 'category',
+      7: 'category',
+      8: 'str'
     },
     comment = '#',
     sep = '\t',
@@ -73,14 +81,22 @@ for file in args.inputs:
   )
   input['file'] = re.search(r'(.+?)\.[^\.]+$', os.path.basename(file)).group(1)
   input['transcript'] = input['attribute'].str.extract(r'transcript_id "(.+?)"')
-  input['tpm'] = input['attribute'].str.extract(r'TPM "(.+?)"').astype(float)
+  input['tpm'] = input['attribute'].str.extract(r'TPM "(.+?)"').astype('float32')
   inputs = inputs.append(input)
+
+inputs = inputs.astype({
+  'file': 'category',
+  'transcript': 'category'
+}).set_index(
+  ['file', 'transcript', 'chromosome', 'strand']
+)
 
 # Multiexonic transcripts with identical splice sites are the same
 transcripts = inputs[inputs['feature'] == 'exon'].sort_values(
   ['start', 'end']
 ).groupby(
-  ['file', 'transcript', 'chromosome', 'strand']
+  ['file', 'transcript', 'chromosome', 'strand'],
+  observed = True
 ).apply(
   lambda exons: zip(exons['start'] - 1, exons['end'] + 1)
 ).apply(
@@ -89,14 +105,29 @@ transcripts = inputs[inputs['feature'] == 'exon'].sort_values(
   lambda positions: 'multi_' + '_'.join(positions) if positions else pd.NA
 ).reset_index(
   name = 'splicing'
+).set_index(
+  ['file', 'transcript', 'chromosome', 'strand']
 ).merge(
-  inputs[inputs['feature'] == 'transcript'],
+  inputs[inputs['feature'] == 'transcript'][['start', 'end', 'tpm']],
   on = ['file', 'transcript', 'chromosome', 'strand']
 )
 
 # Monoexonic transcripts with at least `MIN OVERLAP` overlap are the same
-mono = transcripts[transcripts['splicing'].isna()]
-mono = mono.merge(mono, on = ['chromosome', 'strand'])
+mono = transcripts[transcripts['splicing'].isna()][
+  ['start', 'end']
+].reset_index().sort_values(
+  ['chromosome', 'strand', 'start', 'end']
+)
+
+mono['group'] = (
+  (mono['chromosome'] != mono['chromosome'].shift()) |
+  (mono['strand'] != mono['strand'].shift()) |
+  (mono['start'] > mono['end'].shift())
+).cumsum()
+
+mono = mono.set_index(['chromosome', 'strand', 'group'])
+
+mono = mono.merge(mono, on = ['chromosome', 'strand', 'group'])
 
 mono = mono[
   (mono['start_x'] <= mono['end_y']) &
@@ -119,11 +150,12 @@ mono = mono.rename(columns = {
   'start_y': 'start',
   'end_y': 'end',
 }).groupby(
-  ['file', 'transcript', 'chromosome', 'strand']
+  ['file', 'transcript', 'chromosome', 'strand'],
+  observed = True
 ).agg(**{
   'start_min': ('start', 'min'),
   'end_max': ('end', 'max'),
-}).reset_index().astype({
+}).astype({
   'start_min': str,
   'end_max': str
 })
@@ -140,15 +172,18 @@ transcripts['splicing'] = transcripts['splicing'].fillna(
 
 # Keep transcripts that appear in at least `MIN COUNT` files
 # Keep transcripts with at least one TPM greater or equal to `MIN TPM`
-transcripts = transcripts.groupby(
-  ['chromosome', 'strand', 'splicing']
+transcripts = transcripts.reset_index().groupby(
+  ['chromosome', 'strand', 'splicing'],
+  observed = True
 ).agg(**{
   'file': ('file', list),
   'transcript': ('transcript', list),
   'tpm_max': ('tpm', 'max'),
   'file_count': ('file', 'nunique')
-}).reset_index().explode(
+}).explode(
   ['file', 'transcript']
+).reset_index().set_index(
+  ['file', 'transcript', 'chromosome', 'strand']
 )
 
 transcripts = transcripts[
@@ -157,18 +192,23 @@ transcripts = transcripts[
 ]
 
 # Output filtered GTF
-groups = transcripts[['file', 'transcript']].merge(
-  inputs,
-  on = ['file', 'transcript']
-).groupby('file')
+groups = inputs.merge(
+  transcripts,
+  on = ['file', 'transcript', 'chromosome', 'strand']
+).reset_index().groupby(
+  'file',
+  observed = True
+)
 
 os.makedirs(args.output, exist_ok = True)
 
 for file, group in groups:
-  group[columns].to_csv(
+  group.to_csv(
     f'{args.output}/{file}.filtered.gtf',
     sep = '\t',
+    columns = columns,
     header = False,
     index = False,
-    quoting = csv.QUOTE_NONE
+    quoting = csv.QUOTE_NONE,
+    float_format = '%.10g'
   )

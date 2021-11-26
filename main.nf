@@ -929,6 +929,8 @@ if (!skip_assembly) {
   // ##################
   process STRINGTIE_merge_assemblies {
 
+    label 'memory_8'
+
     publishDir "$output/annotation", mode: 'copy'
 
     input:
