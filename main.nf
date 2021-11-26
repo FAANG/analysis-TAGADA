@@ -949,16 +949,16 @@ if (!skip_assembly) {
       """
       filter_rare_transcripts.py $assemblies -o filtered
 
-      stringtie --merge filtered/*.gtf -G $annotation -o novel_no_biotype.gtf
+      stringtie --merge filtered/*.gtf -G $annotation -o novel.gtf
 
       # Add lines for genes
       awk -f \$(which compute_boundaries.awk) \\
           -v toadd=gene \\
           -v fldno=10 \\
           -v keys=gene_name,ref_gene_id \\
-          novel_no_biotype.gtf > genes.gtf
+          novel.gtf > genes.gtf
 
-      cat genes.gtf novel_no_biotype.gtf | sort -k1,1 -k4,4n -k5,5rn > novel.genes.gtf
+      cat genes.gtf novel.gtf | sort -k1,1 -k4,4n -k5,5rn > novel.genes.gtf
 
       # Write transcript biotype in merged assembly
       awk '
@@ -1000,30 +1000,34 @@ process FEELNC_classify_transcripts {
 
   label 'memory_16'
 
-  publishDir "$output", mode: 'copy', saveAs: { filename ->
-    if (filename == 'lncRNA_classes.txt') "annotation/lnc_classification/$filename"
-    else if (filename.startsWith('exons.')) "annotation/lnc_classification/$filename"
-    else if (filename.endsWith('.gtf')) "annotation/$filename"
-    else "control/lnc/$filename"
+  publishDir "$output", mode: 'copy', overwrite: true, saveAs: { filename ->
+    if (filename == 'novel.gtf') "annotation/$filename"
+    else if (filename == 'reference.updated.gtf') "annotation/$filename"
+    else if (filename == 'lncRNA_classes.txt') "annotation/lnc_classification/$filename"
+    else if (filename.endsWith('.gtf')) "annotation/lnc_classification/$filename"
+    else if (filename == 'feelnc_classification_summary.txt') "control/lnc/$filename"
+    else if (filename.endsWith('.feelncclassifier.log')) "control/lnc/$filename"
   }
 
   when:
     !skip_feelnc
 
   input:
-    path reference_annotation, stageAs: 'reference.gtf' from reference_annotation_to_classify_transcripts
-    path novel_annotation, stageAs: 'novel.gtf' from novel_annotation_to_classify_transcripts
-    path genome, stageAs: 'genome.fa' from genome_to_classify_transcripts
+    path reference_annotation, stageAs: 'reference.input.gtf' from reference_annotation_to_classify_transcripts
+    path novel_annotation, stageAs: 'novel.input.gtf' from novel_annotation_to_classify_transcripts
+    path genome, stageAs: 'genome.input.fa' from genome_to_classify_transcripts
 
   output:
-    path '*classes.txt' into feelnc_classes_to_report
+    path 'novel.gtf' optional true
+    path 'reference.updated.gtf' optional true
     path 'exons.*.gtf'
     path '*.feelncclassifier.log'
-    path 'novel.feelnc_biotype.gtf'
+    path 'lncRNA_classes.txt' into feelnc_classes_to_report
+    path '*.feelncfilter.log' into feelnc_filter_log_to_report
     path 'feelnc_classification_summary.txt' into feelnc_classification_summary_to_report
-    path '*feelncfilter.log' into feelnc_filter_log_to_report
 
   script:
+    updated_annotation = skip_assembly ? 'reference.updated.gtf' : 'novel.gtf'
     """
     script=\$(which FEELnc_codpot.pl)
     export FEELNCPATH=\${script%/*}/..
@@ -1046,7 +1050,7 @@ process FEELNC_classify_transcripts {
                      $feelnc_args
 
     # Enrich assembled annotation with new biotypes
-    cp $novel_annotation novel.feelnc_biotype.gtf
+    cp "\$(readlink -m $novel_annotation)" updated.gtf
     for biotype in lncRNA mRNA noORF TUCp; do
       if [ -f exons.\$biotype.gtf ]; then
         awk -v biotype=\$biotype '
@@ -1072,8 +1076,8 @@ process FEELNC_classify_transcripts {
               print \$0
             }
           }
-        ' exons."\$biotype".gtf novel.feelnc_biotype.gtf > tmp.gtf
-        mv tmp.gtf novel.feelnc_biotype.gtf
+        ' exons.\$biotype.gtf updated.gtf > temp.gtf
+        mv temp.gtf updated.gtf
       fi
     done
 
@@ -1094,7 +1098,7 @@ process FEELNC_classify_transcripts {
         print "Transcripts with no ORF",feelnc_classes["noORF"]
         print "Transcripts of unknown coding potential",feelnc_classes["TUCp"]
       }
-    ' novel.feelnc_biotype.gtf > feelnc_classification_summary.txt
+    ' updated.gtf > feelnc_classification_summary.txt
 
     # Filter coding transcripts for lnc-messenger interactions
     grep -E '#|transcript_biotype "protein_coding"|feelnc_biotype "mRNA"' $novel_annotation > coding_transcripts.gtf
@@ -1103,6 +1107,7 @@ process FEELNC_classify_transcripts {
                          --lncrna exons.lncRNA.gtf \\
                          > lncRNA_classes.txt
 
+    mv updated.gtf $updated_annotation
     """
 }
 
