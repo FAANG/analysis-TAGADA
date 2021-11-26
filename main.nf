@@ -417,7 +417,7 @@ process GZIP_decompress {
     path "$index_name" optional true into index_to_map
     path "$genome_name" optional true into (
       genome_to_index,
-      genome_to_detect_lncRNA
+      genome_to_classify_transcripts
     )
     path "$annotation_name" optional true into (
       reference_annotation_to_index,
@@ -425,7 +425,7 @@ process GZIP_decompress {
       reference_annotation_to_assemble,
       reference_annotation_to_combine,
       reference_annotation_to_quantify,
-      reference_annotation_to_detect_lncRNA,
+      reference_annotation_to_classify_transcripts,
       reference_annotation_to_control_elements,
       reference_annotation_to_control_exons
     )
@@ -939,7 +939,7 @@ if (!skip_assembly) {
 
     output:
       path 'novel.gtf' into (
-        novel_annotation_to_detect_lncRNA,
+        novel_annotation_to_classify_transcripts,
         novel_annotation_to_quantify,
         novel_annotation_to_control_elements,
         novel_annotation_to_control_exons
@@ -988,9 +988,9 @@ if (!skip_assembly) {
   }
 
 } else {
-  reference_annotation_to_detect_lncRNA.into {
-    reference_annotation_to_detect_lncRNA
-    novel_annotation_to_detect_lncRNA
+  reference_annotation_to_classify_transcripts.into {
+    reference_annotation_to_classify_transcripts
+    novel_annotation_to_classify_transcripts
   }
 }
 
@@ -1011,9 +1011,9 @@ process FEELNC_classify_transcripts {
     !skip_feelnc
 
   input:
-    path reference_annotation, stageAs: 'reference.gtf' from reference_annotation_to_detect_lncRNA
-    path novel_annotation, stageAs: 'novel.gtf' from novel_annotation_to_detect_lncRNA
-    path genome, stageAs: 'genome.fa' from genome_to_detect_lncRNA
+    path reference_annotation, stageAs: 'reference.gtf' from reference_annotation_to_classify_transcripts
+    path novel_annotation, stageAs: 'novel.gtf' from novel_annotation_to_classify_transcripts
+    path genome, stageAs: 'genome.fa' from genome_to_classify_transcripts
 
   output:
     path '*classes.txt' into feelnc_classes_to_report
