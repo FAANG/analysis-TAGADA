@@ -49,39 +49,38 @@ args = parser.parse_args()
 # Parse GTF inputs
 inputs = pd.DataFrame()
 
-columns = [
-  'chromosome',
-  'source',
-  'feature',
-  'start',
-  'end',
-  'score',
-  'strand',
-  'frame',
-  'attribute'
-]
+columns = {
+  'chromosome': 'category',
+  'source': 'category',
+  'feature': 'category',
+  'start': 'uint32',
+  'end': 'uint32',
+  'score': 'float32',
+  'strand': 'category',
+  'frame': 'category',
+  'attribute': 'str'
+}
 
-for file in args.inputs:
+for gtf in args.inputs:
   input = pd.read_csv(
-    file,
-    dtype = {
-      0: 'category',
-      1: 'category',
-      2: 'category',
-      3: 'uint32',
-      4: 'uint32',
-      5: 'float32',
-      6: 'category',
-      7: 'category',
-      8: 'str'
-    },
-    comment = '#',
+    gtf,
     sep = '\t',
-    names = columns
+    comment = '#',
+    names = columns.keys(),
+    dtype = columns,
+    usecols = [
+      'chromosome',
+      'feature',
+      'start',
+      'end',
+      'strand',
+      'attribute'
+    ]
   )
-  input['file'] = re.search(r'(.+?)\.[^\.]+$', os.path.basename(file)).group(1)
+  input['file'] = re.search(r'(.+?)\.[^\.]+$', os.path.basename(gtf)).group(1)
   input['transcript'] = input['attribute'].str.extract(r'transcript_id "(.+?)"')
   input['tpm'] = input['attribute'].str.extract(r'TPM "(.+?)"').astype('float32')
+  input = input.drop(columns = 'attribute')
   inputs = inputs.append(input)
 
 inputs = inputs.astype({
@@ -192,21 +191,35 @@ transcripts = transcripts[
 ]
 
 # Output filtered GTF
-groups = inputs.merge(
-  transcripts,
-  on = ['file', 'transcript', 'chromosome', 'strand']
-).reset_index().groupby(
-  'file',
-  observed = True
-)
-
 os.makedirs(args.output, exist_ok = True)
 
-for file, group in groups:
-  group.to_csv(
+for gtf in args.inputs:
+  input = pd.read_csv(
+    gtf,
+    sep = '\t',
+    comment = '#',
+    names = columns.keys(),
+    dtype = columns
+  )
+  file = re.search(r'(.+?)\.[^\.]+$', os.path.basename(gtf)).group(1)
+  input['file'] = file
+  input['transcript'] = input['attribute'].str.extract(r'transcript_id "(.+?)"')
+  input = input.astype({
+    'file': 'category',
+    'transcript': 'category'
+  }).set_index(
+    ['file', 'transcript', 'chromosome', 'strand']
+  )
+
+  output = input.merge(
+    transcripts,
+    on = ['file', 'transcript', 'chromosome', 'strand']
+  ).reset_index()
+
+  output.to_csv(
     f'{args.output}/{file}.filtered.gtf',
     sep = '\t',
-    columns = columns,
+    columns = columns.keys(),
     header = False,
     index = False,
     quoting = csv.QUOTE_NONE,
