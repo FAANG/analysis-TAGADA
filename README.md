@@ -34,8 +34,8 @@ All Nextflow options are [documented here](https://www.nextflow.io/docs/latest/c
 |--------|--------------|-------------|-------------|
 | __`-profile`__ | `profile1,profile2,[...]` | Profile(s) to use when<br>running the pipeline.<br>Specify the profiles that<br>fit your infrastructure<br>among `singularity`,<br>`docker`, `kubernetes`,<br>`slurm`. | Required |
 | __`-revision`__ | `version` | Version of the pipeline<br>to launch. | Optional |
+| __`-work-dir`__ | `directory` | Work directory where<br>all temporary files are<br>written. | Optional |
 | __`-resume`__ | | Resume the pipeline<br>from the last completed<br>process. | Optional |
-| __`-work-dir`__ | | Work directory where<br>all temporary files are<br>written. | Optional |
 
 ### Pipeline options
 
@@ -58,7 +58,7 @@ All Nextflow options are [documented here](https://www.nextflow.io/docs/latest/c
 
 ### Merge factors
 
-Transcripts assembly and quantification can be done by __factors__ instead of by __input__. When using the `--assemble-by` and `--quantify-by` options, mapped reads of identical factors are merged and each resulting merge group is processed individually.
+Transcripts assembly and quantification can be done by __factors__ instead of __input__. When using `--assemble-by` and `--quantify-by`, mapped reads of identical factors are merged and each resulting merge group is processed individually.
 
 Factors are specified in the metadata file. This file consists of tab-separated values describing your inputs. The first column must contain file names without extensions. There is no restriction on column names or number of columns.
 
