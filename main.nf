@@ -644,13 +644,34 @@ if (number_of_raw_reads > 0) {
       """
       STAR --runThreadN ${task.cpus} \\
            --readFilesCommand zcat \\
+           \\
+           `# output sorted BAM file` \\
            --outSAMtype BAM SortedByCoordinate \\
+           \\
+           `# keep unmapped reads` \\
+           --outSAMunmapped Within \\
+           \\
+           `# filter spurious junctions` \\
+           --outFilterType BySJout \\
+           \\
+           `# filter non-canonical junctions` \\
            --outFilterIntronMotifs RemoveNoncanonical \\
+           \\
+           `# tags to specify` \\
+           `# NH: number of reported alignments` \\
+           `# HI: query hit index` \\
+           `# AS: alignment score` \\
+           `# MD: mismatching positions` \\
+           `# NM: number of mismatches in each mate` \\
+           `# nM: number of mismatches per (paired) alignment` \\
+           `# XS: strand` \\
+           --outSAMattributes NH HI AS MD NM nM XS \\
+           \\
            --genomeDir $index \\
            --readFilesIn $reads \\
            --outFileNamePrefix "$prefix".
 
-      mv *.bam "$prefix".bam
+      mv *.Aligned.sortedByCoord.out.bam "$prefix".bam
       """
   }
 
@@ -929,7 +950,7 @@ if (!skip_assembly) {
   // ##################
   process STRINGTIE_merge_assemblies {
 
-    label 'memory_8'
+    label 'memory_16'
 
     publishDir "$output/annotation", mode: 'copy'
 
@@ -1252,11 +1273,11 @@ process STRINGTIE_quantify {
     mkdir counts
     mv "$prefix"."$type".gtf counts
 
-    prepDE.py -i . \\
-              -p counts \\
-              -g "$prefix"."$type"_genes_counts.csv \\
-              -t "$prefix"."$type"_transcripts_counts.csv \\
-              -l $length
+    prepDE.py3 -i . \\
+               -p counts \\
+               -g "$prefix"."$type"_genes_counts.csv \\
+               -t "$prefix"."$type"_transcripts_counts.csv \\
+               -l $length
 
     tr ',' '\t' < "$prefix"."$type"_genes_counts.csv > "$prefix"."$type"_genes_counts.tsv
 
