@@ -1310,7 +1310,7 @@ process STRINGTIE_format {
 
   script:
     """
-    format.py $quantifications
+    format_count_matrices.py $quantifications
     """
 }
 
