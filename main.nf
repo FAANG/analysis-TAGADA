@@ -970,18 +970,21 @@ if (!skip_assembly) {
       """
       filter_rare_transcripts.py $assemblies -o filtered
 
-      stringtie --merge filtered/*.gtf -G $annotation -o novel.gtf
+      mkdir results
 
-      # Add lines for genes
+      stringtie --merge filtered/*.gtf -G $annotation -o results/novel.gtf
+
+      # Add genes
       awk -f \$(which compute_boundaries.awk) \\
           -v toadd=gene \\
           -v fldno=10 \\
           -v keys=gene_name,ref_gene_id \\
-          novel.gtf > genes.gtf
+          results/novel.gtf > results/novel.genes.gtf
 
-      cat genes.gtf novel.gtf | sort -k1,1 -k4,4n -k5,5rn > novel.genes.gtf
+      cat results/novel.genes.gtf results/novel.gtf | \\
+      sort -k1,1 -k4,4n -k5,5rn > results/novel.all.gtf
 
-      # Write transcript biotype in merged assembly
+      # Add transcript biotypes
       awk '
         BEGIN {
           FS = "\t"
@@ -1004,7 +1007,7 @@ if (!skip_assembly) {
             print \$0
           }
         }
-      ' $annotation novel.genes.gtf > novel.gtf
+      ' $annotation results/novel.all.gtf > novel.gtf
       """
   }
 
