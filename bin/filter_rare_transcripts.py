@@ -30,11 +30,12 @@ parser.add_argument(
          'they both have an overlap percentage of at least `MIN OVERLAP`.'
 )
 parser.add_argument(
-  '--min-count',
-  metavar = 'MIN COUNT',
+  '--min-occurrence',
+  metavar = 'MIN OCCURRENCE',
   default = 2,
   type = int,
-  help = 'Keep transcripts that appear in at least `MIN COUNT` inputs.'
+  help = 'Keep transcripts that appear in at least `MIN OCCURRENCE` inputs. ' +
+         'This value is lowered to the number of inputs if it exceeds it.'
 )
 parser.add_argument(
   '--min-tpm',
@@ -45,6 +46,8 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
+
+args.min_occurrence = min(args.min_occurrence, len(args.inputs))
 
 # Parse GTF inputs
 inputs = pd.DataFrame()
@@ -169,7 +172,7 @@ transcripts['splicing'] = transcripts['splicing'].fillna(
   'mono_' + transcripts['start_min'] + '_' + transcripts['end_max']
 )
 
-# Keep transcripts that appear in at least `MIN COUNT` files
+# Keep transcripts that appear in at least `MIN OCCURRENCE` files
 # Keep transcripts with at least one TPM greater or equal to `MIN TPM`
 transcripts = transcripts.reset_index().groupby(
   ['chromosome', 'strand', 'splicing'],
@@ -186,7 +189,7 @@ transcripts = transcripts.reset_index().groupby(
 )
 
 transcripts = transcripts[
-  (transcripts['file_count'] >= args.min_count) &
+  (transcripts['file_count'] >= args.min_occurrence) &
   (transcripts['tpm_max'] >= args.min_tpm)
 ]
 

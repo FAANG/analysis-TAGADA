@@ -12,7 +12,8 @@ quantify_by = params.containsKey('quantify-by') ? params.'quantify-by'.tokenize(
 feelnc_args = params.containsKey('feelnc-args') ? params.'feelnc-args' : ''
 skip_feelnc = params.containsKey('skip-feelnc') ? true : false
 skip_assembly = params.containsKey('skip-assembly') ? true : false
-
+min_transcript_occurrence = params.containsKey('min-transcript-occurrence') ? params.'min-transcript-occurrence' : ''
+min_transcript_tpm = params.containsKey('min-transcript-tpm') ? params.'min-transcript-tpm' : ''
 error = ''
 warning = ''
 
@@ -810,7 +811,8 @@ maps_to_merge.tap {
   else direction = ''
   [it[0], it[1].toInteger(), direction, it[3]]
 }.into {
-  maps_to_merge_for_quantification; maps_to_merge_for_assembly
+  maps_to_merge_for_quantification
+  maps_to_merge_for_assembly
 }
 
 maps_to_log = maps_to_log.toList().get().sort { a, b -> a[0] <=> b[0] }
@@ -967,8 +969,14 @@ if (!skip_assembly) {
       )
 
     script:
+      min_occurrence = min_transcript_occurrence ? '--min-occurrence ' + min_transcript_occurrence : ''
+      min_tpm = min_transcript_tpm ? '--min-tpm ' + min_transcript_tpm : ''
       """
-      filter_rare_transcripts.py $assemblies -o filtered
+      filter_rare_transcripts.py \\
+        $assemblies \\
+        -o filtered \\
+        $min_occurrence \\
+        $min_tpm
 
       mkdir results
 
