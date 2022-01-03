@@ -27,36 +27,40 @@ A small dataset is provided to test this pipeline. To try it out, use this comma
 
 ### Nextflow Options
 
-The pipeline is written in Nextflow, which provides the following default options.  
-All Nextflow options are [documented here](https://www.nextflow.io/docs/latest/cli.html#run).
+The pipeline is written in Nextflow, which provides the following default options:
 
 | Option | Parameters | Description | Requirement |
 |--------|--------------|-------------|-------------|
-| __`-profile`__ | `profile1,profile2,[...]` | Profile(s) to use when<br>running the pipeline.<br>Specify the profiles that<br>fit your infrastructure<br>among `singularity`,<br>`docker`, `kubernetes`,<br>`slurm`. | Required |
+| __`-profile`__ | `profile1,profile2` | Profile(s) to use when<br>running the pipeline.<br>Specify the profiles that<br>fit your infrastructure<br>among `singularity`,<br>`docker`, `kubernetes`,<br>`slurm`. | Required |
 | __`-revision`__ | `version` | Version of the pipeline<br>to launch. | Optional |
 | __`-work-dir`__ | `directory` | Work directory where<br>all temporary files are<br>written. | Optional |
 | __`-resume`__ | | Resume the pipeline<br>from the last completed<br>process. | Optional |
 
-### Pipeline options
+
+For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.io/docs/latest/cli.html#run).
+
+### Pipeline Options
 
 | Option | Parameters | Description | Requirement |
 |--------|--------------|-------------|-------------|
 | __`--output`__ | `directory` | Output directory where<br>all results are written. | Required |
 | __`--reads`__ | `'path/to/reads/*'` | Input `fastq` file(s)<br>and/or `bam` file(s).<br><br>For single-end reads,<br>your files must end with:<br>`.fq[.gz]`<br><br>For paired-end reads,<br>your files must end with:<br>`_[R]{1,2}.fq[.gz]`<br><br>For mapped reads,<br>your files must end with:<br>`.bam`<br><br>If the files are numerous,<br>you may provide a `.txt`<br>sheet with one path or url<br>per line. | Required |
-| __`--annotation`__ | `annotation.gtf[.gz]` | Input reference<br>annotation file or url. | Required |
-| __`--genome`__ | `genome.fa[.gz]` | Input genome<br>sequence file or url. | Required |
-| __`--index`__ | `directory[.tar.gz]` | Input genome index<br>directory or url. | Optional, to skip<br>genome indexing. |
-| __`--metadata`__ | `metadata.tsv` | Input tabulated<br>metadata file or url. | Required if<br>`--assemble-by` or<br>`--quantify-by`<br>are provided. |
-| __`--assemble-by`__ | `factor1,factor2,[...]` | Factor(s) defining groups<br>in which transcripts are<br>assembled. Mapped<br>reads of identical factors<br>are merged and each<br>resulting merge group is<br>processed individually.<br>See the [merge factors](#merge-factors)<br>section for details. | Optional |
-| __`--quantify-by`__ | `factor1,factor2,[...]` | Factor(s) defining groups<br>in which transcripts are<br>quantified. Mapped<br>reads of identical factors<br>are merged and each<br>resulting merge group is<br>processed individually.<br>See the [merge factors](#merge-factors)<br>section for details. | Optional |
+| __`--annotation`__ | `annotation.gtf` | Input reference<br>annotation file or url. | Required |
+| __`--genome`__ | `genome.fa` | Input genome<br>sequence file or url. | Required |
+| __`--index`__ | `directory` | Input genome index<br>directory or url. | Optional, to<br>skip genome<br>indexing. |
+| __`--metadata`__ | `metadata.tsv` | Input tabulated<br>metadata file or url. | Required if<br>`--assemble-by`<br>or<br>`--quantify-by`<br>are provided. |
+| __`--assemble-by`__ | `factor1,factor2` | Factor(s) defining groups<br>in which transcripts are<br>assembled. Mapped<br>reads of identical factors<br>are merged and each<br>resulting merge group is<br>processed individually.<br>See the [merge factors](#merge-factors)<br>section for details. | Optional |
+| __`--quantify-by`__ | `factor1,factor2` | Factor(s) defining groups<br>in which transcripts are<br>quantified. Mapped<br>reads of identical factors<br>are merged and each<br>resulting merge group is<br>processed individually.<br>See the [merge factors](#merge-factors)<br>section for details. | Optional |
+| __`--min-transcript-occurrence`__ | `2` | After transcripts assembly,<br>rare novel transcripts that<br>appear in few assembly<br>groups are removed from<br>the final novel annotation.<br>By default, if a transcript<br>occurs in less than `2`<br>assembly groups, it is<br>removed. If there is only<br>one assembly group, this<br>option defaults to `1`. | Optional |
+| __`--min-transcript-tpm`__ | `0.1` | After transcripts assembly,<br>novel transcripts with low<br>TPM values in every<br>assembly group are<br>removed from the final<br>novel annotation. By<br>default, if a transcript's<br>TPM value is lower than<br>`0.1` in every assembly<br>group, it is removed. | Optional |
 | __`--skip-assembly`__ | | Skip transcripts<br>assembly with StringTie. | Optional |
 | __`--skip-feelnc`__ | | Skip detection of long<br>non-coding RNAs<br>with FEELnc. | Optional |
-| __`--feelnc-args`__ | `'--mode shuffle [...]'` | Custom arguments to<br>pass to FEELnc's<br>[coding potential](https://github.com/tderrien/FEELnc#2--feelnc_codpotpl) script<br>when detecting long<br>non-coding RNAs. | Optional |
+| __`--feelnc-args`__ | `'--mode shuffle'` | Custom arguments to<br>pass to FEELnc's<br>[coding potential](https://github.com/tderrien/FEELnc#2--feelnc_codpotpl) script<br>when detecting long<br>non-coding RNAs. | Optional |
 | __`--max-cpus`__ | `16` | Maximum number of<br>CPU cores that can be<br>used for each process.<br>This is a limit, not the<br>actual number of<br>requested CPU cores. | Optional |
 | __`--max-memory`__ | `64GB` | Maximum memory that<br>can be used for each<br>process. This is a limit,<br>not the actual amount<br>of alloted memory. | Optional |
 | __`--max-time`__ | `12h` | Maximum time that can<br>be spent on each<br>process. This is a limit<br>and has no effect on the<br>duration of each process.| Optional |
 
-### Merge factors
+### Merge Factors
 
 Transcripts assembly and quantification can be done by __factors__ instead of __input__. When using `--assemble-by` and `--quantify-by`, mapped reads of identical factors are merged and each resulting merge group is processed individually.
 
@@ -99,27 +103,27 @@ With the following arguments:
 - __D__ mapped reads will be left alone for quantification in the __muscle__ at __60 days__.
 
 
-## Workflow
+## Workflow and Results
 
 The pipeline executes the following processes:
 1. Control reads quality with [FastQC](https://github.com/s-andrews/FastQC).
 2. Trim adapters with [Trim Galore](https://github.com/FelixKrueger/TrimGalore).
-3. Index the genome with [STAR](https://github.com/alexdobin/STAR).  
+3. Index genome with [STAR](https://github.com/alexdobin/STAR).  
    The indexed genome is saved to `output/index`.
 4. Map reads to the indexed genome with [STAR](https://github.com/alexdobin/STAR).  
-   Mapped reads are saved to `output/maps` in `.bam` files.
+   Mapped reads are saved to `output/maps` as `.bam` files.
 5. Compute genome coverage with [Bedtools](https://github.com/arq5x/bedtools2).  
-   Coverage information is saved to `output/coverage` in `.bed` files.
+   Coverage information is saved to `output/coverage` as `.bed` files.
 6. Merge mapped reads by factors with [Samtools](https://github.com/samtools/samtools).  
    See the [merge factors](#merge-factors) section for details.
 7. Assemble transcripts and create a novel annotation with [StringTie](https://github.com/gpertea/stringtie).  
-   The novel annotation is saved to `output/annotation` in a `.gtf` file.
+   The novel annotation is saved to `output/annotation` as a `.gtf` file.
 8. Detect long non-coding RNAs with [FEELnc](https://github.com/tderrien/FEELnc).  
    The annotation saved to `output/annotation` is updated with the results.
 9. Quantify genes and transcripts with [StringTie](https://github.com/gpertea/stringtie).  
-   Counts and TPM matrices are saved to `output/quantification` in `.tsv` files.
+   Counts and TPM matrices are saved to `output/quantification` as `.tsv` files.
 10. Aggregate quality controls into a report with [MultiQC](https://github.com/ewels/MultiQC).  
-    The report is saved to `output/control` in a `.html` file.
+    The report is saved to `output/control` as a `.html` file.
 
 
 ## About
