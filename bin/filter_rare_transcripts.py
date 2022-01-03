@@ -55,7 +55,7 @@ columns = {
   'feature': 'category',
   'start': 'uint32',
   'end': 'uint32',
-  'score': 'float32',
+  'score': 'str',
   'strand': 'category',
   'frame': 'category',
   'attribute': 'str'
