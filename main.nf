@@ -1612,7 +1612,6 @@ process TAGADA_control_exons {
 // Create multiqc report
 // #####################
 config_to_report = Channel.fromPath("$baseDir/multiqc.yaml", checkIfExists: true)
-config_custom_images = Channel.fromPath("$baseDir/allqc_plots_not_in_main_custom_images.tsv", checkIfExists: true)
 
 process MULTIQC_report {
 
@@ -1622,7 +1621,6 @@ process MULTIQC_report {
 
   input:
     path config from config_to_report
-    path config_custom_images from config_custom_images
     path '*' from metadata_to_report.flatten().collect().ifEmpty([])
     path '*' from control_quality_to_report.flatten().collect().ifEmpty([])
     path '*' from trim_to_report.flatten().collect().ifEmpty([])
@@ -1643,14 +1641,25 @@ process MULTIQC_report {
 
   script:
     """
-    for f in *.tsv ; do
-      if [[ "\$f" == $config_custom_images ]]
-      then
-        continue
-      fi
+    for f in *.tsv; do
       [ -f "\$f" ] || continue
       mv "\$f" "\${f%.*}"_mqc."\${f##*.}"
     done
+
+    TAB=\$'\\t'
+    cat > custom_images.tsv << EOF
+    refgenes_log10readcount_distribution_withzero.png\${TAB}Reference gene read count (with zero)\${TAB}Reference gene read count distribution (log10, with zeros)
+    refgenes_log10readcount_distribution_nozero.png\${TAB}Reference gene read count (no zeros)\${TAB}Reference gene read count distribution (log10, no zeros)
+    refgenes_log10TPM_distribution_withzero.png\${TAB}Reference gene TPM (with zeros)\${TAB}Reference gene TPM distribution (log10, with zeros)
+    refgenes_log10TPM_distribution_nozero.png\${TAB}Reference gene TPM (no zeros)\${TAB}Reference gene TPM distribution (log10, no zeros)
+    cumulative_fraction_of_refgeneTPMsum_captured_by_N_most_expr_refgenes.png\${TAB}Cumulative fraction of expression captured by most expressed genes\${TAB}Cumulative fraction of TPM sum captured by most expressed reference genes
+    exon_per_transcript_and_transcript_per_gene.png\${TAB}Exons per transcript and transcripts per gene\${TAB}Number of exons per transcript and number of transcripts per gene
+    5p_internal_3p_exon_length_per_transcript.png\${TAB}Transcript exon length\${TAB}Transcript most 5', internal and most 3' exon length distribution
+    5p_internal_3p_exon_length_per_gene.png\${TAB}Gene exon length\${TAB}Gene most 5', internal and most 3' exon length distribution
+    all_distinct_exon_length_and_monoexonic_transcript_length.png\${TAB}Exon and monoexonic transcript lengths\${TAB}All and distinct exon length, and monoexonic transcript length distributions
+    transcript_cdna_length_and_TSStorefgeneTSS_distance_for_exact_transcripts.png\${TAB}Transcript and cDNA lengths and distance to reference TSS\${TAB}Transcript and cDNA length, and TSS to reference TSS distance distributions
+    EOF
+
     multiqc --config $config .
     """
 }
