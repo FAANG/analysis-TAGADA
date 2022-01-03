@@ -1346,7 +1346,7 @@ process STRINGTIE_format {
     """
 }
 
-if ( skip_assembly ) {
+if (skip_assembly) {
   formatted_transcripts_reference_to_control_elements.set { formatted_transcripts_to_control_elements }
   formatted_genes_reference_to_control_elements.set { formatted_genes_to_control_elements }
 } else {
@@ -1369,27 +1369,21 @@ process TAGADA_control_elements {
 
   input:
     path reference_annotation from reference_annotation_to_control_elements
-    path novel_annotation from novel_annotation_to_control_elements.ifEmpty(file('no_novel_annotation'))
+    path novel_annotation from novel_annotation_to_control_elements.ifEmpty(file(' '))
     path formatted_transcripts from formatted_transcripts_to_control_elements
     path formatted_genes from formatted_genes_to_control_elements
 
   output:
-    path '*.png' optional true
+    path '*.png' optional true into control_elements_images_to_report
     path 'Plots' optional true
     path 'Tables' optional true
-    path '*_expressed_*.txt' optional true
-    path '*_annotation.tsv' optional true into control_elements_to_report
+    path '*_expressed_*.txt'
+    path '*_annotation.tsv' into control_elements_annotations_to_report
 
   script:
+    novel_annotation_present = skip_assembly ? false : true
     """
-    if [ -L "no_novel_annotation" ] ; then
-      novel_annotation_present=false
-    else
-      novel_annotation_present=true
-    fi
-
-
-    if \$novel_annotation_present ; then
+    if $novel_annotation_present; then
       detected_elements_sumstats.sh \\
         $reference_annotation \\
         $novel_annotation \\
@@ -1444,7 +1438,7 @@ process TAGADA_control_elements {
               +append \\
               +repage \\
               transcript_cdna_length_and_TSStorefgeneTSS_distance_for_exact_transcripts.png
-     else
+    else
       compute_detected_tr_gn.sh \\
         $reference_annotation \\
         $formatted_transcripts \\
@@ -1456,7 +1450,7 @@ process TAGADA_control_elements {
     reference_transcripts=\$(awk 'NR == 2 {print \$2}' detected_transcripts_genes_numbers.tsv)
 
     # Stats for the novel annotation
-    if \$novel_annotation_present ; then
+    if $novel_annotation_present; then
       novel_genes=\$(wc -l string/novel_gnid_nbtr.txt | awk '{print \$1}')
       novel_transcripts=\$(wc -l string/novel_trid_nbex.txt | awk '{print \$1}')
 
@@ -1483,7 +1477,7 @@ process TAGADA_control_elements {
           -v all=\$novel_transcripts \\
           '{print 100 * expressed / all}'
       )
-q
+
       awk '
         BEGIN {OFS = "\\t"}
         NR == 1 {
@@ -1497,7 +1491,6 @@ q
           print \$1, \$6, \$11-\$6, \$16-\$11, \$3-\$16, \$2-\$3;
         }
       ' Tables/prediction_sets_eval_wrt_ref_for_table.txt > transcripts_comparison_annotation.tsv
-
     fi
 
     # Stats for the reference annotation
@@ -1525,7 +1518,7 @@ q
           '{print 100 * expressed / all}'
     )
 
-    if \$novel_annotation_present ; then
+    if $novel_annotation_present; then
       echo -e "Category\tTotal\tPercentage" > novel_annotation.tsv
       echo -e "Genes\t\$novel_genes\t" >> novel_annotation.tsv
       echo -e "Expressed genes\t\$novel_expressed_genes\t\$percent_novel_expressed_genes" >> novel_annotation.tsv
@@ -1538,7 +1531,6 @@ q
     echo -e "Expressed genes\t\$reference_expressed_genes\t\$percent_reference_expressed_genes" >> reference_annotation.tsv
     echo -e "Transcripts\t\$reference_transcripts\t" >> reference_annotation.tsv
     echo -e "Expressed transcripts\t\$reference_expressed_transcripts\t\$percent_reference_expressed_transcripts" >> reference_annotation.tsv
-
     """
 }
 
@@ -1553,7 +1545,7 @@ process TAGADA_control_expression {
     path formatted_genes_counts from formatted_genes_counts_to_control_expression
 
   output:
-    path '*.png' into control_expression_images
+    path '*.png' into control_expression_images_to_report
 
   script:
     """
@@ -1625,7 +1617,8 @@ process MULTIQC_report {
     path '*' from control_quality_to_report.flatten().collect().ifEmpty([])
     path '*' from trim_to_report.flatten().collect().ifEmpty([])
     path '*' from map_to_report.flatten().collect().ifEmpty([])
-    path '*' from control_elements_to_report.flatten().collect().ifEmpty([])
+    path '*' from control_elements_annotations_to_report.flatten().collect().ifEmpty([])
+    path '*' from control_elements_images_to_report.flatten().collect().ifEmpty([])
     path '*' from control_exons_to_report.flatten().collect().ifEmpty([])
     path '*' from control_contigs_to_report.flatten().collect().ifEmpty([])
     path '*' from control_metrics_to_report.flatten().collect().ifEmpty([])
@@ -1633,8 +1626,7 @@ process MULTIQC_report {
     path '*' from feelnc_classes_to_report.flatten().collect().ifEmpty([])
     path '*' from feelnc_classification_summary_to_report.flatten().collect().ifEmpty([])
     path '*' from feelnc_filter_log_to_report.flatten().collect().ifEmpty([])
-    path '*' from control_elements_images
-    path '*' from control_expression_images
+    path '*' from control_expression_images_to_report.flatten().collect().ifEmpty([])
 
   output:
     path 'multiqc_report.html'
