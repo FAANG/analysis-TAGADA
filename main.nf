@@ -626,8 +626,9 @@ if (number_of_raw_reads > 0) {
     label 'cpu_16'
     label 'memory_32'
 
-    publishDir "$output/maps", mode: 'copy', saveAs: { filename ->
-      if (filename.endsWith('.bam')) filename
+    publishDir "$output", mode: 'copy', saveAs: { filename ->
+      if (filename.endsWith('.bam')) "maps/$filename"
+      else if (filename.endsWith('.splicing.tsv')) "control/splicing/$filename"
     }
 
     input:
@@ -635,6 +636,7 @@ if (number_of_raw_reads > 0) {
 
     output:
       path '*.bam'
+      path '*.splicing.tsv'
       path '*.Log.final.out' into map_to_report
       tuple val(prefix), path('*.bam') into mapped_reads_to_direction
       tuple val(prefix), path('*.bam') into mapped_reads_to_control_contigs
@@ -673,6 +675,7 @@ if (number_of_raw_reads > 0) {
            --outFileNamePrefix "$prefix".
 
       mv *.Aligned.sortedByCoord.out.bam "$prefix".bam
+      mv *.SJ.out.tab "$prefix".splicing.tsv
       """
   }
 
