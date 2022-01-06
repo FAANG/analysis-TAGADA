@@ -410,9 +410,9 @@ single_reads_to_control_quality.concat(
 process GZIP_decompress {
 
   input:
-    tuple path(index), val(index_name) from index_to_decompress.ifEmpty([file('   '),''])
-    tuple path(genome), val(genome_name) from genome_to_decompress.ifEmpty([file('  '),''])
-    tuple path(annotation), val(annotation_name) from reference_annotation_to_decompress.ifEmpty([file(' '),''])
+    tuple path(index, stageAs: 'index'), val(index_name) from index_to_decompress.ifEmpty([file(' '),''])
+    tuple path(genome, stageAs: 'genome'), val(genome_name) from genome_to_decompress.ifEmpty([file(' '),''])
+    tuple path(annotation, stageAs: 'annotation'), val(annotation_name) from reference_annotation_to_decompress.ifEmpty([file(' '),''])
 
   output:
     path "$index_name" optional true into index_to_map
@@ -433,11 +433,25 @@ process GZIP_decompress {
 
   script:
     """
-    for f in $index $genome $annotation; do
-      if [[ \${f: -7} == .tar.gz ]]; then
-        tar -xf "\$(readlink -m "\$f")"
-      elif [[ \${f: -3} == .gz ]]; then
-        gzip -c -d "\$(readlink -m "\$f")" > "\${f%.gz}"
+    if [[ ! -z "$index_name" && "$index_name" != index ]]; then
+      mv index "$index_name"
+    fi
+    if [[ ! -z "$genome_name" && "$genome_name" != genome ]]; then
+      mv genome "$genome_name"
+    fi
+    if [[ ! -z "$annotation_name" && "$annotation_name" != annotation ]]; then
+      mv annotation "$annotation_name"
+    fi
+    for name in "$index_name" "$genome_name" "$annotation_name"; do
+      if [[ ! -z "\$name" ]]; then
+        source="\$(readlink -m "\$name")"
+        if [[ \${source: -7} == .tar.gz ]]; then
+          tar -xf "\$source" -C decompressed
+          mv decompressed "\$name"
+        elif [[ \${source: -3} == .gz ]]; then
+          gzip -c -d "\$source" > decompressed
+          mv decompressed "\$name"
+        fi
       fi
     done
     """
