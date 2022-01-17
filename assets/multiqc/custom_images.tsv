@@ -1,0 +1,10 @@
+refgenes_log10readcount_distribution_withzero.png	Reference gene read count (with zero)	Reference gene read count distribution (log10, with zeros)
+refgenes_log10readcount_distribution_nozero.png	Reference gene read count (no zeros)	Reference gene read count distribution (log10, no zeros)
+refgenes_log10TPM_distribution_withzero.png	Reference gene TPM (with zeros)	Reference gene TPM distribution (log10, with zeros)
+refgenes_log10TPM_distribution_nozero.png	Reference gene TPM (no zeros)	Reference gene TPM distribution (log10, no zeros)
+cumulative_fraction_of_refgeneTPMsum_captured_by_N_most_expr_refgenes.png	Cumulative fraction of expression captured by most expressed genes	Cumulative fraction of TPM sum captured by most expressed reference genes
+exon_per_transcript_and_transcript_per_gene.png	Exons per transcript and transcripts per gene	Number of exons per transcript and number of transcripts per gene
+5p_internal_3p_exon_length_per_transcript.png	Transcript exon length	Transcript most 5', internal and most 3' exon length distribution
+5p_internal_3p_exon_length_per_gene.png	Gene exon length	Gene most 5', internal and most 3' exon length distribution
+all_distinct_exon_length_and_monoexonic_transcript_length.png	Exon and monoexonic transcript lengths	All and distinct exon length, and monoexonic transcript length distributions
+transcript_cdna_length_and_TSStorefgeneTSS_distance_for_exact_transcripts.png	Transcript and cDNA lengths and distance to reference TSS	Transcript and cDNA length, and TSS to reference TSS distance distributions

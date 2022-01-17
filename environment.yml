@@ -1,4 +1,4 @@
-name: rnaseq
+name: tagada
 channels:
   - conda-forge
   - bioconda

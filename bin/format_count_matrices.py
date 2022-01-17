@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
-from functools import reduce
 import pandas as pd
 import re
 import sys
 
 files = sys.argv[1:]
 
-dataframes = []
+result = pd.DataFrame()
 
 keys = []
 columns = []
@@ -38,23 +37,22 @@ for file in files:
     )
 
   if 'TPM' in df.columns:
-    dataframes += [df[keys + ['TPM']].rename(columns = {
+    df = df[keys + ['TPM']].rename(columns = {
       'TPM': id
-    }).groupby(keys).sum().round(6).astype(str).reset_index()]
+    }).groupby(keys).sum().round(6).astype(str).reset_index()
 
-  if 'counts' in df.columns:
-    dataframes += [df[keys + ['counts']].rename(columns = {
+  elif 'counts' in df.columns:
+    df = df[keys + ['counts']].rename(columns = {
       'counts': id
-    }).groupby(keys).sum().reset_index()]
+    }).groupby(keys).sum().reset_index()
 
-reduce(
-  lambda df1, df2: pd.merge(
-    df1, df2,
+  result = result.merge(
+    df,
     on = keys,
     how = 'outer'
-  ),
-  dataframes
-).reindex(
+  ) if not result.empty else df
+
+result.reindex(
   columns = keys + sorted(columns, key = str.casefold)
 ).sort_values(
   keys

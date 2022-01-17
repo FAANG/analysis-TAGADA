@@ -6,7 +6,7 @@ COPY environment.yml /
 RUN conda env create -f /environment.yml && conda clean -a
 RUN rm /environment.yml
 
-ENV PATH /opt/conda/envs/rnaseq/bin:$PATH
+ENV PATH /opt/conda/envs/tagada/bin:$PATH
 
 RUN git clone --branch v2.1.7 --depth 1 https://github.com/gpertea/stringtie.git /usr/local/src/StringTie && \
     bash -c 'ln -s /usr/local/src/StringTie/prepDE.py3 /usr/local/bin'
