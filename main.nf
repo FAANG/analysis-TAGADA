@@ -195,7 +195,11 @@ workflow {
     TRIMGALORE_trim_adapters.out.results.map({ output ->
       [
         'prefix': output[0],
-        'fastqs': output[1] instanceof List ? output[1] : [output[1]]
+        'fastqs': output[1] instanceof List ? output[1].sort({ fastq ->
+          (fastq =~ /[\._ ][Rr]?([12]) \(.+?\)\.fq\.gz$/).with({ match ->
+            match ? match[0][1] : fastq
+          })
+        }) : [output[1]]
       ]
     })
 
