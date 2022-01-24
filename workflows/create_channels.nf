@@ -77,11 +77,11 @@ workflow CREATE_CHANNELS {
         filename = path.getName()
         return (
           filename =~ /^(.+?)(?:[\._ ][Rr]?([12]))?(?:\.(fastq|fq|gz|bam))+$/
-        ).with({ it ->
-          matches() ? [
-            'prefix': it[0][1],
-            'R': it[0][2] ? it[0][2].toInteger() : null,
-            'bam': it[0][3] == 'bam',
+        ).with({ match ->
+          match ? [
+            'prefix': match[0][1],
+            'R': match[0][2] ? match[0][2].toInteger() : null,
+            'bam': match[0][3] == 'bam',
             'path': path,
             'filename': filename
           ] : filename
