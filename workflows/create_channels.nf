@@ -107,6 +107,7 @@ workflow CREATE_CHANNELS {
 
     // CHECK UNPAIRED AND DUPLICATED READS -------------------------------------
 
+    // each [filenames]
     channel_incoherent_reads =
       Channel.empty().concat(
         channel_reads.r1.map({ r1 ->
@@ -154,6 +155,7 @@ workflow CREATE_CHANNELS {
 
     // CREATE READS CHANNELS ---------------------------------------------------
 
+    // each [prefix, [fastqs]]
     channel_raw_reads =
       channel_reads.r1.map({ r1 ->
         [r1['prefix'], r1['path']]
@@ -169,6 +171,7 @@ workflow CREATE_CHANNELS {
         })
       )
 
+    // each [prefix, bam]
     channel_aligned_reads =
       channel_reads.aligned.map({ aligned ->
         ['prefix': aligned['prefix'], 'bam': aligned['path']]
@@ -178,6 +181,7 @@ workflow CREATE_CHANNELS {
 
     if (!params.metadata) {
 
+      // each [prefix, [column: value, column: value]]
       channel_metadata =
         Channel.empty().mix(
           channel_raw_reads,
@@ -188,6 +192,7 @@ workflow CREATE_CHANNELS {
 
     } else {
 
+      // each [prefix, [column: value, column: value]]
       channel_metadata =
         Channel.fromPath(
           params.metadata,
@@ -297,6 +302,7 @@ workflow CREATE_CHANNELS {
 
     // DETERMINE MERGE GROUPS --------------------------------------------------
 
+    // each [prefix, id, [column: value, column: value]]
     channel_assembly_metadata =
       set_metadata_groups(channel_metadata, params.assemble_by)
 
@@ -304,6 +310,7 @@ workflow CREATE_CHANNELS {
       log_metadata_groups(channel_assembly_metadata, 'assembly')
     }
 
+    // each [prefix, id, [column: value, column: value]]
     channel_quantification_metadata =
       set_metadata_groups(channel_metadata, params.quantify_by)
 
@@ -315,6 +322,7 @@ workflow CREATE_CHANNELS {
 
     if (params.index) {
 
+      // one index
       channel_index =
         Channel.fromPath(
           params.index,
@@ -324,21 +332,24 @@ workflow CREATE_CHANNELS {
 
       if (params.index.endsWith('.gz') || params.index.endsWith('.tar')) {
 
-        // index => index
+        // one index => index
         GZIP_decompress_index(channel_index)
 
+        // one index
         channel_index =
           GZIP_decompress_index.out
       }
 
     } else {
 
+      // none index
       channel_index =
         Channel.empty()
     }
 
     // DECOMPRESS GENOME -------------------------------------------------------
 
+    // one genome
     channel_genome =
       Channel.fromPath(
         params.genome,
@@ -347,15 +358,17 @@ workflow CREATE_CHANNELS {
 
     if (params.genome.endsWith('.gz')) {
 
-      // genome => genome
+      // one genome => genome
       GZIP_decompress_genome(channel_genome)
 
+      // one genome
       channel_genome =
         GZIP_decompress_genome.out
     }
 
     // DECOMPRESS ANNOTATION ---------------------------------------------------
 
+    // one annotation
     channel_reference_annotation =
       Channel.fromPath(
         params.annotation,
@@ -364,9 +377,10 @@ workflow CREATE_CHANNELS {
 
     if (params.annotation.endsWith('.gz')) {
 
-      // annotation => annotation
+      // one annotation => annotation
       GZIP_decompress_annotation(channel_reference_annotation)
 
+      // one annotation
       channel_reference_annotation =
         GZIP_decompress_annotation.out
     }

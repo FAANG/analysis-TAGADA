@@ -94,6 +94,7 @@ workflow MERGE_READS {
 
     if (params.assemble_by) {
 
+      // each [id, [bams], [lengths], [directions]]
       channel_assembly_reads =
         group_reads(
           channel_aligned_reads,
@@ -105,6 +106,7 @@ workflow MERGE_READS {
         'assembly'
       )
 
+      // each [id, [bams], length, direction]
       channel_assembly_reads =
         channel_assembly_reads.map({ group ->
           [
@@ -115,10 +117,10 @@ workflow MERGE_READS {
           ]
         })
 
-      // [id, [bams], length, direction]
-      // => [id, bam, length, direction]
+      // each [id, [bams], length, direction] => [id, bam, length, direction]
       SAMTOOLS_merge_reads_for_assembly(channel_assembly_reads)
 
+      // each [id, bam, length, direction]
       channel_assembly_reads =
         SAMTOOLS_merge_reads_for_assembly.out.map({ output ->
           [
@@ -131,6 +133,7 @@ workflow MERGE_READS {
 
     } else {
 
+      // each [id, bam, length, direction]
       channel_assembly_reads =
         channel_aligned_reads.map({ aligned ->
           [
@@ -144,6 +147,7 @@ workflow MERGE_READS {
 
     if (params.quantify_by) {
 
+      // each [id, [bams], [lengths], [directions]]
       channel_quantification_reads =
         group_reads(
           channel_aligned_reads,
@@ -160,6 +164,7 @@ workflow MERGE_READS {
         'quantification'
       )
 
+      // each [id, [bams], length, direction]
       channel_quantification_reads =
         channel_quantification_reads.map({ group ->
           [
@@ -170,10 +175,10 @@ workflow MERGE_READS {
           ]
         })
 
-      // [id, [bams], length, direction]
-      // => [id, bam, length, direction]
+      // each [id, [bams], length, direction] => [id, bam, length, direction]
       SAMTOOLS_merge_reads_for_quantification(channel_quantification_reads)
 
+      // each [id, bam, length, direction]
       channel_quantification_reads =
         SAMTOOLS_merge_reads_for_quantification.out.map({ output ->
           [
@@ -186,6 +191,7 @@ workflow MERGE_READS {
 
     } else {
 
+      // each [id, bam, length, direction]
       channel_quantification_reads =
         channel_aligned_reads.map({ aligned ->
           [
