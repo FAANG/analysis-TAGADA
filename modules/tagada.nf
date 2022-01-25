@@ -69,10 +69,13 @@ process TAGADA_control_expression {
     path(genes_counts_quantification)
 
   output:
-    path('*.png'), emit: reports
+    path('*.png'), optional: true, emit: reports
 
   shell:
     '''
+    samples_count=$(awk 'NR == 1 {print NF - 1}' !{genes_tpm_quantification})
+    (( $samples_count > 40 )) && exit 0
+
     awk \\
       'BEGIN {
         OFS = "\\t"
