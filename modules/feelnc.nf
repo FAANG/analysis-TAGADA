@@ -9,8 +9,6 @@ process FEELNC_classify_transcripts {
     saveAs: { filename ->
       if (filename == 'novel.gtf')
         'annotation/' + filename
-      else if (filename == 'reference.updated.gtf')
-        'annotation/' + filename
       else if (filename == 'lncRNA_classes.txt')
         'annotation/lnc_classification/' + filename
       else if (filename.endsWith('.gtf'))
@@ -28,16 +26,11 @@ process FEELNC_classify_transcripts {
     path(novel_annotation, stageAs: 'novel.input.gtf')
 
   output:
-    path('novel.gtf') optional true
-    path('reference.updated.gtf') optional true
+    path('novel.gtf')
     path('exons.*.gtf')
     path('*.{txt,log}'), emit: reports
 
   shell:
-    updated_annotation =
-      params.skip_assembly ?
-      'reference.updated.gtf' : 'novel.gtf'
-
     '''
     script=$(which FEELnc_codpot.pl)
     export FEELNCPATH=${script%/*}/..
@@ -132,6 +125,6 @@ process FEELNC_classify_transcripts {
       --lncrna exons.lncRNA.gtf \\
       > lncRNA_classes.txt
 
-    mv updated.gtf !{updated_annotation}
+    mv updated.gtf novel.gtf
     '''
 }

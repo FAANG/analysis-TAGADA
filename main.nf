@@ -366,14 +366,13 @@ workflow {
 
   // DETECT LONG NON-CODING TRANSCRIPTS ----------------------------------------
 
-  if (!params.skip_feelnc) {
+  if (!params.skip_feelnc && !params.skip_assembly) {
 
     // genome & reference_annotation & novel_annotation => [reports]
     FEELNC_classify_transcripts(
       channel_genome,
       channel_reference_annotation,
-      params.skip_assembly ?
-        channel_reference_annotation : channel_novel_annotation,
+      channel_novel_annotation
     )
 
     channel_reports =
@@ -425,27 +424,24 @@ workflow {
 
   // CONTROL ANNOTATION --------------------------------------------------------
 
-  // reference_annotation & novel_annotation &
-  // transcripts_tpm_quantification & genes_tpm_quantification => [reports]
-  TAGADA_control_annotation(
-    channel_reference_annotation,
-    params.skip_assembly ? [] : channel_novel_annotation,
-    channel_quantifications.filter({ quantification ->
-      quantification.getName() == (
-        params.skip_assembly ?
-        'reference_transcripts_TPM.tsv' : 'novel_transcripts_TPM.tsv'
-      )
-    }),
-    channel_quantifications.filter({ quantification ->
-      quantification.getName() == (
-        params.skip_assembly ?
-        'reference_genes_TPM.tsv' : 'novel_genes_TPM.tsv'
-      )
-    })
-  )
+  if (!params.skip_assembly) {
 
-  channel_reports =
-    channel_reports.mix(TAGADA_control_annotation.out.reports)
+    // reference_annotation & novel_annotation &
+    // transcripts_tpm_quantification & genes_tpm_quantification => [reports]
+    TAGADA_control_annotation(
+      channel_reference_annotation,
+      channel_novel_annotation,
+      channel_quantifications.filter({ quantification ->
+        quantification.getName() == 'novel_transcripts_TPM.tsv'
+      }),
+      channel_quantifications.filter({ quantification ->
+        quantification.getName() == 'novel_genes_TPM.tsv'
+      })
+    )
+
+    channel_reports =
+      channel_reports.mix(TAGADA_control_annotation.out.reports)
+  }
 
   // CONTROL EXONS -------------------------------------------------------------
 

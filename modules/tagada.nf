@@ -138,153 +138,144 @@ process TAGADA_control_annotation {
     path(genes_tpm_quantification)
 
   output:
-    path('Plots') optional true
-    path('Tables') optional true
+    path('Plots')
+    path('Tables')
     path('*_expressed_*.txt')
     path('{*.png,*_annotation.tsv}'), emit: reports
 
   shell:
     '''
-    if !{!params.skip_assembly}; then
+    detected_elements_sumstats.sh \\
+      !{reference_annotation} \\
+      !{novel_annotation} \\
+      !{transcripts_tpm_quantification} \\
+      !{genes_tpm_quantification}
 
-      detected_elements_sumstats.sh \\
-        !{reference_annotation} \\
-        !{novel_annotation} \\
-        !{transcripts_tpm_quantification} \\
-        !{genes_tpm_quantification}
+    for f in \\
+      Plots/ExonPerTranscript/*.png \\
+      Plots/ExonLength/*.png \\
+      Plots/DistinctExonLength/*.png \\
+      Plots/5pExonLength_Tr/*.png \\
+      Plots/InternalExonLength/*.png \\
+      Plots/5pExonLength_Gn/*.png \\
+      Plots/DistinctInternalExonLength/*.png \\
+      Plots/Exact_tr_dist_to_Genc_TSS/*.png \\
+      Plots/TrLength/*.png
+    do
+      [[ -f "$f" ]] || continue
+      convert "$f" -crop 1400x2100+0+0 +repage "${f%.png}"_cropped.png
+    done
 
-      for f in \\
-        Plots/ExonPerTranscript/*.png \\
-        Plots/ExonLength/*.png \\
-        Plots/DistinctExonLength/*.png \\
-        Plots/5pExonLength_Tr/*.png \\
-        Plots/InternalExonLength/*.png \\
-        Plots/5pExonLength_Gn/*.png \\
-        Plots/DistinctInternalExonLength/*.png \\
-        Plots/Exact_tr_dist_to_Genc_TSS/*.png \\
-        Plots/TrLength/*.png
-      do
-        [[ -f "$f" ]] || continue
-        convert "$f" -crop 1400x2100+0+0 +repage "${f%.png}"_cropped.png
-      done
+    convert \\
+      Plots/ExonPerTranscript/*_cropped.png \\
+      Plots/TranscriptPerGene/prediction_nbtringn_forggplot.png \\
+      +append \\
+      +repage \\
+      exon_per_transcript_and_transcript_per_gene.png
 
-      convert \\
-        Plots/ExonPerTranscript/*_cropped.png \\
-        Plots/TranscriptPerGene/prediction_nbtringn_forggplot.png \\
-        +append \\
-        +repage \\
-        exon_per_transcript_and_transcript_per_gene.png
+    convert \\
+      Plots/ExonLength/*_cropped.png \\
+      Plots/DistinctExonLength/*_cropped.png \\
+      Plots/MonoExTrExLength/*.png \\
+      +append \\
+      +repage \\
+      all_distinct_exon_length_and_monoexonic_transcript_length.png
 
-      convert \\
-        Plots/ExonLength/*_cropped.png \\
-        Plots/DistinctExonLength/*_cropped.png \\
-        Plots/MonoExTrExLength/*.png \\
-        +append \\
-        +repage \\
-        all_distinct_exon_length_and_monoexonic_transcript_length.png
+    convert \\
+      Plots/5pExonLength_Tr/*_cropped.png \\
+      Plots/InternalExonLength/*_cropped.png \\
+      Plots/3pExonLength_Tr/*.png \\
+      +append \\
+      +repage \\
+      5p_internal_3p_exon_length_per_transcript.png
 
-      convert \\
-        Plots/5pExonLength_Tr/*_cropped.png \\
-        Plots/InternalExonLength/*_cropped.png \\
-        Plots/3pExonLength_Tr/*.png \\
-        +append \\
-        +repage \\
-        5p_internal_3p_exon_length_per_transcript.png
+    convert \\
+      Plots/5pExonLength_Gn/*_cropped.png \\
+      Plots/DistinctInternalExonLength/*_cropped.png \\
+      Plots/3pExonLength_Gn/*.png \\
+      +append \\
+      +repage \\
+      5p_internal_3p_exon_length_per_gene.png
 
-      convert \\
-        Plots/5pExonLength_Gn/*_cropped.png \\
-        Plots/DistinctInternalExonLength/*_cropped.png \\
-        Plots/3pExonLength_Gn/*.png \\
-        +append \\
-        +repage \\
-        5p_internal_3p_exon_length_per_gene.png
+    convert \\
+      Plots/Exact_tr_dist_to_Genc_TSS/*_cropped.png \\
+      Plots/TrLength/*_cropped.png \\
+      Plots/cDNALength/*.png \\
+      +append \\
+      +repage \\
+      transcript_cdna_length_and_TSStorefgeneTSS_distance_for_exact_transcripts.png
 
-      convert \\
-        Plots/Exact_tr_dist_to_Genc_TSS/*_cropped.png \\
-        Plots/TrLength/*_cropped.png \\
-        Plots/cDNALength/*.png \\
-        +append \\
-        +repage \\
-        transcript_cdna_length_and_TSStorefgeneTSS_distance_for_exact_transcripts.png
+    # Novel annotation stats
 
-    else
-      compute_detected_tr_gn.sh \\
-        !{reference_annotation} \\
-        !{transcripts_tpm_quantification} \\
-        !{genes_tpm_quantification} \\
-        > detected_transcripts_genes_numbers.tsv
-    fi
+    novel_genes=$(
+      wc -l string/novel_gnid_nbtr.txt \\
+      | awk '{print $1}'
+    )
+
+    novel_transcripts=$(
+      wc -l string/novel_trid_nbex.txt \\
+      | awk '{print $1}'
+    )
+
+    perl -pe 's/^"([^"]+)".+$/$1/g' \\
+      string_expr/stringtie.annot.tpm0.1.2samples.exons_complete_gnid_nbtr.txt \\
+      > novel_expressed_genes.txt
+
+    novel_expressed_genes=$(
+      wc -l novel_expressed_genes.txt \\
+      | awk '{print $1}'
+    )
+
+    perl -pe 's/^"([^"]+)".+$/$1/g' \\
+      string_expr/stringtie.annot.tpm0.1.2samples.exons_complete_trid_nbex.txt \\
+      > novel_expressed_transcripts.txt
+
+    novel_expressed_transcripts=$(
+      wc -l novel_expressed_transcripts.txt \\
+      | awk '{print $1}'
+    )
+
+    percent_novel_expressed_genes=$(
+      echo | awk \\
+        -v expressed=$novel_expressed_genes \\
+        -v all=$novel_genes \\
+        '{print 100 * expressed / all}'
+    )
+
+    percent_novel_expressed_transcripts=$(
+      echo | awk \\
+        -v expressed=$novel_expressed_transcripts \\
+        -v all=$novel_transcripts \\
+        '{print 100 * expressed / all}'
+    )
+
+    awk \\
+      'BEGIN {
+        OFS = "\\t"
+      }
+      NR == 1 {
+        print "Annotation subset", "Exact spliced transcripts",
+        "Extended spliced transcripts", "Shortened spliced transcripts",
+        "Other spliced transcripts", "Monoexonic transcripts";
+      }
+      NR >= 4 {
+        if ($1 == "string") $1 = "All transcripts";
+        if ($1 == "string_expr") $1 = "Expressed transcripts";
+        print $1, $6, $11-$6, $16-$11, $3-$16, $2-$3;
+      }' \\
+      Tables/prediction_sets_eval_wrt_ref_for_table.txt \\
+      > transcripts_comparison_annotation.tsv
+
+    # Reference annotation stats
 
     reference_genes=$(
       awk 'NR == 3 {print $2}' detected_transcripts_genes_numbers.tsv
     )
+
     reference_transcripts=$(
       awk 'NR == 2 {print $2}' detected_transcripts_genes_numbers.tsv
     )
 
-    # Novel annotation stats
-    if !{!params.skip_assembly}; then
-      novel_genes=$(
-        wc -l string/novel_gnid_nbtr.txt \\
-        | awk '{print $1}'
-      )
-
-      novel_transcripts=$(
-        wc -l string/novel_trid_nbex.txt \\
-        | awk '{print $1}'
-      )
-
-      perl -pe 's/^"([^"]+)".+$/$1/g' \\
-        string_expr/stringtie.annot.tpm0.1.2samples.exons_complete_gnid_nbtr.txt \\
-        > novel_expressed_genes.txt
-
-      novel_expressed_genes=$(
-        wc -l novel_expressed_genes.txt \\
-        | awk '{print $1}'
-      )
-
-      perl -pe 's/^"([^"]+)".+$/$1/g' \\
-        string_expr/stringtie.annot.tpm0.1.2samples.exons_complete_trid_nbex.txt \\
-        > novel_expressed_transcripts.txt
-
-      novel_expressed_transcripts=$(
-        wc -l novel_expressed_transcripts.txt \\
-        | awk '{print $1}'
-      )
-
-      percent_novel_expressed_genes=$(
-        echo | awk \\
-          -v expressed=$novel_expressed_genes \\
-          -v all=$novel_genes \\
-          '{print 100 * expressed / all}'
-      )
-
-      percent_novel_expressed_transcripts=$(
-        echo | awk \\
-          -v expressed=$novel_expressed_transcripts \\
-          -v all=$novel_transcripts \\
-          '{print 100 * expressed / all}'
-      )
-
-      awk \\
-        'BEGIN {
-          OFS = "\\t"
-        }
-        NR == 1 {
-          print "Annotation subset", "Exact spliced transcripts",
-          "Extended spliced transcripts", "Shortened spliced transcripts",
-          "Other spliced transcripts", "Monoexonic transcripts";
-        }
-        NR >= 4 {
-          if ($1 == "string") $1 = "All transcripts";
-          if ($1 == "string_expr") $1 = "Expressed transcripts";
-          print $1, $6, $11-$6, $16-$11, $3-$16, $2-$3;
-        }' \\
-        Tables/prediction_sets_eval_wrt_ref_for_table.txt \\
-        > transcripts_comparison_annotation.tsv
-    fi
-
-    # Reference annotation stats
     perl -pe 's/^"([^"]+)".+$/$1/g' \\
       ref_expr/ref.annot.tpm0.1.2samples.exons_complete_gnid_nbtr.txt \\
       > reference_expressed_genes.txt
@@ -317,21 +308,19 @@ process TAGADA_control_annotation {
         '{print 100 * expressed / all}'
     )
 
-    if !{!params.skip_assembly}; then
-      echo \\
-        -e "Category\\tTotal\\tPercentage" > novel_annotation.tsv
-      echo \\
-        -e "Genes\\t$novel_genes\\t" >> novel_annotation.tsv
-      echo \\
-        -e "Expressed genes\\t$novel_expressed_genes\\t$percent_novel_expressed_genes" \\
-        >> novel_annotation.tsv
-      echo \\
-        -e "Transcripts\\t$novel_transcripts\\t" \\
-        >> novel_annotation.tsv
-      echo \\
-        -e "Expressed transcripts\\t$novel_expressed_transcripts\\t$percent_novel_expressed_transcripts" \\
-        >> novel_annotation.tsv
-    fi
+    echo \\
+      -e "Category\\tTotal\\tPercentage" > novel_annotation.tsv
+    echo \\
+      -e "Genes\\t$novel_genes\\t" >> novel_annotation.tsv
+    echo \\
+      -e "Expressed genes\\t$novel_expressed_genes\\t$percent_novel_expressed_genes" \\
+      >> novel_annotation.tsv
+    echo \\
+      -e "Transcripts\\t$novel_transcripts\\t" \\
+      >> novel_annotation.tsv
+    echo \\
+      -e "Expressed transcripts\\t$novel_expressed_transcripts\\t$percent_novel_expressed_transcripts" \\
+      >> novel_annotation.tsv
 
     echo \\
       -e "Category\\tTotal\\tPercentage" \\
