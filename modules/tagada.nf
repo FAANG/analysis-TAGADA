@@ -16,20 +16,23 @@ process TAGADA_estimate_reads {
 
     proportions=($(infer_library_type.sh !{bam} !{annotation}))
 
-    difference=$(
+    direction=$(
       awk \\
-        -v a=${proportions[0]} \\
-        -v b=${proportions[1]} \\
-        'BEGIN {print sqrt((a - b)^2)}'
+        -v fr=${proportions[0]} \\
+        -v rf=${proportions[1]} \\
+        'BEGIN {
+          difference = int(sqrt((fr - rf)^2))
+          fr = int(fr)
+          rf = int(rf)
+          if (difference > 50 && fr > rf) {
+            print "FR"
+          } else if (difference > 50) {
+            print "RF"
+          } else {
+            print "Undirected"
+          }
+        }'
     )
-
-    if [[ $difference > 50 && $proportions[0] > $proportions[1] ]]; then
-      direction="FR"
-    elif [[ $difference > 50 ]]; then
-      direction="RF"
-    else
-      direction="No direction"
-    fi
     '''
 }
 
