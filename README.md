@@ -52,8 +52,9 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
 | __`--quantify-by`__ | `factor1,factor2` | Factor(s) defining groups<br>in which transcripts are<br>quantified. Aligned<br>reads of identical factors<br>are merged and each<br>resulting merge group is<br>processed individually.<br>See the [merge factors](#merge-factors)<br>section for details. | Optional |
 | __`--min-transcript-occurrence`__ | `2` | After transcripts assembly,<br>rare novel transcripts that<br>appear in few assembly<br>groups are removed from<br>the final novel annotation.<br>By default, if a transcript<br>occurs in less than `2`<br>assembly groups, it is<br>removed. If there is only<br>one assembly group, this<br>option defaults to `1`. | Optional |
 | __`--min-transcript-tpm`__ | `0.1` | After transcripts assembly,<br>novel transcripts with low<br>TPM values in every<br>assembly group are<br>removed from the final<br>novel annotation. By<br>default, if a transcript's<br>TPM value is lower than<br>`0.1` in every assembly<br>group, it is removed. | Optional |
-| __`--skip-feelnc`__ | | Skip detection of long<br>non-coding RNAs<br>with FEELnc. | Optional |
-| __`--feelnc-args`__ | `'--mode shuffle'` | Custom arguments to<br>pass to FEELnc's<br>[coding potential](https://github.com/tderrien/FEELnc#2--feelnc_codpotpl) script<br>when detecting long<br>non-coding RNAs. | Optional |
+| __`--skip-assembly`__ | | Skip transcripts assembly<br>with StringTie and skip<br>all subsequent processes<br>working with a novel<br>annotation. | Optional |
+| __`--skip-feelnc`__ | | Skip detection of long<br>non-coding transcripts<br>in the novel annotation<br>with FEELnc. | Optional |
+| __`--feelnc-args`__ | `'--mode shuffle'` | Custom arguments to<br>pass to FEELnc's<br>[coding potential](https://github.com/tderrien/FEELnc#2--feelnc_codpotpl) script<br>when detecting long<br>non-coding transcripts. | Optional |
 | __`--max-cpus`__ | `16` | Maximum number of<br>CPU cores that can be<br>used for each process.<br>This is a limit, not the<br>actual number of<br>requested CPU cores. | Optional |
 | __`--max-memory`__ | `64GB` | Maximum memory that<br>can be used for each<br>process. This is a limit,<br>not the actual amount<br>of alloted memory. | Optional |
 | __`--max-time`__ | `12h` | Maximum time that can<br>be spent on each<br>process. This is a limit<br>and has no effect on the<br>duration of each process.| Optional |
@@ -116,7 +117,7 @@ The pipeline executes the following processes:
    See the [merge factors](#merge-factors) section for details.
 7. Assemble transcripts and create a novel annotation with [StringTie](https://github.com/gpertea/stringtie).  
    The novel annotation is saved to `output/annotation` in a `.gtf` file.
-8. Detect long non-coding RNAs with [FEELnc](https://github.com/tderrien/FEELnc).  
+8. Detect long non-coding transcripts with [FEELnc](https://github.com/tderrien/FEELnc).  
    The annotation saved to `output/annotation` is updated with the results.
 9. Quantify genes and transcripts with [StringTie](https://github.com/gpertea/stringtie).  
    Counts and TPM matrices are saved to `output/quantification` in `.tsv` files.
