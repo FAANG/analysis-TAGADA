@@ -86,6 +86,16 @@ if ((params.assemble_by || params.quantify_by) && !params.metadata) {
   error += '\nNo --metadata provided for --assemble-by or --quantify-by\n'
 }
 
+params.stringtie_merge = 
+  params.containsKey('stringtie-merge') ?
+  true : false
+
+params.tmerge_endfuzz = params.containsKey('tmerge-endfuzz') ?
+  params.'tmerge_endfuzz' : 10000
+
+params.tmerge_overhang = params.containsKey('tmerge-overhang') ?
+  params.'tmerge_overhang' : 10
+
 if (error) exit(1, error)
 
 // INCLUDE WORKFLOWS -----------------------------------------------------------
@@ -132,6 +142,10 @@ include {
   STRINGTIE_merge_assemblies
   STRINGTIE_quantify_expression
 } from './modules/stringtie.nf'
+
+include {
+  TMERGE_merge_assemblies
+} from './modules/tmerge.nf'
 
 include {
   FEELNC_classify_transcripts
@@ -370,15 +384,26 @@ workflow {
     channel_assemblies =
       STRINGTIE_assemble_transcripts.out
 
-    // one [assemblies] & annotation => annotation
-    STRINGTIE_merge_assemblies(
-      channel_assemblies.collect(),
-      channel_reference_annotation
-    )
+    if (params.stringtie_merge) {
+      // one [assemblies] & annotation => annotation
+      STRINGTIE_merge_assemblies(
+        channel_assemblies.collect(),
+        channel_reference_annotation
+      )
+      // one annotation
+      channel_novel_annotation =
+        STRINGTIE_merge_assemblies.out
+    } else {
+      // one [assemblies] & annotation => annotation
+      TMERGE_merge_assemblies(
+        channel_assemblies.collect(),
+        channel_reference_annotation
+      )
+      // one annotation
+      channel_novel_annotation =
+        TMERGE_merge_assemblies.out
+    }
 
-    // one annotation
-    channel_novel_annotation =
-      STRINGTIE_merge_assemblies.out
 
   } else {
 

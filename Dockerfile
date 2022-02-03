@@ -29,6 +29,16 @@ RUN git clone --branch v1.0 --depth 1 https://github.com/sdjebali/Overlap.git /u
     cd /usr/local/src/Overlap && \
     make && \
     bash -c 'ln -s /usr/local/src/Overlap/overlap /usr/local/bin'
+    
+RUN git clone -n https://github.com/julienlag/tmerge /usr/local/src/tmerge && \
+    cd /usr/local/src/tmerge && \
+    git checkout 8b4d6e7c1c94955931946081476e326c4cece161 && \
+    bash -c 'ln -s /usr/local/src/tmerge/tmerge /usr/local/bin'
+
+RUN git clone -n https://github.com/julienlag/buildLoci /usr/local/src/buildLoci && \
+    cd /usr/local/src/buildLoci && \
+    git checkout 0f4ba3c2862b8786a3b94692b877d386d713830b && \
+    bash -c 'ln -s /usr/local/src/buildLoci/buildLoci.pl /usr/local/bin'
 
 USER root
 
