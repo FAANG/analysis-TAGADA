@@ -57,6 +57,78 @@ process TAGADA_merge_quantifications {
     '''
 }
 
+process TAGADA_cluster_expression {
+
+  label 'memory_4'
+
+  publishDir = [
+    path: params.output + '/control/expression',
+    mode: 'copy'
+  ]
+
+  input:
+    path(genes_tpm_quantification)
+    val(quantification_metadata)
+
+  output:
+    path('*_correlation.{pdf,tsv}')
+
+  shell:
+    rows = quantification_metadata.unique({ row -> row['id'] })
+
+    columns = rows.first()['columns'].keySet().collect()
+
+    metadata = 'labExpId' + '\t' + 'Name'
+    metadata += columns.size() > 0 ? '\t' + columns.join('\t') : ''
+
+    rows.each({ row ->
+      metadata += '\n' + ([row['id']] * 2 + row['columns'].values()).join('\t')
+    })
+
+    factors = columns.size() > 0 ? columns.join(',') : 'Name'
+
+    palettes = (
+      [projectDir + '/assets/palettes/Set3.12.txt']
+      * Math.max(columns.size(), 1)
+    ).join(',')
+
+    gradient = projectDir + '/assets/palettes/terrain.colors.3.txt'
+
+    '''
+    echo -e '!{metadata}' > metadata.tsv
+
+    cat \\
+      <(head -n 1 !{genes_tpm_quantification} | cut -f 2-) \\
+      <(tail -n +2 !{genes_tpm_quantification}) \\
+      > reference_genes_TPM.reformatted.tsv
+
+    matrix_to_dist.R \\
+      -i reference_genes_TPM.reformatted.tsv \\
+      --log10 \\
+      -c pearson \\
+      -p 0.1 \\
+      -v \\
+      -o reference_genes_TPM_log_pearson_correlation.tsv
+
+    ggheatmap.R \\
+      -i reference_genes_TPM_log_pearson_correlation.tsv \\
+      -d i \\
+      --row_metadata metadata.tsv \\
+      --col_metadata metadata.tsv \\
+      --col_dendro \\
+      --row_dendro \\
+      --rowSide_by '!{factors}' \\
+      --matrix_legend_title samp.samp.pcor.refgn.TPM.log10.ps0.1 \\
+      -B 10 \\
+      --matrix_palette '!{gradient}' \\
+      --rowSide_palette '!{palettes}' \\
+      --col_labels '!{factors}' \\
+      --row_labels '!{factors}' \\
+      -v \\
+      -o reference_genes_TPM_log_pearson_correlation.pdf
+    '''
+}
+
 process TAGADA_control_expression {
 
   publishDir = [

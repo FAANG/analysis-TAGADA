@@ -113,6 +113,7 @@ include {
 include {
   TAGADA_estimate_reads
   TAGADA_merge_quantifications
+  TAGADA_cluster_expression
   TAGADA_control_expression
   TAGADA_control_annotation
 } from './modules/tagada.nf'
@@ -433,6 +434,14 @@ workflow {
     TAGADA_merge_quantifications.out
 
   // CONTROL EXPRESSION --------------------------------------------------------
+
+  // one genes_tpm_quantification & quantification_metadata
+  TAGADA_cluster_expression(
+    channel_quantifications.filter({ quantification ->
+      quantification.getName() == 'reference_genes_TPM.tsv'
+    }),
+    channel_quantification_metadata.collect()
+  )
 
   // one genes_tpm_quantification & genes_counts_quantification => [reports]
   TAGADA_control_expression(
