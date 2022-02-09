@@ -29,6 +29,9 @@ process STRINGTIE_merge_assemblies {
 
   output:
     path('novel.gtf')
+  
+  when:
+    stringtie_merge
 
   shell:
     min_occurrence =
@@ -40,16 +43,10 @@ process STRINGTIE_merge_assemblies {
       '--min-tpm ' + params.min_transcript_tpm : ''
 
     '''
-    filter_rare_transcripts.py \\
-      !{assemblies} \\
-      -o filtered \\
-      !{min_occurrence} \\
-      !{min_tpm}
-
     mkdir results
 
     stringtie \\
-      --merge filtered/*.gtf \\
+      --merge !{assemblies} \\
       -G !{annotation} \\
       -o results/novel.gtf
 

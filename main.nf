@@ -86,7 +86,7 @@ if ((params.assemble_by || params.quantify_by) && !params.metadata) {
   error += '\nNo --metadata provided for --assemble-by or --quantify-by\n'
 }
 
-params.stringtie_merge = 
+params.stringtie_merge =
   params.containsKey('stringtie-merge') ?
   true : false
 
@@ -123,6 +123,7 @@ include {
 include {
   TAGADA_estimate_reads
   TAGADA_merge_quantifications
+  TAGADA_filter_rare_transcripts
   TAGADA_cluster_expression
   TAGADA_control_expression
   TAGADA_control_annotation
@@ -384,10 +385,16 @@ workflow {
     channel_assemblies =
       STRINGTIE_assemble_transcripts.out
 
+    // all assemblies
+    TAGADA_filter_rare_transcripts(
+      channel_assemblies.collect()
+    )
+    filtered_assemblies = TAGADA_filter_rare_transcripts.out
+
     if (params.stringtie_merge) {
       // one [assemblies] & annotation => annotation
       STRINGTIE_merge_assemblies(
-        channel_assemblies.collect(),
+        filtered_assemblies,
         channel_reference_annotation
       )
       // one annotation
@@ -396,7 +403,7 @@ workflow {
     } else {
       // one [assemblies] & annotation => annotation
       TMERGE_merge_assemblies(
-        channel_assemblies.collect(),
+        filtered_assemblies,
         channel_reference_annotation
       )
       // one annotation

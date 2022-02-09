@@ -57,6 +57,32 @@ process TAGADA_merge_quantifications {
     '''
 }
 
+process TAGADA_filter_rare_transcripts {
+
+  input:
+    path(assemblies )
+
+  output:
+    path('filtered/*.gtf')
+
+  shell:
+    min_occurrence =
+      params.min_transcript_occurrence ?
+      '--min-occurrence ' + params.min_transcript_occurrence : ''
+
+    min_tpm =
+      params.min_transcript_tpm ?
+      '--min-tpm ' + params.min_transcript_tpm : ''
+
+    '''
+    filter_rare_transcripts.py \\
+      !{assemblies} \\
+      -o filtered \\
+      !{min_occurrence} \\
+      !{min_tpm}
+    '''
+}
+
 process TAGADA_cluster_expression {
 
   label 'memory_4'
