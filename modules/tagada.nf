@@ -59,6 +59,8 @@ process TAGADA_merge_quantifications {
 
 process TAGADA_filter_rare_transcripts {
 
+  label 'memory_16'
+
   input:
     path(assemblies )
 
