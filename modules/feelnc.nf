@@ -117,7 +117,7 @@ process FEELNC_classify_transcripts {
     # Filter coding transcripts for lnc-messenger interactions
     grep \\
       -E '#|transcript_biotype "protein_coding"|feelnc_biotype "mRNA"' \\
-      !{novel_annotation} \\
+      updated.gtf \\
       > coding_transcripts.gtf
 
     FEELnc_classifier.pl \\
