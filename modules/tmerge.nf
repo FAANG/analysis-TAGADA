@@ -16,7 +16,6 @@ process TMERGE_merge_assemblies {
     """
     # Add file names to transcript ids
     # Start with the reference 
-
     awk '!/^#/ && \$1!="." && \$3=="exon" {
         sub(/transcript_id "/,"transcript_id \\"ref:")
         print \$0
@@ -51,5 +50,33 @@ process TMERGE_merge_assemblies {
         awk -f /usr/local/bin/gff2gff.awk | \\
         sort -k1,1 -k4,4n -k5,5n \\
         > novel.gtf
+
+    # Add transcript biotypes
+    awk \\
+      'BEGIN {
+        FS = "\\t"
+      }
+      NR == FNR {
+        match(\$9, /transcript_id "([^;]*)";*/, tId)
+        match(\$9, /transcript_biotype "([^;]*)";*/, biotype)
+        biotypes[tId[1]] = biotype[1]
+        next
+      }
+      !/^#/ && \$3 != "gene" {
+          match(\$9, /transcript_id "([^;]*)";*/, tId)
+          if (tId[1] in biotypes) {
+            print \$0 " transcript_biotype \\""biotypes[tId[1]]"\\";"
+          } else {
+            print \$0
+          }
+        } else {
+          print \$0
+        }
+      }' \\
+      $annotation \\
+      novel.gtf\\
+      > novel_with_biotypes.gtf
+
+      mv novel_with_biotypes.gtf novel.gtf
     """
 }

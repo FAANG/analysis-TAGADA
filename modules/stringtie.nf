@@ -76,9 +76,8 @@ process STRINGTIE_merge_assemblies {
         biotypes[tId[1]] = biotype[1]
         next
       }
-      {
-        if (substr($1,1,1) != "#" && $3 != "gene") {
-          match($9, /transcript_id "([^;]*)";*/, tId)
+      !/^#/ && \$3 != "gene" {
+        match($9, /transcript_id "([^;]*)";*/, tId)
           if (tId[1] in biotypes) {
             print $0 " transcript_biotype \\""biotypes[tId[1]]"\\";"
           } else {
