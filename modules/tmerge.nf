@@ -19,7 +19,7 @@ process TMERGE_merge_assemblies {
     awk '!/^#/ && \$1!="." && \$3=="exon" {
         sub(/transcript_id "/,"transcript_id \\"ref:")
         print \$0
-    }' > all_exons_from_assemblies_and_ref.gtf
+    }' $annotation > all_exons_from_assemblies_and_ref.gtf
 
     for assembly in $assemblies
     do
