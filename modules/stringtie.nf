@@ -30,9 +30,6 @@ process STRINGTIE_merge_assemblies {
   output:
     path('novel.gtf')
   
-  when:
-    stringtie_merge
-
   shell:
     min_occurrence =
       params.min_transcript_occurrence ?

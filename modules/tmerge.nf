@@ -9,9 +9,6 @@ process TMERGE_merge_assemblies {
    output:
     path('novel.gtf')
 
-  when:
-    !stringtie_merge
-
   script:
     """
     # Add file names to transcript ids
