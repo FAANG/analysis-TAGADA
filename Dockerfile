@@ -2,8 +2,14 @@ FROM nfcore/base:2.1
 
 RUN apt-get update && apt-get install libxt6 ocaml -y
 
+RUN conda update conda -n base -c defaults
+
+RUN conda install mamba -n base -c conda-forge
+
 COPY environment.yml /
-RUN conda env create -f /environment.yml && conda clean -a
+
+RUN mamba env create -f /environment.yml && conda clean -a
+
 RUN rm /environment.yml
 
 ENV PATH /opt/conda/envs/tagada/bin:$PATH
@@ -11,7 +17,7 @@ ENV PATH /opt/conda/envs/tagada/bin:$PATH
 RUN git clone --branch v2.1.7 --depth 1 https://github.com/gpertea/stringtie.git /usr/local/src/StringTie && \
     bash -c 'ln -s /usr/local/src/StringTie/prepDE.py3 /usr/local/bin'
 
-RUN git clone --branch v0.2 --depth 1 https://github.com/sdjebali/Scripts.git /usr/local/src/Scripts && \
+RUN git clone --branch v0.3 --depth 1 https://github.com/sdjebali/Scripts.git /usr/local/src/Scripts && \
     bash -c 'ln -s /usr/local/src/Scripts/* /usr/local/bin'
 
 RUN git clone --branch v1.3 --depth 1 https://github.com/sdjebali/Comptr.git /usr/local/src/Comptr && \
@@ -25,6 +31,7 @@ RUN git clone --branch v1.0 --depth 1 https://github.com/sdjebali/Overlap.git /u
     bash -c 'ln -s /usr/local/src/Overlap/overlap /usr/local/bin'
 
 USER root
+
 RUN git clone --branch v1.0.2 --depth 1 https://github.com/cguyomar/multiqc_feelnc /usr/local/src/multiqc_feelnc && \
     cd /usr/local/src/multiqc_feelnc && \
     python setup.py install

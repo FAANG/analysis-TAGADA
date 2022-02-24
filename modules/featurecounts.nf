@@ -1,6 +1,6 @@
 process FEATURECOUNTS_control_exons {
 
-  label 'cpu_16'
+  label 'cpu_8'
 
   publishDir = [
     path: params.output + '/control/exons',
