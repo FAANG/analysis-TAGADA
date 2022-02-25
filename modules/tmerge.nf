@@ -1,6 +1,11 @@
 process TMERGE_merge_assemblies {
 
   label 'memory_16'
+  
+  publishDir = [
+    path: params.output + '/annotation',
+    mode: 'copy'
+  ]
 
   input:
     path(assemblies)
