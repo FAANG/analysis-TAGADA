@@ -29,7 +29,7 @@ RUN git clone --branch v1.0 --depth 1 https://github.com/sdjebali/Overlap.git /u
     cd /usr/local/src/Overlap && \
     make && \
     bash -c 'ln -s /usr/local/src/Overlap/overlap /usr/local/bin'
-    
+
 RUN git clone -n https://github.com/julienlag/tmerge /usr/local/src/tmerge && \
     cd /usr/local/src/tmerge && \
     git checkout 8b4d6e7c1c94955931946081476e326c4cece161 && \
