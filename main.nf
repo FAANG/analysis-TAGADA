@@ -56,6 +56,14 @@ params.min_transcript_tpm =
   params.containsKey('min-transcript-tpm') ?
   params.'min-transcript-tpm' : ''
 
+params.assemblies_merger =
+  params.containsKey('assemblies-merger') ?
+  params.'assemblies-merger' : 'tmerge'
+
+params.tmerge_args =
+  params.containsKey('tmerge-args') ?
+  params.'tmerge-args' : ''
+
 error = ''
 
 if (!params.output) {
@@ -86,15 +94,9 @@ if ((params.assemble_by || params.quantify_by) && !params.metadata) {
   error += '\nNo --metadata provided for --assemble-by or --quantify-by\n'
 }
 
-params.stringtie_merge =
-  params.containsKey('stringtie-merge') ?
-  true : false
-
-params.tmerge_endfuzz = params.containsKey('tmerge-endfuzz') ?
-  params.'tmerge_endfuzz' : 10000
-
-params.tmerge_overhang = params.containsKey('tmerge-overhang') ?
-  params.'tmerge_overhang' : 10
+if (!['tmerge', 'stringtie'].contains(params.assemblies_merger)) {
+  error += '\nInvalid --assemblies-merger must be "tmerge" or "stringtie"\n'
+}
 
 if (error) exit(1, error)
 
@@ -386,7 +388,8 @@ workflow {
       STRINGTIE_assemble_transcripts.out.collect()
     )
 
-    if (params.stringtie_merge) {
+    if (params.assemblies_merger == 'stringtie') {
+
       // one [assemblies] & annotation => annotation
       STRINGTIE_merge_assemblies(
         TAGADA_filter_transcripts.out,
