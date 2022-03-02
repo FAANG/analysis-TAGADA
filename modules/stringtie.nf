@@ -29,16 +29,8 @@ process STRINGTIE_merge_assemblies {
 
   output:
     path('novel.gtf')
-  
+
   shell:
-    min_occurrence =
-      params.min_transcript_occurrence ?
-      '--min-occurrence ' + params.min_transcript_occurrence : ''
-
-    min_tpm =
-      params.min_transcript_tpm ?
-      '--min-tpm ' + params.min_transcript_tpm : ''
-
     '''
     mkdir results
 
@@ -81,10 +73,14 @@ process STRINGTIE_merge_assemblies {
           print $0
         }
       }
-      { print $0 }' \\
+      {
+        print $0
+      }' \\
       !{annotation} \\
       results/novel.all.gtf \\
-      > novel.gtf
+      > results/novel.done.gtf
+
+      mv results/novel.done.gtf novel.gtf
     '''
 }
 
