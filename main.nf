@@ -123,7 +123,7 @@ include {
 include {
   TAGADA_estimate_reads
   TAGADA_merge_quantifications
-  TAGADA_filter_rare_transcripts
+  TAGADA_filter_transcripts
   TAGADA_cluster_expression
   TAGADA_control_expression
   TAGADA_control_annotation
@@ -381,36 +381,34 @@ workflow {
       }).combine(channel_reference_annotation)
     )
 
-    // each assembly
-    channel_assemblies =
-      STRINGTIE_assemble_transcripts.out
-
-    // all assemblies
-    TAGADA_filter_rare_transcripts(
-      channel_assemblies.collect()
+    // one [assemblies] => [assemblies]
+    TAGADA_filter_transcripts(
+      STRINGTIE_assemble_transcripts.out.collect()
     )
-    filtered_assemblies = TAGADA_filter_rare_transcripts.out
 
     if (params.stringtie_merge) {
       // one [assemblies] & annotation => annotation
       STRINGTIE_merge_assemblies(
-        filtered_assemblies,
+        TAGADA_filter_transcripts.out,
         channel_reference_annotation
       )
+
       // one annotation
       channel_novel_annotation =
         STRINGTIE_merge_assemblies.out
+
     } else {
+
       // one [assemblies] & annotation => annotation
       TMERGE_merge_assemblies(
-        filtered_assemblies,
+        TAGADA_filter_transcripts.out,
         channel_reference_annotation
       )
+
       // one annotation
       channel_novel_annotation =
         TMERGE_merge_assemblies.out
     }
-
 
   } else {
 
