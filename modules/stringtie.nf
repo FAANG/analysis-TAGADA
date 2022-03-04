@@ -69,8 +69,7 @@ process STRINGTIE_merge_assemblies {
         match($9, /transcript_id "([^;]*)";*/, tId)
         if (tId[1] in biotypes) {
           print $0 " transcript_biotype \\""biotypes[tId[1]]"\\";"
-        } else {
-          print $0
+          next
         }
       }
       {
@@ -80,7 +79,7 @@ process STRINGTIE_merge_assemblies {
       results/novel.all.gtf \\
       > results/novel.done.gtf
 
-      mv results/novel.done.gtf novel.gtf
+    mv results/novel.done.gtf novel.gtf
     '''
 }
 
