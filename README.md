@@ -2,15 +2,21 @@
 
 TAGADA is a Nextflow pipeline that processes RNA-Seq data. It parallelizes multiple tasks to control reads quality, align reads to a reference genome, assemble new transcripts to create a novel annotation, and quantify genes and transcripts.
 
+
 ## Table of Contents
 
 - [Dependencies](#dependencies)
 - [Usage](#usage)
   - [Nextflow options](#nextflow-options)
-  - [Pipeline options](#pipeline-options)
-  - [Merge factors](#merge-factors)
-- [Workflow](#workflow)
+  - [Input and output options](#input-and-output-options)
+  - [Merge options](#merge-options)
+  - [Assembly options](#assembly-options)
+  - [Skip options](#skip-options)
+  - [Resources options](#resources-options)
+- [Merge groups](#merge-groups)
+- [Workflow and results](#workflow-and-results)
 - [About](#about)
+
 
 ## Dependencies
 
@@ -18,6 +24,7 @@ To use this pipeline you will need:
 
 - [Nextflow](https://www.nextflow.io/docs/latest/getstarted.html) >= 21.04.1
 - [Docker](https://docs.docker.com/engine/install/) >= 19.03.2 or [Singularity](https://sylabs.io/guides/3.5/user-guide/quick_start.html) >= 3.7.3
+
 
 ## Usage
 
@@ -38,7 +45,7 @@ The pipeline is written in Nextflow, which provides the following default option
 
 For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.io/docs/latest/cli.html#run).
 
-### Pipeline Options
+### Input and Output Options
 
 | Option | Parameters | Description | Requirement |
 |--------|--------------|-------------|-------------|
@@ -46,26 +53,51 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
 | __`--reads`__ | `'path/to/reads/*'` | Input `fastq` file(s)<br>and/or `bam` file(s).<br><br>For single-end reads,<br>your files must end with:<br>`.fq[.gz]`<br><br>For paired-end reads,<br>your files must end with:<br>`_[R]{1,2}.fq[.gz]`<br><br>For aligned reads,<br>your files must end with:<br>`.bam`<br><br>If the files are numerous,<br>you may provide a `.txt`<br>sheet with one path or url<br>per line. | Required |
 | __`--annotation`__ | `annotation.gtf` | Input reference<br>annotation file or url. | Required |
 | __`--genome`__ | `genome.fa` | Input genome<br>sequence file or url. | Required |
-| __`--index`__ | `directory` | Input genome index<br>directory or url. | Optional, to<br>skip genome<br>indexing. |
-| __`--metadata`__ | `metadata.tsv` | Input tabulated<br>metadata file or url. | Required if<br>`--assemble-by`<br>or<br>`--quantify-by`<br>are provided. |
-| __`--assemble-by`__ | `factor1,factor2` | Factor(s) defining groups<br>in which transcripts are<br>assembled. Aligned<br>reads of identical factors<br>are merged and each<br>resulting merge group is<br>processed individually.<br>See the [merge factors](#merge-factors)<br>section for details. | Optional |
-| __`--quantify-by`__ | `factor1,factor2` | Factor(s) defining groups<br>in which transcripts are<br>quantified. Aligned<br>reads of identical factors<br>are merged and each<br>resulting merge group is<br>processed individually.<br>See the [merge factors](#merge-factors)<br>section for details. | Optional |
+| __`--index`__ | `directory` | Input genome index<br>directory or url. | Optional, to<br>skip genome<br>indexing |
+| __`--metadata`__ | `metadata.tsv` | Input tabulated<br>metadata file or url. | Required if<br>`--assemble-by`<br>or<br>`--quantify-by`<br>are provided |
+
+### Merge Options
+
+| Option | Parameters | Description | Requirement |
+|--------|--------------|-------------|-------------|
+| __`--assemble-by`__ | `factor1,factor2` | Factor(s) defining groups<br>in which transcripts are<br>assembled. Aligned<br>reads of identical factors<br>are merged and each<br>resulting merge group is<br>processed individually.<br>See the [merge groups](#merge-groups)<br>section for details. | Optional |
+| __`--quantify-by`__ | `factor1,factor2` | Factor(s) defining groups<br>in which transcripts are<br>quantified. Aligned<br>reads of identical factors<br>are merged and each<br>resulting merge group is<br>processed individually.<br>See the [merge groups](#merge-groups)<br>section for details. | Optional |
+
+### Assembly Options
+
+| Option | Parameters | Description | Requirement |
+|--------|--------------|-------------|-------------|
 | __`--min-transcript-occurrence`__ | `2` | After transcripts assembly,<br>rare novel transcripts that<br>appear in few assembly<br>groups are removed from<br>the final novel annotation.<br>By default, if a transcript<br>occurs in less than `2`<br>assembly groups, it is<br>removed. If there is only<br>one assembly group, this<br>option defaults to `1`. | Optional |
 | __`--min-transcript-tpm`__ | `0.1` | After transcripts assembly,<br>novel transcripts with low<br>TPM values in every<br>assembly group are<br>removed from the final<br>novel annotation. By<br>default, if a transcript's<br>TPM value is lower than<br>`0.1` in every assembly<br>group, it is removed. | Optional |
-| __`--skip-assembly`__ | | Skip transcripts assembly<br>with StringTie and skip<br>all subsequent processes<br>working with a novel<br>annotation. | Optional |
-| __`--skip-feelnc`__ | | Skip detection of long<br>non-coding transcripts<br>in the novel annotation<br>with FEELnc. | Optional |
+| __`--coalesce-transcripts-with`__ | `tmerge` | Tool used to coalesce<br>transcripts assemblies<br>into a non-redundant set<br>of transcripts for the<br>novel annotation. Can be<br>`tmerge` or `stringtie`. | Optional |
+| __`--tmerge-args`__ | `'--endFuzz 10000'` | Custom arguments to<br>pass to [tmerge](https://github.com/julienlag/tmerge#options) when<br>coalescing transcripts. | Optional |
 | __`--feelnc-args`__ | `'--mode shuffle'` | Custom arguments to<br>pass to FEELnc's<br>[coding potential](https://github.com/tderrien/FEELnc#2--feelnc_codpotpl) script<br>when detecting long<br>non-coding transcripts. | Optional |
+
+### Skip Options
+
+| Option | Parameters | Description | Requirement |
+|--------|--------------|-------------|-------------|
+| __`--skip-assembly`__ | | Skip transcripts assembly<br>with StringTie and skip<br>all subsequent processes<br>working with a novel<br>annotation. | Optional |
+| __`--skip-lnc-detection`__ | | Skip detection of long<br>non-coding transcripts<br>in the novel annotation<br>with FEELnc. | Optional |
+
+### Resources Options
+
+| Option | Parameters | Description | Requirement |
+|--------|--------------|-------------|-------------|
 | __`--max-cpus`__ | `16` | Maximum number of<br>CPU cores that can be<br>used for each process.<br>This is a limit, not the<br>actual number of<br>requested CPU cores. | Optional |
 | __`--max-memory`__ | `64GB` | Maximum memory that<br>can be used for each<br>process. This is a limit,<br>not the actual amount<br>of alloted memory. | Optional |
 | __`--max-time`__ | `12h` | Maximum time that can<br>be spent on each<br>process. This is a limit<br>and has no effect on the<br>duration of each process.| Optional |
 
-### Merge Factors
 
-Transcripts assembly and quantification can be done by __factors__ instead of __input__. When using `--assemble-by` or `--quantify-by`, aligned reads of identical factors are merged and each resulting merge group is processed individually.
+## Merge Groups
+
+Transcripts assembly and quantification can be done by __factors__ instead of __input__.
+
+When using `--assemble-by` or `--quantify-by`, aligned reads with identical factors are merged and each resulting merge group is processed individually.
 
 Factors are specified in the metadata file. This file consists of tab-separated values describing your inputs. The first column must contain file names without extensions. There is no restriction on column names or number of columns.
 
-#### Examples
+### Examples
 
 Given the following tabulated metadata file:
 
@@ -114,8 +146,8 @@ The pipeline executes the following processes:
 5. Compute genome coverage with [Bedtools](https://github.com/arq5x/bedtools2).  
    Coverage information is saved to `output/coverage` in `.bed` files.
 6. Merge aligned reads by factors with [Samtools](https://github.com/samtools/samtools).  
-   See the [merge factors](#merge-factors) section for details.
-7. Assemble transcripts and create a novel annotation with [StringTie](https://github.com/gpertea/stringtie).  
+   See the [merge groups](#merge-groups) section for details.
+7. Assemble transcripts and create a novel annotation with [StringTie](https://github.com/gpertea/stringtie) and [Tmerge](https://github.com/julienlag/tmerge).  
    The novel annotation is saved to `output/annotation` in a `.gtf` file.
 8. Detect long non-coding transcripts with [FEELnc](https://github.com/tderrien/FEELnc).  
    The annotation saved to `output/annotation` is updated with the results.
