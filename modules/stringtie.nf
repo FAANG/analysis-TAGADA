@@ -14,7 +14,7 @@ process STRINGTIE_assemble_transcripts {
     '''
 }
 
-process STRINGTIE_merge_assemblies {
+process STRINGTIE_coalesce_transcripts {
 
   label 'memory_16'
 

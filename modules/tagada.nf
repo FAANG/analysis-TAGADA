@@ -36,7 +36,7 @@ process TAGADA_estimate_reads {
     '''
 }
 
-process TAGADA_merge_quantifications {
+process TAGADA_format_quantifications {
 
   label 'memory_8'
 

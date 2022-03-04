@@ -1,4 +1,4 @@
-process TMERGE_merge_assemblies {
+process TMERGE_coalesce_transcripts {
 
   label 'memory_16'
 

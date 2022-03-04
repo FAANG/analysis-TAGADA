@@ -28,7 +28,8 @@ params.metadata =
   params.containsKey('metadata') ?
   params.metadata : ''
 
-params.skip_feelnc =
+params.skip_lnc_detection =
+  params.containsKey('skip-lnc-detection') ||
   params.containsKey('skip-feelnc') ?
   true : false
 
@@ -56,9 +57,9 @@ params.min_transcript_tpm =
   params.containsKey('min-transcript-tpm') ?
   params.'min-transcript-tpm' : ''
 
-params.assemblies_merger =
-  params.containsKey('assemblies-merger') ?
-  params.'assemblies-merger' : 'tmerge'
+params.coalesce_transcripts_with =
+  params.containsKey('coalesce-transcripts-with') ?
+  params.'coalesce-transcripts-with' : 'tmerge'
 
 params.tmerge_args =
   params.containsKey('tmerge-args') ?
@@ -94,8 +95,9 @@ if ((params.assemble_by || params.quantify_by) && !params.metadata) {
   error += '\nNo --metadata provided for --assemble-by or --quantify-by\n'
 }
 
-if (!['tmerge', 'stringtie'].contains(params.assemblies_merger)) {
-  error += '\nInvalid --assemblies-merger must be "tmerge" or "stringtie"\n'
+if (!['tmerge', 'stringtie'].contains(params.coalesce_transcripts_with)) {
+  error += '\nInvalid --coalesce-transcripts-with must be "tmerge" or ' +
+  '"stringtie"\n'
 }
 
 if (error) exit(1, error)
@@ -124,8 +126,8 @@ include {
 
 include {
   TAGADA_estimate_reads
-  TAGADA_merge_quantifications
   TAGADA_filter_transcripts
+  TAGADA_format_quantifications
   TAGADA_cluster_expression
   TAGADA_control_expression
   TAGADA_control_annotation
@@ -142,12 +144,12 @@ include {
 
 include {
   STRINGTIE_assemble_transcripts
-  STRINGTIE_merge_assemblies
+  STRINGTIE_coalesce_transcripts
   STRINGTIE_quantify_expression
 } from './modules/stringtie.nf'
 
 include {
-  TMERGE_merge_assemblies
+  TMERGE_coalesce_transcripts
 } from './modules/tmerge.nf'
 
 include {
@@ -388,29 +390,29 @@ workflow {
       STRINGTIE_assemble_transcripts.out.collect()
     )
 
-    if (params.assemblies_merger == 'stringtie') {
+    if (params.coalesce_transcripts_with == 'stringtie') {
 
       // one [assemblies] & annotation => annotation
-      STRINGTIE_merge_assemblies(
+      STRINGTIE_coalesce_transcripts(
         TAGADA_filter_transcripts.out,
         channel_reference_annotation
       )
 
       // one annotation
       channel_novel_annotation =
-        STRINGTIE_merge_assemblies.out
+        STRINGTIE_coalesce_transcripts.out
 
     } else {
 
       // one [assemblies] & annotation => annotation
-      TMERGE_merge_assemblies(
+      TMERGE_coalesce_transcripts(
         TAGADA_filter_transcripts.out,
         channel_reference_annotation
       )
 
       // one annotation
       channel_novel_annotation =
-        TMERGE_merge_assemblies.out
+        TMERGE_coalesce_transcripts.out
     }
 
   } else {
@@ -422,7 +424,7 @@ workflow {
 
   // DETECT LONG NON-CODING TRANSCRIPTS ----------------------------------------
 
-  if (!params.skip_feelnc && !params.skip_assembly) {
+  if (!params.skip_lnc_detection && !params.skip_assembly) {
 
     // one genome & reference_annotation & novel_annotation => [reports]
     FEELNC_classify_transcripts(
@@ -460,11 +462,11 @@ workflow {
     }).groupTuple().map({ quantifications -> quantifications[1] })
 
   // each [quantifications] => quantification
-  TAGADA_merge_quantifications(channel_quantifications)
+  TAGADA_format_quantifications(channel_quantifications)
 
   // each quantification
   channel_quantifications =
-    TAGADA_merge_quantifications.out
+    TAGADA_format_quantifications.out
 
   // CONTROL EXPRESSION --------------------------------------------------------
 
