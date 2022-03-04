@@ -116,7 +116,7 @@ process TAGADA_cluster_expression {
     factors = columns.size() > 0 ? columns.join(',') : 'Name'
 
     palettes = (
-      [projectDir + '/assets/palettes/Set3.12.txt']
+      [projectDir + '/assets/palettes/set3.12.txt']
       * Math.max(columns.size(), 1)
     ).join(',')
 
