@@ -146,7 +146,8 @@ process TAGADA_cluster_expression {
       --col_dendro \\
       --row_dendro \\
       --rowSide_by '!{factors}' \\
-      --matrix_legend_title samp.samp.pcor.refgn.TPM.log10.ps0.1 \\
+      --matrix_legend_title \\
+        'reference genes TPM pearson correlation\n(log10 pseudocount 0.1)' \\
       -B 10 \\
       --matrix_palette '!{gradient}' \\
       --rowSide_palette '!{palettes}' \\
