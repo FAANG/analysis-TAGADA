@@ -51,7 +51,7 @@ process TMERGE_coalesce_transcripts {
       results/all_exons_from_assemblies_and_ref_sorted.gtf \\
       --endFuzz 10000 \\
       --exonOverhangTolerance 10 \\
-      '!{params.tmerge_args}' \\
+      !{params.tmerge_args} \\
       > results/tmerged.gtf
 
     # Add gene ids

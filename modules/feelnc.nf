@@ -52,7 +52,7 @@ process FEELNC_classify_transcripts {
       --outname exons \\
       --mode shuffle \\
       --spethres=0.98,0.98 \\
-      '!{params.feelnc_args}'
+      !{params.feelnc_args}
 
     # Update annotation with new biotypes
     cp "$(readlink -m !{novel_annotation})" updated.gtf
