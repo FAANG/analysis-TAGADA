@@ -37,18 +37,21 @@ A small dataset is provided to test this pipeline. To try it out, use this comma
 The pipeline is written in Nextflow, which provides the following default options:
 
 | Option | Parameters | Description | Requirement |
-|--------|--------------|-------------|-------------|
+|--------|------------|-------------|-------------|
 | __`-profile`__ | `profile1,profile2` | Profile(s) to use when<br>running the pipeline.<br>Specify the profiles that<br>fit your infrastructure<br>among `singularity`,<br>`docker`, `kubernetes`,<br>`slurm`. | Required |
+| __`-config`__ | `custom.config` | Configuration file tailored<br>to your infrastructure. | Optional |
 | __`-revision`__ | `version` | Version of the pipeline<br>to launch. | Optional |
 | __`-work-dir`__ | `directory` | Work directory where<br>all temporary files are<br>written. | Optional |
 | __`-resume`__ | | Resume the pipeline<br>from the last completed<br>process. | Optional |
+
+To find a configuration file for your HPC infrastructure, browse [nf-core configs](https://github.com/nf-core/configs/tree/master/conf).
 
 For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.io/docs/latest/cli.html#run).
 
 ### Input and Output Options
 
 | Option | Parameters | Description | Requirement |
-|--------|--------------|-------------|-------------|
+|--------|------------|-------------|-------------|
 | __`--output`__ | `directory` | Output directory where<br>all results are written. | Required |
 | __`--reads`__ | `'path/to/reads/*'` | Input `fastq` file(s)<br>and/or `bam` file(s).<br><br>For single-end reads,<br>your files must end with:<br>`.fq[.gz]`<br><br>For paired-end reads,<br>your files must end with:<br>`_[R]{1,2}.fq[.gz]`<br><br>For aligned reads,<br>your files must end with:<br>`.bam`<br><br>If the files are numerous,<br>you may provide a `.txt`<br>sheet with one path or url<br>per line. | Required |
 | __`--annotation`__ | `annotation.gtf` | Input reference<br>annotation file or url. | Required |
@@ -59,14 +62,14 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
 ### Merge Options
 
 | Option | Parameters | Description | Requirement |
-|--------|--------------|-------------|-------------|
+|--------|------------|-------------|-------------|
 | __`--assemble-by`__ | `factor1,factor2` | Factor(s) defining groups<br>in which transcripts are<br>assembled. Aligned<br>reads of identical factors<br>are merged and each<br>resulting merge group is<br>processed individually.<br>See the [merge groups](#merge-groups)<br>section for details. | Optional |
 | __`--quantify-by`__ | `factor1,factor2` | Factor(s) defining groups<br>in which transcripts are<br>quantified. Aligned<br>reads of identical factors<br>are merged and each<br>resulting merge group is<br>processed individually.<br>See the [merge groups](#merge-groups)<br>section for details. | Optional |
 
 ### Assembly Options
 
 | Option | Parameters | Description | Requirement |
-|--------|--------------|-------------|-------------|
+|--------|------------|-------------|-------------|
 | __`--min-transcript-occurrence`__ | `2` | After transcripts assembly,<br>rare novel transcripts that<br>appear in few assembly<br>groups are removed from<br>the final novel annotation.<br>By default, if a transcript<br>occurs in less than `2`<br>assembly groups, it is<br>removed. If there is only<br>one assembly group, this<br>option defaults to `1`. | Optional |
 | __`--min-transcript-tpm`__ | `0.1` | After transcripts assembly,<br>novel transcripts with low<br>TPM values in every<br>assembly group are<br>removed from the final<br>novel annotation. By<br>default, if a transcript's<br>TPM value is lower than<br>`0.1` in every assembly<br>group, it is removed. | Optional |
 | __`--coalesce-transcripts-with`__ | `tmerge` | Tool used to coalesce<br>transcripts assemblies<br>into a non-redundant set<br>of transcripts for the<br>novel annotation. Can be<br>`tmerge` or `stringtie`. | Optional |
@@ -76,14 +79,14 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
 ### Skip Options
 
 | Option | Parameters | Description | Requirement |
-|--------|--------------|-------------|-------------|
+|--------|------------|-------------|-------------|
 | __`--skip-assembly`__ | | Skip transcripts assembly<br>with StringTie and skip<br>all subsequent processes<br>working with a novel<br>annotation. | Optional |
 | __`--skip-lnc-detection`__ | | Skip detection of long<br>non-coding transcripts<br>in the novel annotation<br>with FEELnc. | Optional |
 
 ### Resources Options
 
 | Option | Parameters | Description | Requirement |
-|--------|--------------|-------------|-------------|
+|--------|------------|-------------|-------------|
 | __`--max-cpus`__ | `16` | Maximum number of<br>CPU cores that can be<br>used for each process.<br>This is a limit, not the<br>actual number of<br>requested CPU cores. | Optional |
 | __`--max-memory`__ | `64GB` | Maximum memory that<br>can be used for each<br>process. This is a limit,<br>not the actual amount<br>of alloted memory. | Optional |
 | __`--max-time`__ | `12h` | Maximum time that can<br>be spent on each<br>process. This is a limit<br>and has no effect on the<br>duration of each process.| Optional |
