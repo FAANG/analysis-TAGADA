@@ -22,32 +22,67 @@ parser.add_argument(
   help = 'Output directory.'
 )
 parser.add_argument(
-  '--min-overlap',
-  metavar = 'MIN OVERLAP',
+  '--min-monoexonic-overlap',
+  metavar = 'MIN_MONOEXONIC_OVERLAP',
   default = 0.5,
   type = float,
   help = 'Monoexonic transcripts are assumed to be the same transcript if ' +
-         'they both have an overlap percentage of at least `MIN OVERLAP`.'
+         'they both have an overlap ratio of at least `MIN_MONOEXONIC_' +
+         'OVERLAP`. Defaults to `0.5`.'
 )
 parser.add_argument(
-  '--min-occurrence',
-  metavar = 'MIN OCCURRENCE',
+  '--min-transcript-occurrence',
+  metavar = 'MIN_TRANSCRIPT_OCCURRENCE',
   default = 2,
   type = int,
-  help = 'Keep transcripts that appear in at least `MIN OCCURRENCE` inputs. ' +
-         'This value is lowered to the number of inputs if it exceeds it.'
+  help = 'Filter transcripts that appear in less than `MIN_TRANSCRIPT_' +
+         'OCCURRENCE` inputs. Defaults to `2`. This value is lowered to the ' +
+         'number of inputs if it exceeds it.'
 )
 parser.add_argument(
-  '--min-tpm',
-  metavar = 'MIN TPM',
+  '--min-monoexonic-occurrence',
+  metavar = 'MIN_MONOEXONIC_OCCURRENCE',
+  default = None,
+  type = int,
+  help = 'Filter monoexonic transcripts that appear in less than `MIN_' +
+         'MONOEXONIC_OCCURRENCE` inputs. Defaults to `MIN_TRANSCRIPT_' +
+         'OCCURRENCE`. This value is lowered to the number of inputs if it ' +
+         'exceeds it.'
+)
+parser.add_argument(
+  '--min-transcript-tpm',
+  metavar = 'MIN_TRANSCRIPT_TPM',
   default = 0.1,
   type = float,
-  help = 'Keep transcripts with at least one TPM greater or equal to `MIN TPM`.'
+  help = 'Filter transcripts with no TPM equal to or greater than `MIN_' +
+         'TRANSCRIPT_TPM`. Defaults to `0.1`.'
+)
+parser.add_argument(
+  '--min-monoexonic-tpm',
+  metavar = 'MIN_MONOEXONIC_TPM',
+  default = None,
+  type = float,
+  help = 'Filter monoexonic transcripts with no TPM equal to or greater than ' +
+         '`MIN_MONOEXONIC_TPM`. Defaults to `10 * MIN_TRANSCRIPT_TPM`.'
 )
 
 args = parser.parse_args()
 
-args.min_occurrence = min(args.min_occurrence, len(args.inputs))
+args.min_transcript_occurrence = min(
+  args.min_transcript_occurrence,
+  len(args.inputs)
+)
+
+if args.min_monoexonic_occurrence == None:
+  args.min_monoexonic_occurrence = args.min_transcript_occurrence
+else:
+  args.min_monoexonic_occurrence = min(
+    args.min_monoexonic_occurrence,
+    len(args.inputs)
+  )
+
+if args.min_monoexonic_tpm == None:
+  args.min_monoexonic_tpm = 10 * args.min_transcript_tpm
 
 # Parse GTF inputs
 inputs = pd.DataFrame()
@@ -84,7 +119,7 @@ for gtf in args.inputs:
   input['transcript'] = input['attribute'].str.extract(r'transcript_id "(.+?)"')
   input['tpm'] = input['attribute'].str.extract(r'TPM "(.+?)"').astype('float32')
   input = input.drop(columns = 'attribute')
-  inputs = inputs.append(input)
+  inputs = pd.concat([inputs, input])
 
 inputs = inputs.astype({
   'file': 'category',
@@ -114,7 +149,7 @@ transcripts = inputs[inputs['feature'] == 'exon'].sort_values(
   on = ['file', 'transcript', 'chromosome', 'strand']
 )
 
-# Monoexonic transcripts with at least `MIN OVERLAP` overlap are the same
+# Monoexonic transcripts with at least `MIN_MONOEXONIC_OVERLAP` are the same
 mono = transcripts[transcripts['splicing'].isna()][
   ['start', 'end']
 ].reset_index().sort_values(
@@ -142,8 +177,8 @@ overlap = (
 )
 
 mono = mono[
-  (overlap / (mono['end_x'] - mono['start_x']) >= args.min_overlap) &
-  (overlap / (mono['end_y'] - mono['start_y']) >= args.min_overlap)
+  (overlap / (mono['end_x'] - mono['start_x']) >= args.min_monoexonic_overlap) &
+  (overlap / (mono['end_y'] - mono['start_y']) >= args.min_monoexonic_overlap)
 ]
 
 mono = mono.rename(columns = {
@@ -168,12 +203,14 @@ transcripts = transcripts.merge(
   how = 'left'
 )
 
+transcripts['is_monoexonic'] = transcripts['splicing'].isna()
+
 transcripts['splicing'] = transcripts['splicing'].fillna(
   'mono_' + transcripts['start_min'] + '_' + transcripts['end_max']
 )
 
-# Keep transcripts that appear in at least `MIN OCCURRENCE` files
-# Keep transcripts with at least one TPM greater or equal to `MIN TPM`
+# Filter transcripts that appear in less than `MIN_xxx_OCCURRENCE` files
+# Filter transcripts with no TPM equal to or greater than `MIN_xxx_TPM`
 transcripts = transcripts.reset_index().groupby(
   ['chromosome', 'strand', 'splicing'],
   observed = True
@@ -181,7 +218,8 @@ transcripts = transcripts.reset_index().groupby(
   'file': ('file', list),
   'transcript': ('transcript', list),
   'tpm_max': ('tpm', 'max'),
-  'file_count': ('file', 'nunique')
+  'file_count': ('file', 'nunique'),
+  'is_monoexonic': ('is_monoexonic', 'first')
 }).explode(
   ['file', 'transcript']
 ).reset_index().set_index(
@@ -189,8 +227,15 @@ transcripts = transcripts.reset_index().groupby(
 )
 
 transcripts = transcripts[
-  (transcripts['file_count'] >= args.min_occurrence) &
-  (transcripts['tpm_max'] >= args.min_tpm)
+  (
+    (transcripts['is_monoexonic'] == True) &
+    (transcripts['file_count'] >= args.min_monoexonic_occurrence) &
+    (transcripts['tpm_max'] >= args.min_monoexonic_tpm)
+  ) | (
+    (transcripts['is_monoexonic'] == False) &
+    (transcripts['file_count'] >= args.min_transcript_occurrence) &
+    (transcripts['tpm_max'] >= args.min_transcript_tpm)
+  )
 ]
 
 # Output filtered GTF

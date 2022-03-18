@@ -68,20 +68,30 @@ process TAGADA_filter_transcripts {
     path('filtered/*.gtf')
 
   shell:
-    min_occurrence =
+    min_transcript_occurrence =
       params.min_transcript_occurrence ?
-      '--min-occurrence ' + params.min_transcript_occurrence : ''
+      '--min-transcript-occurrence ' + params.min_transcript_occurrence : ''
 
-    min_tpm =
+    min_monoexonic_occurrence =
+      params.min_monoexonic_occurrence ?
+      '--min-monoexonic-occurrence ' + params.min_monoexonic_occurrence : ''
+
+    min_transcript_tpm =
       params.min_transcript_tpm ?
-      '--min-tpm ' + params.min_transcript_tpm : ''
+      '--min-transcript-tpm ' + params.min_transcript_tpm : ''
+
+    min_monoexonic_tpm =
+      params.min_monoexonic_tpm ?
+      '--min-monoexonic-tpm ' + params.min_monoexonic_tpm : ''
 
     '''
     filter_rare_transcripts.py \\
       !{assemblies} \\
       -o filtered \\
-      !{min_occurrence} \\
-      !{min_tpm}
+      !{min_transcript_occurrence} \\
+      !{min_monoexonic_occurrence} \\
+      !{min_transcript_tpm} \\
+      !{min_monoexonic_tpm}
     '''
 }
 

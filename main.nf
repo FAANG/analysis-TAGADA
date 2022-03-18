@@ -25,7 +25,9 @@ params.keySet().collect({ param ->
     'quantify-by',
     'merge',
     'min-transcript-occurrence',
+    'min-monoexonic-occurrence',
     'min-transcript-tpm',
+    'min-monoexonic-tpm',
     'coalesce-transcripts-with',
     'tmerge-args',
     'feelnc-args',
@@ -76,9 +78,17 @@ params.min_transcript_occurrence =
   params.containsKey('min-transcript-occurrence') ?
   params.'min-transcript-occurrence' : ''
 
+params.min_monoexonic_occurrence =
+  params.containsKey('min-monoexonic-occurrence') ?
+  params.'min-monoexonic-occurrence' : ''
+
 params.min_transcript_tpm =
   params.containsKey('min-transcript-tpm') ?
   params.'min-transcript-tpm' : ''
+
+params.min_monoexonic_tpm =
+  params.containsKey('min-monoexonic-tpm') ?
+  params.'min-monoexonic-tpm' : ''
 
 params.coalesce_transcripts_with =
   params.containsKey('coalesce-transcripts-with') ?
