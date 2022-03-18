@@ -4,6 +4,42 @@ nextflow.enable.dsl = 2
 
 // CHECK PARAMETERS ------------------------------------------------------------
 
+error = ''
+
+// Nextflow duplicates parameters and replaces dashes
+// https://www.nextflow.io/docs/latest/cli.html#pipeline-parameters
+// Here we find duplicates and keep the first ones for the validity check
+params.keySet().collect({ param ->
+  [param.replaceAll('-', '').toLowerCase(), param]
+}).unique({ it -> it[0] }).collect({ it -> it[1] })
+// Now we can check the original parameters provided by the user
+.findAll({ param ->
+  ![
+    'output',
+    'reads',
+    'annotation',
+    'genome',
+    'index',
+    'metadata',
+    'assemble-by',
+    'quantify-by',
+    'merge',
+    'min-transcript-occurrence',
+    'min-transcript-tpm',
+    'coalesce-transcripts-with',
+    'tmerge-args',
+    'feelnc-args',
+    'skip-assembly',
+    'skip-lnc-detection',
+    'skip-feelnc',
+    'max-cpus',
+    'max-memory',
+    'max-time'
+  ].contains(param)
+}).each({ unknown ->
+  error += '\nUnknown parameter provided: --' + unknown + '\n'
+})
+
 params.output =
   params.containsKey('output') ?
   params.output : ''
@@ -11,6 +47,10 @@ params.output =
 params.reads =
   params.containsKey('reads') ?
   params.reads : ''
+
+params.annotation =
+  params.containsKey('annotation') ?
+  params.annotation : ''
 
 params.genome =
   params.containsKey('genome') ?
@@ -20,22 +60,9 @@ params.index =
   params.containsKey('index') ?
   params.index : ''
 
-params.annotation =
-  params.containsKey('annotation') ?
-  params.annotation : ''
-
 params.metadata =
   params.containsKey('metadata') ?
   params.metadata : ''
-
-params.skip_lnc_detection =
-  params.containsKey('skip-lnc-detection') ||
-  params.containsKey('skip-feelnc') ?
-  true : false
-
-params.skip_assembly =
-  params.containsKey('skip-assembly') ?
-  true : false
 
 params.assemble_by =
   params.containsKey('assemble-by') ?
@@ -44,10 +71,6 @@ params.assemble_by =
 params.quantify_by =
   params.containsKey('quantify-by') ?
   params.'quantify-by'.tokenize(',') : []
-
-params.feelnc_args =
-  params.containsKey('feelnc-args') ?
-  params.'feelnc-args' : ''
 
 params.min_transcript_occurrence =
   params.containsKey('min-transcript-occurrence') ?
@@ -65,7 +88,18 @@ params.tmerge_args =
   params.containsKey('tmerge-args') ?
   params.'tmerge-args' : ''
 
-error = ''
+params.feelnc_args =
+  params.containsKey('feelnc-args') ?
+  params.'feelnc-args' : ''
+
+params.skip_assembly =
+  params.containsKey('skip-assembly') ?
+  true : false
+
+params.skip_lnc_detection =
+  params.containsKey('skip-lnc-detection') ||
+  params.containsKey('skip-feelnc') ?
+  true : false
 
 if (!params.output) {
   error += '\nNo --output provided\n'
@@ -84,7 +118,7 @@ if (!params.annotation) {
 }
 
 if (params.containsKey('merge')) {
-  error += '\nReplace deprecated --merge with --assemble-by or --quantify-by\n'
+  error += '\nReplace deprecated --merge with --assemble-by and --quantify-by\n'
 }
 
 if (params.assemble_by && params.skip_assembly) {
@@ -97,7 +131,7 @@ if ((params.assemble_by || params.quantify_by) && !params.metadata) {
 
 if (!['tmerge', 'stringtie'].contains(params.coalesce_transcripts_with)) {
   error += '\nInvalid --coalesce-transcripts-with must be "tmerge" or ' +
-  '"stringtie"\n'
+           '"stringtie"\n'
 }
 
 if (error) exit(1, error)
