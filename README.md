@@ -53,7 +53,7 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
 | Option | Parameters | Description | Requirement |
 |--------|------------|-------------|-------------|
 | __`--output`__ | `directory` | Output directory where<br>all results are written. | Required |
-| __`--reads`__ | `'path/to/reads/*'` | Input `fastq` file(s)<br>and/or `bam` file(s).<br><br>For single-end reads,<br>your files must end with:<br>`.fq[.gz]`<br><br>For paired-end reads,<br>your files must end with:<br>`_[R]{1,2}.fq[.gz]`<br><br>For aligned reads,<br>your files must end with:<br>`.bam`<br><br>If the files are numerous,<br>you may provide a `.txt`<br>sheet with one path or url<br>per line. | Required |
+| __`--reads`__ | `'path/to/reads/*'` | Input `fastq` file(s)<br>and/or `bam` file(s).<br><br>For single-end reads,<br>your files must end with:<br>`.fq[.gz]`<br><br>For paired-end reads,<br>your files must end with:<br>`_[R]{1,2}.fq[.gz]`<br><br>For aligned reads,<br>your files must end with:<br>`.bam`<br><br>If the provided path<br>includes a wildcard<br>character like `*`, you<br>must enclose it with<br>quotes to prevent Bash<br>glob expansion, as per<br>[Nextflow's requirements](https://www.nextflow.io/docs/latest/cli.html#pipeline-parameters).<br><br>If the files are numerous,<br>you may provide a `.txt`<br>sheet with one path or url<br>per line. | Required |
 | __`--annotation`__ | `annotation.gtf` | Input reference<br>annotation file or url. | Required |
 | __`--genome`__ | `genome.fa` | Input genome<br>sequence file or url. | Required |
 | __`--index`__ | `directory` | Input genome index<br>directory or url. | Optional, to<br>skip genome<br>indexing |
