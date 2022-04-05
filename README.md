@@ -3,7 +3,7 @@
 TAGADA is a Nextflow pipeline that processes RNA-Seq data. It parallelizes multiple tasks to control reads quality, align reads to a reference genome, assemble new transcripts to create a novel annotation, and quantify genes and transcripts.
 
 
-## Table of Contents
+## Table of contents
 
 - [Dependencies](#dependencies)
 - [Usage](#usage)
@@ -13,7 +13,11 @@ TAGADA is a Nextflow pipeline that processes RNA-Seq data. It parallelizes multi
   - [Assembly options](#assembly-options)
   - [Skip options](#skip-options)
   - [Resources options](#resources-options)
-- [Merge groups](#merge-groups)
+- [Metadata](#metadata)
+  - [Example metadata file](#example-metadata-file)
+- [Merging inputs](#merging-inputs)
+  - [Merging inputs by a single factor](#merging-inputs-by-a-single-factor)
+  - [Merging inputs by an intersection of factors](#merging-inputs-by-an-intersection-of-factors)
 - [Workflow and results](#workflow-and-results)
 - [About](#about)
 
@@ -32,79 +36,275 @@ A small dataset is provided to test this pipeline. To try it out, use this comma
 
     nextflow run FAANG/analysis-TAGADA -profile test,docker -revision 2.1.0 --output directory
 
-### Nextflow Options
+### Nextflow options
 
 The pipeline is written in Nextflow, which provides the following default options:
 
-| Option | Parameters | Description | Requirement |
-|--------|------------|-------------|-------------|
-| __`-profile`__ | `profile1,profile2` | Profile(s) to use when<br>running the pipeline.<br>Specify the profiles that<br>fit your infrastructure<br>among `singularity`,<br>`docker`, `kubernetes`,<br>`slurm`. | Required |
-| __`-config`__ | `custom.config` | Configuration file tailored<br>to your infrastructure. | Optional |
-| __`-revision`__ | `version` | Version of the pipeline<br>to launch. | Optional |
-| __`-work-dir`__ | `directory` | Work directory where<br>all temporary files are<br>written. | Optional |
-| __`-resume`__ | | Resume the pipeline<br>from the last completed<br>process. | Optional |
-
-To find a configuration file for your HPC infrastructure, browse [nf-core configs](https://github.com/nf-core/configs/tree/master/conf).
+<table>
+  <thead>
+    <tr>
+      <th width=222px>Option</th>
+      <th width=220px>Parameters</th>
+      <th width=215px>Description</th>
+      <th width=153px>Required</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td nowrap><strong><code>-profile</code></strong></td>
+      <td nowrap><code>profile1,profile2,etc.</code></td>
+      <td>Profile(s) to use when running the pipeline. Specify the profiles that fit your infrastructure among <code>singularity</code>, <code>docker</code>, <code>kubernetes</code>, <code>slurm</code>.</td>
+      <td align=center>Required</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>-config</code></strong></td>
+      <td nowrap><code>custom.config</code></td>
+      <td>Configuration file tailored to your infrastructure. To find a configuration file for your infrastructure, browse <a href="https://github.com/nf-core/configs/tree/master/conf">nf-core configs</a>.
+      </td>
+      <td align=center>Optional</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>-revision</code></strong></td>
+      <td nowrap><code>version</code></td>
+      <td>Version of the pipeline to launch.</td>
+      <td align=center>Optional</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>-work-dir</code></strong></td>
+      <td nowrap><code>directory</code></td>
+      <td>Work directory where all temporary files are written.</td>
+      <td align=center>Optional</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>-resume</code></strong></td>
+      <td nowrap></td>
+      <td>Resume the pipeline from the last completed process.</td>
+      <td align=center>Optional</td>
+    </tr>
+  </tbody>
+</table>
 
 For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.io/docs/latest/cli.html#run).
 
-### Input and Output Options
+### Input and output options
 
-| Option | Parameters | Description | Requirement |
-|--------|------------|-------------|-------------|
-| __`--output`__ | `directory` | Output directory where<br>all results are written. | Required |
-| __`--reads`__ | `'path/to/reads/*'` | Input `fastq` file(s)<br>and/or `bam` file(s).<br><br>For single-end reads,<br>your files must end with:<br>`.fq[.gz]`<br><br>For paired-end reads,<br>your files must end with:<br>`_[R]{1,2}.fq[.gz]`<br><br>For aligned reads,<br>your files must end with:<br>`.bam`<br><br>If the provided path<br>includes a wildcard<br>character like `*`, you<br>must enclose it with<br>quotes to prevent Bash<br>glob expansion, as per<br>[Nextflow's requirements](https://www.nextflow.io/docs/latest/cli.html#pipeline-parameters).<br><br>If the files are numerous,<br>you may provide a `.txt`<br>sheet with one path or url<br>per line. | Required |
-| __`--annotation`__ | `annotation.gtf` | Input reference<br>annotation file or url. | Required |
-| __`--genome`__ | `genome.fa` | Input genome<br>sequence file or url. | Required |
-| __`--index`__ | `directory` | Input genome index<br>directory or url. | Optional, to<br>skip genome<br>indexing |
-| __`--metadata`__ | `metadata.tsv` | Input tabulated<br>metadata file or url. | Required if<br>`--assemble-by`<br>or<br>`--quantify-by`<br>are provided |
+<table>
+  <thead>
+    <tr>
+      <th width=222px>Option</th>
+      <th width=220px>Parameters</th>
+      <th width=215px>Description</th>
+      <th width=153px>Required</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td nowrap><strong><code>--output</code></strong></td>
+      <td nowrap><code>directory</code></td>
+      <td>Output directory where all results are written.</td>
+      <td align=center>Required</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>--reads</code></strong></td>
+      <td nowrap><code>'path/to/reads/*'</code></td>
+      <td>
+        Input <code>fastq</code> file(s) and/or <code>bam</code> file(s).<br><br>
+        For single-end reads, your files must end with:<br><code>.fq[.gz]</code><br><br>
+        For paired-end reads, your files must end with:<br><code>_[R]{1,2}.fq[.gz]</code><br><br>
+        For aligned reads, your files must end with:<br><code>.bam</code><br><br>
+        If the provided path includes a wildcard character like <code>*</code>, you must enclose it with quotes to prevent Bash glob expansion, as per <a href="https://www.nextflow.io/docs/latest/cli.html#pipeline-parameters">Nextflow's requirements</a>.<br><br>
+        If the files are numerous, you may provide a <code>.txt</code> sheet with one path or url per line.</td>
+      <td align=center>Required</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>--annotation</code></strong></td>
+      <td nowrap><code>annotation.gtf</code></td>
+      <td>Input reference<br>annotation file or url.</td>
+      <td align=center>Required</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>--genome</code></strong></td>
+      <td nowrap><code>genome.fa</code></td>
+      <td>Input genome<br>sequence file or url.</td>
+      <td align=center>Required</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>--index</code></strong></td>
+      <td nowrap><code>directory</code></td>
+      <td>Input genome index<br>directory or url.</td>
+      <td align=center>Optional, to<br>skip genome indexing</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>--metadata</code></strong></td>
+      <td nowrap><code>metadata.tsv</code></td>
+      <td>Input tabulated<br>metadata file or url.</td>
+      <td align=center>Required if<br><code>--assemble-by</code><br>or<br><code>--quantify-by</code><br>are provided</td>
+    </tr>
+  </tbody>
+</table>
 
-### Merge Options
+### Merge options
 
-| Option | Parameters | Description | Requirement |
-|--------|------------|-------------|-------------|
-| __`--assemble-by`__ | `factor1,factor2` | Factor(s) defining groups<br>in which transcripts are<br>assembled. Aligned<br>reads of identical factors<br>are merged and each<br>resulting merge group is<br>processed individually.<br>See the [merge groups](#merge-groups)<br>section for details. | Optional |
-| __`--quantify-by`__ | `factor1,factor2` | Factor(s) defining groups<br>in which transcripts are<br>quantified. Aligned<br>reads of identical factors<br>are merged and each<br>resulting merge group is<br>processed individually.<br>See the [merge groups](#merge-groups)<br>section for details. | Optional |
+<table>
+  <thead>
+    <tr>
+      <th width=222px>Option</th>
+      <th width=220px>Parameters</th>
+      <th width=215px>Description</th>
+      <th width=153px>Required</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td nowrap><strong><code>--assemble-by</code></strong></td>
+      <td nowrap><code>factor1,factor2,etc.</code></td>
+      <td>Factor(s) defining groups in which transcripts are assembled. Aligned reads of identical factors are merged and each resulting merge group is processed individually. See the <a href="#merging-inputs">merging inputs</a> section for details.</td>
+      <td align=center>Optional</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>--quantify-by</code></strong></td>
+      <td nowrap><code>factor1,factor2,etc.</code></td>
+      <td>Factor(s) defining groups in which transcripts are quantified. Aligned reads of identical factors are merged and each resulting merge group is processed individually. See the <a href="#merging-inputs">merging inputs</a> section for details.</td>
+      <td align=center>Optional</td>
+    </tr>
+  </tbody>
+</table>
 
-### Assembly Options
+### Assembly options
 
-| Option | Parameters | Description | Requirement |
-|--------|------------|-------------|-------------|
-| __`--min-transcript-occurrence`__ | `2` | After transcripts assembly,<br>rare novel transcripts that<br>appear in few assembly<br>groups are removed from<br>the final novel annotation.<br>By default, if a transcript<br>occurs in less than `2`<br>assembly groups, it is<br>removed. If there is only<br>one assembly group, this<br>option defaults to `1`. | Optional |
-| __`--min-monoexonic-occurrence`__ | `2` | If specified, rare novel<br>monoexonic transcripts<br>are filtered according to the<br>provided threshold. Otherwise,<br>this option takes the value of<br>`--min-transcript-occurrence`. | Optional |
-| __`--min-transcript-tpm`__ | `0.1` | After transcripts assembly,<br>novel transcripts with low<br>TPM values in every<br>assembly group are<br>removed from the final<br>novel annotation. By<br>default, if a transcript's<br>TPM value is lower than<br>`0.1` in every assembly<br>group, it is removed. | Optional |
-| __`--min-monoexonic-tpm`__ | `1` | If specified, novel monoexonic<br>transcripts with low TPM values<br>are filtered according to the<br>provided threshold. Otherwise,<br>this option takes the value of<br>`--min-transcript-tpm * 10`. | Optional |
-| __`--coalesce-transcripts-with`__ | `tmerge` | Tool used to coalesce<br>transcripts assemblies<br>into a non-redundant set<br>of transcripts for the<br>novel annotation. Can be<br>`tmerge` or `stringtie`. | Optional |
-| __`--tmerge-args`__ | `'--endFuzz 10000'` | Custom arguments to<br>pass to [tmerge](https://github.com/julienlag/tmerge#options) when<br>coalescing transcripts. | Optional |
-| __`--feelnc-args`__ | `'--mode shuffle'` | Custom arguments to<br>pass to FEELnc's<br>[coding potential](https://github.com/tderrien/FEELnc#2--feelnc_codpotpl) script<br>when detecting long<br>non-coding transcripts. | Optional |
+<table>
+  <thead>
+    <tr>
+      <th width=262px>Option</th>
+      <th width=180px>Parameters</th>
+      <th width=268px>Description</th>
+      <th width=100px>Required</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td nowrap><strong><code>--min-transcript-occurrence</code></strong></td>
+      <td nowrap><code>2</code></td>
+      <td>After transcripts assembly, rare novel transcripts that appear in few assembly groups are removed from the final novel annotation. By default, if a transcript occurs in less than <code>2</code> assembly groups, it is removed. If there is only one assembly group, this option defaults to <code>1</code>.</td>
+      <td align=center>Optional</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>--min-monoexonic-occurrence</code></strong></td>
+      <td nowrap><code>2</code></td>
+      <td>If specified, rare novel monoexonic transcripts are filtered according to the provided threshold. Otherwise, this option takes the value of<br><code>--min-transcript-occurrence</code>.</td>
+      <td align=center>Optional</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>--min-transcript-tpm</code></strong></td>
+      <td nowrap><code>0.1</code></td>
+      <td>After transcripts assembly, novel transcripts with low TPM values in every assembly group are removed from the final novel annotation. By default, if a transcript's TPM value is lower than <code>0.1</code> in every assembly group, it is removed.</td>
+      <td align=center>Optional</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>--min-monoexonic-tpm</code></strong></td>
+      <td nowrap><code>1</code></td>
+      <td>If specified, novel monoexonic transcripts with low TPM values are filtered according to the provided threshold. Otherwise, this option takes the value of<br><code>--min-transcript-tpm * 10</code>.</td>
+      <td align=center>Optional</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>--coalesce-transcripts-with</code></strong></td>
+      <td nowrap><code>tmerge</code></td>
+      <td>Tool used to coalesce transcripts assemblies into a non-redundant set of transcripts for the novel annotation. Can be <code>tmerge</code> or <code>stringtie</code>.</td>
+      <td align=center>Optional</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>--tmerge-args</code></strong></td>
+      <td nowrap><code>'--endFuzz 10000'</code></td>
+      <td>Custom arguments to pass to <a href="https://github.com/julienlag/tmerge#options">tmerge</a> when coalescing transcripts.</td>
+      <td align=center>Optional</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>--feelnc-args</code></strong></td>
+      <td nowrap><code>'--mode shuffle'</code></td>
+      <td>Custom arguments to pass to FEELnc's <a href="https://github.com/tderrien/FEELnc#2--feelnc_codpotpl">coding potential</a> script when detecting long non-coding transcripts.</td>
+      <td align=center>Optional</td>
+    </tr>
+  </tbody>
+</table>
 
-### Skip Options
+### Skip options
 
-| Option | Parameters | Description | Requirement |
-|--------|------------|-------------|-------------|
-| __`--skip-assembly`__ | | Skip transcripts assembly<br>with StringTie and skip<br>all subsequent processes<br>working with a novel<br>annotation. | Optional |
-| __`--skip-lnc-detection`__ | | Skip detection of long<br>non-coding transcripts<br>in the novel annotation<br>with FEELnc. | Optional |
+<table>
+  <thead>
+    <tr>
+      <th width=222px>Option</th>
+      <th width=220px>Parameters</th>
+      <th width=215px>Description</th>
+      <th width=153px>Required</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td nowrap><strong><code>--skip-assembly</code></strong></td>
+      <td nowrap></td>
+      <td>Skip transcripts assembly with StringTie and skip all subsequent processes working with a novel annotation.</td>
+      <td align=center>Optional</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>--skip-lnc-detection</code></strong></td>
+      <td nowrap></td>
+      <td>Skip detection of long non-coding transcripts in the novel annotation with FEELnc.</td>
+      <td align=center>Optional</td>
+    </tr>
+  </tbody>
+</table>
 
-### Resources Options
+### Resources options
 
-| Option | Parameters | Description | Requirement |
-|--------|------------|-------------|-------------|
-| __`--max-cpus`__ | `16` | Maximum number of<br>CPU cores that can be<br>used for each process.<br>This is a limit, not the<br>actual number of<br>requested CPU cores. | Optional |
-| __`--max-memory`__ | `64GB` | Maximum memory that<br>can be used for each<br>process. This is a limit,<br>not the actual amount<br>of alloted memory. | Optional |
-| __`--max-time`__ | `12h` | Maximum time that can<br>be spent on each<br>process. This is a limit<br>and has no effect on the<br>duration of each process.| Optional |
+<table>
+  <thead>
+    <tr>
+      <th width=222px>Option</th>
+      <th width=220px>Parameters</th>
+      <th width=215px>Description</th>
+      <th width=153px>Required</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td nowrap><strong><code>--max-cpus</code></strong></td>
+      <td nowrap><code>16</code></td>
+      <td>Maximum number of CPU cores that can be used for each process. This is a limit, not the actual number of requested CPU cores.</td>
+      <td align=center>Optional</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>--max-memory</code></strong></td>
+      <td nowrap><code>64GB</code></td>
+      <td>Maximum memory that can be used for each process. This is a limit, not the actual amount of alloted memory.</td>
+      <td align=center>Optional</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>--max-time</code></strong></td>
+      <td nowrap><code>18h</code></td>
+      <td>Maximum time that can be spent on each process. This is a limit and has no effect on the duration of each process.</td>
+      <td align=center>Optional</td>
+    </tr>
+  </tbody>
+</table>
 
 
-## Merge Groups
+## Metadata
 
-Transcripts assembly and quantification can be done by __factors__ instead of __input__.
+Using `--metadata`, you may provide a file describing your inputs with tab-separated factors. The first column must contain file names without file type extensions or paired-end suffixes. There are no constraints on column names or number of columns.
 
-When using `--assemble-by` or `--quantify-by`, aligned reads with identical factors are merged and each resulting merge group is processed individually.
+### Example metadata file
 
-Factors are specified in the metadata file. This file consists of tab-separated values describing your inputs. The first column must contain file names without extensions. There is no restriction on column names or number of columns.
+    --reads reads.txt --metadata metadata.tsv
 
-### Examples
+`reads.txt`
 
-Given the following tabulated metadata file:
+    path/to/A_R1.fq
+    path/to/A_R2.fq
+    path/to/B.fq.gz
+    path/to/C.bam
+    path/to/D.fq
+
+`metadata.tsv`
 
     input    tissue     stage
     A        liver      30 days
@@ -112,34 +312,110 @@ Given the following tabulated metadata file:
     C        liver      60 days
     D        muscle     60 days
 
-And the following inputs:
 
-    A_R1.fq
-    A_R2.fq
-    B.fq.gz
-    C.bam
-    D.fq
+## Merging inputs
 
-With the following arguments:
+When using `--assemble-by` and/or `--quantify-by`, your inputs are merged into experiment groups that share common factors. With `--assemble-by`, transcripts assembly is done individually for each assembly group, and consensus transcripts are kept to generate a novel annotation. With `--quantify-by`, quantification values are given individually for each quantification group.
+
+### Merging inputs by a single factor
 
     --assemble-by tissue --quantify-by stage
 
-- __A__ and __B__ and __C__ aligned reads will be merged for transcripts assembly in the __liver__ tissue.
-- __D__ aligned reads will be left alone for transcripts assembly in the __muscle__ tissue.
-- __A__ and __B__ aligned reads will be merged for quantification in the __30 days__ stage.
-- __C__ and __D__ aligned reads will be merged for quantification in the __60 days__ stage.
+<table>
+  <thead align=center>
+    <tr>
+      <th colspan=3 width=250px>Metadata</th>
+      <th rowspan=2 width=190px>Transcripts assembly<br>by tissue</th>
+      <th rowspan=2 width=190px>Annotation</th>
+      <th rowspan=2 width=190px>Quantification<br>by stage</th>
+    </tr>
+    <tr>
+      <th>input</th>
+      <th>tissue</th>
+      <th>stage</th>
+    </tr>
+  </thead>
+  <tbody align=center>
+    <tr>
+      <td>A</td>
+      <td>liver</td>
+      <td>30 days</td>
+      <td rowspan=3>A, B, C<br>↓<br>liver</td>
+      <td rowspan=4>liver, muscle<br>↓<br>novel annotation</td>
+      <td rowspan=2>A, B<br>↓<br>30 days</td>
+    </tr>
+    <tr>
+      <td>B</td>
+      <td>liver</td>
+      <td>30 days</td>
+    </tr>
+    <tr>
+      <td>C</td>
+      <td>liver</td>
+      <td>60 days</td>
+      <td rowspan=2>C, D<br>↓<br>60 days</td>
+    </tr>
+    <tr>
+      <td>D</td>
+      <td>muscle</td>
+      <td>60 days</td>
+      <td>D<br>↓<br>muscle</td>
+    </tr>
+  </tbody>
+</table>
 
-With the following arguments:
+### Merging inputs by an intersection of factors
 
-    --quantify-by tissue,stage
+    --assemble-by tissue,stage
 
-- all aligned reads will be left alone for transcripts assembly in each individual input.
-- __A__ and __B__ aligned reads will be merged for quantification in the __liver__ at __30 days__.
-- __C__ aligned reads will be left alone for quantification in the __liver__ at __60 days__.
-- __D__ aligned reads will be left alone for quantification in the __muscle__ at __60 days__.
+<table>
+  <thead align=center>
+    <tr>
+      <th colspan=3 width=250px>Metadata</th>
+      <th rowspan=2 width=190px>Transcripts assembly<br>by tissue and stage</th>
+      <th rowspan=2 width=190px>Annotation</th>
+      <th rowspan=2 width=190px>Quantification<br>by input</th>
+    </tr>
+    <tr>
+      <th>input</th>
+      <th>tissue</th>
+      <th>stage</th>
+    </tr>
+  </thead>
+  <tbody align=center>
+    <tr>
+      <td>A</td>
+      <td>liver</td>
+      <td>30 days</td>
+      <td rowspan=2>A, B<br>↓<br>liver at 30 days</td>
+      <td rowspan=4>liver at 30 days,<br>liver at 60 days,<br>muscle at 60 days<br>↓<br>novel annotation</td>
+      <td>A</td>
+    </tr>
+    <tr>
+      <td>B</td>
+      <td>liver</td>
+      <td>30 days</td>
+      <td>B</td>
+    </tr>
+    <tr>
+      <td>C</td>
+      <td>liver</td>
+      <td>60 days</td>
+      <td>C<br>↓<br>liver at 60 days</td>
+      <td>C</td>
+    </tr>
+    <tr>
+      <td>D</td>
+      <td>muscle</td>
+      <td>60 days</td>
+      <td>D<br>↓<br>muscle at 60 days</td>
+      <td>D</td>
+    </tr>
+  </tbody>
+</table>
 
 
-## Workflow and Results
+## Workflow and results
 
 The pipeline executes the following processes:
 1. Control reads quality with [FastQC](https://github.com/s-andrews/FastQC).
@@ -151,7 +427,7 @@ The pipeline executes the following processes:
 5. Compute genome coverage with [Bedtools](https://github.com/arq5x/bedtools2).  
    Coverage information is saved to `output/coverage` in `.bed` files.
 6. Merge aligned reads by factors with [Samtools](https://github.com/samtools/samtools).  
-   See the [merge groups](#merge-groups) section for details.
+   See the [merging inputs](#merging-inputs) section for details.
 7. Assemble transcripts and create a novel annotation with [StringTie](https://github.com/gpertea/stringtie) and [Tmerge](https://github.com/julienlag/tmerge).  
    The novel annotation is saved to `output/annotation` in a `.gtf` file.
 8. Detect long non-coding transcripts with [FEELnc](https://github.com/tderrien/FEELnc).  
