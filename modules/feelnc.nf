@@ -1,6 +1,7 @@
 process FEELNC_classify_transcripts {
 
-  label 'memory_16'
+  label 'cpu_4'
+  label 'memory_24'
 
   publishDir = [
     path: params.output,
@@ -39,6 +40,7 @@ process FEELNC_classify_transcripts {
       --mRNAfile !{reference_annotation} \\
       --infile !{novel_annotation} \\
       --biotype transcript_biotype=protein_coding \\
+      --proc !{task.cpus} \\
       > candidate_transcripts.gtf
 
     FEELnc_codpot.pl \\
@@ -51,7 +53,7 @@ process FEELNC_classify_transcripts {
       --outdir . \\
       --outname exons \\
       --mode shuffle \\
-      --spethres=0.98,0.98 \\
+      --spethres 0.98,0.98 \\
       !{params.feelnc_args}
 
     # Update annotation with new biotypes
