@@ -64,14 +64,18 @@ process TMERGE_coalesce_transcripts {
       | buildLoci.pl - \\
       | sort -k1,1 -k4,4n -k5,5n \\
       > results/tmerged.gene_id.gtf
-
+    
     # Add ref_gene_id and gene/transcript rows
     cat \\
       results/tmerged.gene_id.gtf \\
       | awk \\
-        -f $(which make_gff_ok.awk) \\
+        -f $(which make_gff_ok.awk) > tmp.gff
+
+    cat \\
+      tmp.gff \\
       | awk \\
-        -v fileRef=!{annotation} \\
+        -v fileRef1=!{annotation} \\
+        -v fileRef2=tmp.gff \\
         -f $(which tmerge.buildLoci2okgff.awk) \\
       | awk \\
         -f $(which gff2gff.awk) \\
