@@ -19,7 +19,8 @@ TAGADA is a Nextflow pipeline that processes RNA-Seq data. It parallelizes multi
   - [Merging inputs by a single factor](#merging-inputs-by-a-single-factor)
   - [Merging inputs by an intersection of factors](#merging-inputs-by-an-intersection-of-factors)
 - [Workflow and results](#workflow-and-results)
-- [About](#about)
+- [Novel annotation](#novel-annotation)
+- [Funding](#funding)
 
 
 ## Dependencies
@@ -209,7 +210,7 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
     <tr>
       <td nowrap><strong><code>--coalesce-transcripts-with</code></strong></td>
       <td nowrap><code>tmerge</code></td>
-      <td>Tool used to coalesce transcripts assemblies into a non-redundant set of transcripts for the novel annotation. Can be <code>tmerge</code> or <code>stringtie</code>.</td>
+      <td>Tool used to coalesce transcripts assemblies into a non-redundant set of transcripts for the novel annotation. Can be <code>tmerge</code> or <code>stringtie</code>. Defaults to <code>tmerge</code>.</td>
       <td align=center>Optional</td>
     </tr>
     <tr>
@@ -438,7 +439,62 @@ The pipeline executes the following processes:
     The report is saved to `output/control` in a `.html` file.
 
 
-## About
+## Novel annotation
+
+The novel annotation contains information from [StringTie](https://github.com/gpertea/stringtie), [Tmerge](https://github.com/julienlag/tmerge), and [FEELnc](https://github.com/tderrien/FEELnc). It is provided in gtf format with exon, transcript and gene rows. Row attributes vary depending on which tool was used to coalesce transcripts.
+
+<br>
+
+    --coalesce-transcripts-with tmerge
+
+- `gene_id`  
+  All rows. The Tmerge `gene_id` starting with LOC.
+
+- `ref_gene_id`  
+  All rows. A comma-separated list of reference annotation `gene_id` when a Tmerge transcript is made of at least one reference transcript, otherwise a dot.
+
+- `transcript_id`  
+  Exon and transcript rows. The Tmerge `transcript_id` starting with TM, unless the transcript is exactly identical to a reference transcript, in which case the reference annotation `transcript_id` is provided.
+
+- `tmerge_tr_id`  
+  Exon and transcript rows. Optional. A comma-separated list of Tmerge `transcript_id` if the current `transcript_id` is from the reference annotation, to list which initial Tmerge transcripts it is made of.
+
+- `transcript_biotype`  
+  Exon and transcript rows. Optional. The reference annotation `transcript_biotype` of the `transcript_id`.
+
+- `feelnc_biotype`  
+  Exon and transcript rows. Optional. The transcript biotype determined by FEELnc (lncRNA, mRNA, noORF, or TUCp) if the transcript has been classified.
+
+- `contains`, `contains_count`, `3p_dists_to_3p`, `5p_dists_to_5p`, `flrpm`, `longest`, `longest_FL_supporters`, `longest_FL_supporters_count`, `mature_RNA_length`, `meta_3p_dists_to_5p`, `meta_5p_dists_to_5p`, `rpm`, `spliced`  
+  Transcript rows. Attributes provided by Tmerge.
+
+<br>
+
+    --coalesce-transcripts-with stringtie
+
+- `gene_id`  
+  All rows. The StringTie `gene_id` starting with MSTRG.
+
+- `ref_gene_id`  
+  All rows. Optional. The reference annotation `gene_id`.
+
+- `ref_gene_name`  
+  All rows. Optional. The reference annotation `gene_name`.
+
+- `transcript_id`  
+  Exon and transcript rows. The StringTie `transcript_id` starting with MSTRG, unless the transcript is exactly identical to a reference transcript, in which case the reference annotation `transcript_id` is provided.
+
+- `transcript_biotype`  
+  Exon and transcript rows. Optional. The reference annotation `transcript_biotype` of the `transcript_id`.
+
+- `feelnc_biotype`  
+  Exon and transcript rows. Optional. The transcript biotype determined by FEELnc (lncRNA, mRNA, noORF, or TUCp) if the transcript has been classified.
+
+- `exon_number`  
+  Exon rows. The StringTie `exon_number` starting from 1 within a given transcript.
+
+
+## Funding
 
 The GENE-SWitCH project has received funding from the European Union’s [Horizon 2020](https://ec.europa.eu/programmes/horizon2020/) research and innovation program under Grant Agreement No 817998.
 
