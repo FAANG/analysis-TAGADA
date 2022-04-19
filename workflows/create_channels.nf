@@ -200,7 +200,7 @@ workflow CREATE_CHANNELS {
         ).splitCsv(header: true, sep: '\t').map({ row ->
           [
             'prefix': row.values()[0],
-            'columns': row.subMap(row.keySet().collect()[1..-1])
+            'columns': row
           ]
         })
 
@@ -306,17 +306,13 @@ workflow CREATE_CHANNELS {
     channel_assembly_metadata =
       set_metadata_groups(channel_metadata, params.assemble_by)
 
-    if (params.assemble_by) {
-      log_metadata_groups(channel_assembly_metadata, 'assembly')
-    }
+    log_metadata_groups(channel_assembly_metadata, 'assembly')
 
     // each [prefix, id, [column: value, column: value]]
     channel_quantification_metadata =
       set_metadata_groups(channel_metadata, params.quantify_by)
 
-    if (params.quantify_by) {
-      log_metadata_groups(channel_quantification_metadata, 'quantification')
-    }
+    log_metadata_groups(channel_quantification_metadata, 'quantification')
 
     // DECOMPRESS INDEX --------------------------------------------------------
 

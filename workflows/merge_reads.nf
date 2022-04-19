@@ -92,114 +92,100 @@ workflow MERGE_READS {
 
   main:
 
-    if (params.assemble_by) {
-
-      // each [id, [bams], [lengths], [directions]]
-      channel_assembly_reads =
-        group_reads(
-          channel_aligned_reads,
-          channel_assembly_metadata
-        )
-
-      check_grouped_directions(
-        channel_assembly_reads,
-        'assembly'
+    // each [id, [bams], [lengths], [directions]]
+    channel_assembly_reads =
+      group_reads(
+        channel_aligned_reads,
+        channel_assembly_metadata
       )
 
-      // each [id, [bams], length, direction]
-      channel_assembly_reads =
-        channel_assembly_reads.map({ group ->
-          [
-            group['id'],
-            group['bams'],
-            (group['lengths'].sum()/group['lengths'].size()).toInteger(),
-            group['directions'][0]
-          ]
-        })
+    check_grouped_directions(
+      channel_assembly_reads,
+      'assembly'
+    )
 
-      // each [id, [bams], length, direction] => [id, bam, length, direction]
-      SAMTOOLS_merge_reads_for_assembly(channel_assembly_reads)
+    // each [id, [bams], length, direction]
+    channel_assembly_reads =
+      channel_assembly_reads.map({ group ->
+        [
+          group['id'],
+          group['bams'].size() == 1 &&
+          (group['bams'][0].getName() =~ /^(.+?)\.bam$/)[0][1] == group['id'] ?
+          group['bams'][0] : group['bams'],
+          (group['lengths'].sum()/group['lengths'].size()).toInteger(),
+          group['directions'][0]
+        ]
+      }).branch({ group ->
+        grouped: group[1] instanceof List
+        single: true
+      })
 
-      // each [id, bam, length, direction]
-      channel_assembly_reads =
-        SAMTOOLS_merge_reads_for_assembly.out.map({ output ->
-          [
-            'id': output[0],
-            'bam': output[1],
-            'length': output[2],
-            'direction': output[3]
-          ]
-        })
+    // each [id, [bams], length, direction] => [id, bam, length, direction]
+    SAMTOOLS_merge_reads_for_assembly(
+      channel_assembly_reads.grouped
+    )
 
-    } else {
+    // each [id, bam, length, direction]
+    channel_assembly_reads =
+      SAMTOOLS_merge_reads_for_assembly.out.mix(
+        channel_assembly_reads.single
+      ).map({ output ->
+        [
+          'id': output[0],
+          'bam': output[1],
+          'length': output[2],
+          'direction': output[3]
+        ]
+      })
 
-      // each [id, bam, length, direction]
-      channel_assembly_reads =
-        channel_aligned_reads.map({ aligned ->
-          [
-            'id': aligned['prefix'],
-            'bam': aligned['bam'],
-            'length': aligned['length'],
-            'direction': aligned['direction']
-          ]
-        })
-    }
-
-    if (params.quantify_by) {
-
-      // each [id, [bams], [lengths], [directions]]
-      channel_quantification_reads =
-        group_reads(
-          channel_aligned_reads,
-          channel_quantification_metadata
-        )
-
-      check_grouped_lengths(
-        channel_quantification_reads,
-        'quantification'
+    // each [id, [bams], [lengths], [directions]]
+    channel_quantification_reads =
+      group_reads(
+        channel_aligned_reads,
+        channel_quantification_metadata
       )
 
-      check_grouped_directions(
-        channel_quantification_reads,
-        'quantification'
-      )
+    check_grouped_lengths(
+      channel_quantification_reads,
+      'quantification'
+    )
 
-      // each [id, [bams], length, direction]
-      channel_quantification_reads =
-        channel_quantification_reads.map({ group ->
-          [
-            group['id'],
-            group['bams'],
-            (group['lengths'].sum()/group['lengths'].size()).toInteger(),
-            group['directions'][0]
-          ]
-        })
+    check_grouped_directions(
+      channel_quantification_reads,
+      'quantification'
+    )
 
-      // each [id, [bams], length, direction] => [id, bam, length, direction]
-      SAMTOOLS_merge_reads_for_quantification(channel_quantification_reads)
+    // each [id, [bams], length, direction]
+    channel_quantification_reads =
+      channel_quantification_reads.map({ group ->
+        [
+          group['id'],
+          group['bams'].size() == 1 &&
+          (group['bams'][0].getName() =~ /^(.+?)\.bam$/)[0][1] == group['id'] ?
+          group['bams'][0] : group['bams'],
+          (group['lengths'].sum()/group['lengths'].size()).toInteger(),
+          group['directions'][0]
+        ]
+      }).branch({ group ->
+        grouped: group[1] instanceof List
+        single: true
+      })
 
-      // each [id, bam, length, direction]
-      channel_quantification_reads =
-        SAMTOOLS_merge_reads_for_quantification.out.map({ output ->
-          [
-            'id': output[0],
-            'bam': output[1],
-            'length': output[2],
-            'direction': output[3]
-          ]
-        })
+    // each [id, [bams], length, direction] => [id, bam, length, direction]
+    SAMTOOLS_merge_reads_for_quantification(
+      channel_quantification_reads.grouped
+    )
 
-    } else {
-
-      // each [id, bam, length, direction]
-      channel_quantification_reads =
-        channel_aligned_reads.map({ aligned ->
-          [
-            'id': aligned['prefix'],
-            'bam': aligned['bam'],
-            'length': aligned['length'],
-            'direction': aligned['direction']
-          ]
-        })
-    }
+    // each [id, bam, length, direction]
+    channel_quantification_reads =
+      SAMTOOLS_merge_reads_for_quantification.out.mix(
+        channel_quantification_reads.single
+      ).map({ output ->
+        [
+          'id': output[0],
+          'bam': output[1],
+          'length': output[2],
+          'direction': output[3]
+        ]
+      })
 }

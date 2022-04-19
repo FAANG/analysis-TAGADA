@@ -111,6 +111,18 @@ params.skip_lnc_detection =
   params.containsKey('skip-feelnc') ?
   true : false
 
+params.max_cpus =
+  params.containsKey('max-cpus') ?
+  params.'max-cpus' as int : 16
+
+params.max_memory =
+  params.containsKey('max-memory') ?
+  params.'max-memory' as nextflow.util.MemoryUnit : 64.GB
+
+params.max_time =
+  params.containsKey('max-time') ?
+  params.'max-time' as nextflow.util.Duration : 18.h
+
 if (!params.output) {
   error += '\nNo --output provided\n'
 }
