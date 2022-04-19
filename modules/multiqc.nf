@@ -4,7 +4,8 @@ process MULTIQC_generate_report {
 
   publishDir = [
     path: params.output + '/control',
-    mode: 'copy'
+    mode: 'copy',
+    overwrite: true
   ]
 
   input:

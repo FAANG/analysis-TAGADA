@@ -5,7 +5,8 @@ process FEATURECOUNTS_control_exons {
 
   publishDir = [
     path: params.output + '/control/exons',
-    mode: 'copy'
+    mode: 'copy',
+    overwrite: true
   ]
 
   input:

@@ -4,7 +4,8 @@ process BEDTOOLS_compute_coverage {
 
   publishDir = [
     path: params.output + '/coverage',
-    mode: 'copy'
+    mode: 'copy',
+    overwrite: true
   ]
 
   input:

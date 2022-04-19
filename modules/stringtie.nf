@@ -20,7 +20,8 @@ process STRINGTIE_coalesce_transcripts {
 
   publishDir = [
     path: params.output + '/annotation',
-    mode: 'copy'
+    mode: 'copy',
+    overwrite: true
   ]
 
   input:

@@ -42,7 +42,8 @@ process TAGADA_format_quantifications {
 
   publishDir = [
     path: params.output + '/quantification',
-    mode: 'copy'
+    mode: 'copy',
+    overwrite: true
   ]
 
   input:
@@ -101,7 +102,8 @@ process TAGADA_cluster_expression {
 
   publishDir = [
     path: params.output + '/control/expression',
-    mode: 'copy'
+    mode: 'copy',
+    overwrite: true
   ]
 
   input:
@@ -172,7 +174,8 @@ process TAGADA_control_expression {
 
   publishDir = [
     path: params.output + '/control/expression',
-    mode: 'copy'
+    mode: 'copy',
+    overwrite: true
   ]
 
   input:
@@ -232,6 +235,7 @@ process TAGADA_control_annotation {
   publishDir = [
     path: params.output + '/control/annotation',
     mode: 'copy',
+    overwrite: true,
     saveAs: { filename ->
       if (
         filename.endsWith('.png') ||

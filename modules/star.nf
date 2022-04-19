@@ -5,7 +5,8 @@ process STAR_index_genome {
 
   publishDir = [
     path: params.output,
-    mode: 'copy'
+    mode: 'copy',
+    overwrite: true
   ]
 
   input:
@@ -50,6 +51,7 @@ process STAR_align_reads {
   publishDir = [
     path: params.output,
     mode: 'copy',
+    overwrite: true,
     saveAs: { filename ->
       if (filename.endsWith('.bam'))
         'alignment/' + filename

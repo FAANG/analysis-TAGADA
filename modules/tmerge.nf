@@ -4,7 +4,8 @@ process TMERGE_coalesce_transcripts {
 
   publishDir = [
     path: params.output + '/annotation',
-    mode: 'copy'
+    mode: 'copy',
+    overwrite: true
   ]
 
   input:
@@ -64,7 +65,7 @@ process TMERGE_coalesce_transcripts {
       | buildLoci.pl - \\
       | sort -k1,1 -k4,4n -k5,5n \\
       > results/tmerged.gene_id.gtf
-    
+
     # Add ref_gene_id and gene/transcript rows
     cat \\
       results/tmerged.gene_id.gtf \\
