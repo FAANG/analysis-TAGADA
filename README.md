@@ -45,7 +45,7 @@ The pipeline is written in Nextflow, which provides the following default option
   <thead>
     <tr>
       <th width=222px>Option</th>
-      <th width=220px>Parameters</th>
+      <th width=220px>Example</th>
       <th width=215px>Description</th>
       <th width=153px>Required</th>
     </tr>
@@ -93,7 +93,7 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
   <thead>
     <tr>
       <th width=222px>Option</th>
-      <th width=220px>Parameters</th>
+      <th width=220px>Example</th>
       <th width=215px>Description</th>
       <th width=153px>Required</th>
     </tr>
@@ -150,7 +150,7 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
   <thead>
     <tr>
       <th width=222px>Option</th>
-      <th width=220px>Parameters</th>
+      <th width=220px>Example</th>
       <th width=215px>Description</th>
       <th width=153px>Required</th>
     </tr>
@@ -177,7 +177,7 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
   <thead>
     <tr>
       <th width=262px>Option</th>
-      <th width=180px>Parameters</th>
+      <th width=180px>Example</th>
       <th width=268px>Description</th>
       <th width=100px>Required</th>
     </tr>
@@ -220,9 +220,21 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
       <td align=center>Optional</td>
     </tr>
     <tr>
-      <td nowrap><strong><code>--feelnc-args</code></strong></td>
+      <td nowrap><strong><code>--feelnc-filter-args</code></strong></td>
+      <td nowrap><code>'--size 200'</code></td>
+      <td>Custom arguments to pass to FEELnc's <a href="https://github.com/tderrien/FEELnc#1--feelnc_filterpl">filter</a> script when detecting long non-coding transcripts.</td>
+      <td align=center>Optional</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>--feelnc-codpot-args</code></strong></td>
       <td nowrap><code>'--mode shuffle'</code></td>
       <td>Custom arguments to pass to FEELnc's <a href="https://github.com/tderrien/FEELnc#2--feelnc_codpotpl">coding potential</a> script when detecting long non-coding transcripts.</td>
+      <td align=center>Optional</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>--feelnc-classifier-args</code></strong></td>
+      <td nowrap><code>'--window 10000'</code></td>
+      <td>Custom arguments to pass to FEELnc's <a href="https://github.com/tderrien/FEELnc#3--feelnc_classifierpl">classifier</a> script when detecting long non-coding transcripts.</td>
       <td align=center>Optional</td>
     </tr>
   </tbody>
@@ -234,7 +246,7 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
   <thead>
     <tr>
       <th width=222px>Option</th>
-      <th width=220px>Parameters</th>
+      <th width=220px>Example</th>
       <th width=215px>Description</th>
       <th width=153px>Required</th>
     </tr>
@@ -261,7 +273,7 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
   <thead>
     <tr>
       <th width=222px>Option</th>
-      <th width=220px>Parameters</th>
+      <th width=220px>Example</th>
       <th width=215px>Description</th>
       <th width=153px>Required</th>
     </tr>

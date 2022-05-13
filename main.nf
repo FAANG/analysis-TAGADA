@@ -30,6 +30,9 @@ params.keySet().collect({ param ->
     'min-monoexonic-tpm',
     'coalesce-transcripts-with',
     'tmerge-args',
+    'feelnc-filter-args',
+    'feelnc-codpot-args',
+    'feelnc-classifier-args',
     'feelnc-args',
     'skip-assembly',
     'skip-lnc-detection',
@@ -98,9 +101,17 @@ params.tmerge_args =
   params.containsKey('tmerge-args') ?
   params.'tmerge-args' : ''
 
-params.feelnc_args =
-  params.containsKey('feelnc-args') ?
-  params.'feelnc-args' : ''
+params.feelnc_filter_args =
+  params.containsKey('feelnc-filter-args') ?
+  params.'feelnc-filter-args' : ''
+
+params.feelnc_codpot_args =
+  params.containsKey('feelnc-codpot-args') ?
+  params.'feelnc-codpot-args' : ''
+
+params.feelnc_classifier_args =
+  params.containsKey('feelnc-classifier-args') ?
+  params.'feelnc-classifier-args' : ''
 
 params.skip_assembly =
   params.containsKey('skip-assembly') ?
@@ -141,6 +152,10 @@ if (!params.annotation) {
 
 if (params.containsKey('merge')) {
   error += '\nReplace deprecated --merge with --assemble-by and --quantify-by\n'
+}
+
+if (params.containsKey('feelnc-args')) {
+  error += '\nReplace deprecated --feelnc-args with --feelnc-codpot-args\n'
 }
 
 if (params.assemble_by && params.skip_assembly) {

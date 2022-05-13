@@ -41,6 +41,7 @@ process FEELNC_classify_transcripts {
       --infile !{novel_annotation} \\
       --biotype transcript_biotype=protein_coding \\
       --proc !{task.cpus} \\
+      !{params.feelnc_filter_args} \\
       > candidate_transcripts.gtf
 
     FEELnc_codpot.pl \\
@@ -54,7 +55,7 @@ process FEELNC_classify_transcripts {
       --outname exons \\
       --mode shuffle \\
       --spethres 0.98,0.98 \\
-      !{params.feelnc_args}
+      !{params.feelnc_codpot_args}
 
     # Update annotation with new biotypes
     cp "$(readlink -m !{novel_annotation})" updated.gtf
@@ -125,6 +126,7 @@ process FEELNC_classify_transcripts {
     FEELnc_classifier.pl \\
       --mrna coding_transcripts.gtf \\
       --lncrna exons.lncRNA.gtf \\
+      !{params.feelnc_classifier_args} \\
       > lncRNA_classes.txt
 
     mv updated.gtf novel.gtf
