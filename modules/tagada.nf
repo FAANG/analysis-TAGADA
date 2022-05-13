@@ -116,26 +116,26 @@ process TAGADA_cluster_expression {
   shell:
     rows = quantification_metadata.unique({ row -> row['id'] })
 
-    columns = rows.first()['columns'].keySet().collect()
+    columns = rows.first()['columns'].keySet()
+    columns = columns.collectEntries({ column -> [(column): [] as Set] })
 
     metadata = 'labExpId' + '\t' + 'Name'
-    metadata += columns.size() > 0 ? '\t' + columns.join('\t') : ''
+
+    if (columns.size() > 0) metadata += '\t' + columns.keySet().join('\t')
+    else columns = ['Name': rows.collect({ row -> row['id'] })]
 
     rows.each({ row ->
       metadata += '\n' + ([row['id']] * 2 + row['columns'].values()).join('\t')
+      row['columns'].each({ column, value -> columns[column].add(value) })
     })
 
-    factors = columns.size() > 0 ? columns.join(',') : 'Name'
-
-    palettes = (
-      [projectDir + '/assets/palettes/set3.12.txt']
-      * Math.max(columns.size(), 1)
-    ).join(',')
-
-    gradient = projectDir + '/assets/palettes/terrain.colors.3.txt'
+    factors = columns.keySet().join(',')
+    counts = columns.values().collect({ values -> values.size() }).join(' ')
 
     '''
     echo -e '!{metadata}' > metadata.tsv
+
+    for count in !{counts}; do make.rainbow.palette.sh $count .; done
 
     cat \\
       <(head -n 1 !{genes_tpm_quantification} | cut -f 2-) \\
@@ -161,8 +161,8 @@ process TAGADA_cluster_expression {
       --matrix_legend_title \\
         'reference genes TPM pearson correlation\n(log10 pseudocount 0.1)' \\
       -B 10 \\
-      --matrix_palette '!{gradient}' \\
-      --rowSide_palette '!{palettes}' \\
+      --matrix_palette <(echo -e '#00A600FF\n#ECB176FF\n#F2F2F2FF') \\
+      --rowSide_palette $(echo rainbow.*.txt | sed 's/ /,/g') \\
       --col_labels '!{factors}' \\
       --row_labels '!{factors}' \\
       -v \\
