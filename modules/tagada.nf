@@ -130,12 +130,14 @@ process TAGADA_cluster_expression {
     })
 
     factors = columns.keySet().join(',')
-    counts = columns.values().collect({ values -> values.size() }).join(' ')
+    sizes = columns.values().collect({ values -> values.size() })
+    palettes = sizes.collect({ size -> 'rainbow.' + size + '.txt' }).join(',')
+    sizes = sizes.join(' ')
 
     '''
     echo -e '!{metadata}' > metadata.tsv
 
-    for count in !{counts}; do make.rainbow.palette.sh $count .; done
+    for size in !{sizes}; do make.rainbow.palette.sh $size .; done
 
     cat \\
       <(head -n 1 !{genes_tpm_quantification} | cut -f 2-) \\
@@ -162,7 +164,7 @@ process TAGADA_cluster_expression {
         'reference genes TPM pearson correlation\n(log10 pseudocount 0.1)' \\
       -B 10 \\
       --matrix_palette <(echo -e '#00A600FF\n#ECB176FF\n#F2F2F2FF') \\
-      --rowSide_palette $(echo rainbow.*.txt | sed 's/ /,/g') \\
+      --rowSide_palette '!{palettes}' \\
       --col_labels '!{factors}' \\
       --row_labels '!{factors}' \\
       -v \\
