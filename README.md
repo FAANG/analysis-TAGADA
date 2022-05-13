@@ -35,7 +35,7 @@ To use this pipeline you will need:
 
 A small dataset is provided to test this pipeline. To try it out, use this command:
 
-    nextflow run FAANG/analysis-TAGADA -profile test,docker -revision 2.1.0 --output directory
+    nextflow run FAANG/analysis-TAGADA -profile test,docker -revision 2.1.1 --output directory
 
 ### Nextflow options
 
