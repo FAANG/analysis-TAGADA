@@ -13,8 +13,10 @@ TAGADA is a Nextflow pipeline that processes RNA-Seq data. It parallelizes multi
   - [Assembly options](#assembly-options)
   - [Skip options](#skip-options)
   - [Resources options](#resources-options)
+- [Custom resources](#custom-resources)
+  - [Example configuration](#example-configuration)
 - [Metadata](#metadata)
-  - [Example metadata file](#example-metadata-file)
+  - [Example metadata](#example-metadata)
 - [Merging inputs](#merging-inputs)
   - [Merging inputs by a single factor](#merging-inputs-by-a-single-factor)
   - [Merging inputs by an intersection of factors](#merging-inputs-by-an-intersection-of-factors)
@@ -60,7 +62,10 @@ The pipeline is written in Nextflow, which provides the following default option
     <tr>
       <td nowrap><strong><code>-config</code></strong></td>
       <td nowrap><code>custom.config</code></td>
-      <td>Configuration file tailored to your infrastructure. To find a configuration file for your infrastructure, browse <a href="https://github.com/nf-core/configs/tree/master/conf">nf-core configs</a>.
+      <td>
+        Configuration file tailored to your infrastructure and dataset.<br><br>
+        To find a configuration file for your infrastructure, browse <a href="https://github.com/nf-core/configs/tree/master/conf">nf-core configs</a>.<br><br>
+        Some large datasets require more computing resources than the pipeline defaults. To specify custom resources for specific processes, see the <a href="#custom-resources">custom resources</a> section.
       </td>
       <td align=center>Optional</td>
     </tr>
@@ -300,12 +305,38 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
   </tbody>
 </table>
 
+## Custom resources
+
+With large datasets, some [workflow processes](#workflow-and-results) may require more computing resources than the pipeline defaults. To customize the amount of resources alloted to specific processes, add a [process scope](https://www.nextflow.io/docs/edge/config.html#scope-process) to your configuration file. Resources provided in the configuration file override the [resources options](#resources-options).
+
+### Example configuration
+
+    -config custom.config
+
+`custom.config`
+
+    process {
+
+      withName: TRIMGALORE_trim_adapters {
+        cpus = 8
+        memory = 18.GB
+        time = 20.h
+      }
+
+      withName: STAR_align_reads {
+        cpus = 16
+        memory = 64.GB
+        time = 2.d
+      }
+
+    }
+
 
 ## Metadata
 
 Using `--metadata`, you may provide a file describing your inputs with tab-separated factors. The first column must contain file names without file type extensions or paired-end suffixes. There are no constraints on column names or number of columns.
 
-### Example metadata file
+### Example metadata
 
     --reads reads.txt --metadata metadata.tsv
 
@@ -431,23 +462,49 @@ When using `--assemble-by` and/or `--quantify-by`, your inputs are merged into e
 ## Workflow and results
 
 The pipeline executes the following processes:
-1. Control reads quality with [FastQC](https://github.com/s-andrews/FastQC).
-2. Trim adapters with [Trim Galore](https://github.com/FelixKrueger/TrimGalore).
-3. Index genome with [STAR](https://github.com/alexdobin/STAR).  
+
+1. `FASTQC_control_reads`  
+   Control reads quality with [FastQC](https://github.com/s-andrews/FastQC).
+
+2. `TRIMGALORE_trim_adapters`  
+   Trim adapters with [Trim Galore](https://github.com/FelixKrueger/TrimGalore).
+
+3. `STAR_index_genome`  
+   Index genome with [STAR](https://github.com/alexdobin/STAR).  
    The indexed genome is saved to `output/index`.
-4. Align reads to the indexed genome with [STAR](https://github.com/alexdobin/STAR).  
+
+4. `STAR_align_reads`  
+   Align reads to the indexed genome with [STAR](https://github.com/alexdobin/STAR).  
    Aligned reads are saved to `output/alignment` in `.bam` files.
-5. Compute genome coverage with [Bedtools](https://github.com/arq5x/bedtools2).  
+
+5. `BEDTOOLS_compute_coverage`  
+   Compute genome coverage with [Bedtools](https://github.com/arq5x/bedtools2).  
    Coverage information is saved to `output/coverage` in `.bed` files.
-6. Merge aligned reads by factors with [Samtools](https://github.com/samtools/samtools).  
+
+6. `SAMTOOLS_merge_reads`  
+   Merge aligned reads by factors with [Samtools](https://github.com/samtools/samtools).  
    See the [merging inputs](#merging-inputs) section for details.
-7. Assemble transcripts and create a novel annotation with [StringTie](https://github.com/gpertea/stringtie) and [Tmerge](https://github.com/julienlag/tmerge).  
+
+7. `STRINGTIE_assemble_transcripts`  
+   Assemble transcripts in each individual assembly group with [StringTie](https://github.com/gpertea/stringtie).
+
+8. `TAGADA_filter_transcripts`  
+   Filter rare transcripts that appear in few assembly groups and poorly-expressed transcripts with low TPM values.
+
+9. `STRINGTIE_coalesce_transcripts` or `TMERGE_coalesce_transcripts`  
+   Create a novel annotation with [StringTie](https://github.com/gpertea/stringtie) or [Tmerge](https://github.com/julienlag/tmerge).  
    The novel annotation is saved to `output/annotation` in a `.gtf` file.
-8. Detect long non-coding transcripts with [FEELnc](https://github.com/tderrien/FEELnc).  
+
+10. `FEELNC_classify_transcripts`  
+   Detect long non-coding transcripts with [FEELnc](https://github.com/tderrien/FEELnc).  
    The annotation saved to `output/annotation` is updated with the results.
-9. Quantify genes and transcripts with [StringTie](https://github.com/gpertea/stringtie).  
-   Counts and TPM matrices are saved to `output/quantification` in `.tsv` files.
-10. Aggregate quality controls into a report with [MultiQC](https://github.com/ewels/MultiQC).  
+
+11. `STRINGTIE_quantify_expression`  
+    Quantify genes and transcripts with [StringTie](https://github.com/gpertea/stringtie).  
+    Counts and TPM matrices are saved to `output/quantification` in `.tsv` files.
+
+12. `MULTIQC_generate_report`  
+    Aggregate quality controls into a report with [MultiQC](https://github.com/ewels/MultiQC).  
     The report is saved to `output/control` in a `.html` file.
 
 
