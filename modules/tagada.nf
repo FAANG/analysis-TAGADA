@@ -38,14 +38,6 @@ process TAGADA_estimate_reads {
 
 process TAGADA_format_quantifications {
 
-  label 'memory_8'
-
-  publishDir = [
-    path: params.output + '/quantification',
-    mode: 'copy',
-    overwrite: true
-  ]
-
   input:
     path(quantifications)
 
@@ -59,8 +51,6 @@ process TAGADA_format_quantifications {
 }
 
 process TAGADA_filter_transcripts {
-
-  label 'memory_16'
 
   input:
     path(assemblies)
@@ -97,14 +87,6 @@ process TAGADA_filter_transcripts {
 }
 
 process TAGADA_cluster_expression {
-
-  label 'memory_4'
-
-  publishDir = [
-    path: params.output + '/control/expression',
-    mode: 'copy',
-    overwrite: true
-  ]
 
   input:
     path(genes_tpm_quantification)
@@ -174,12 +156,6 @@ process TAGADA_cluster_expression {
 
 process TAGADA_control_expression {
 
-  publishDir = [
-    path: params.output + '/control/expression',
-    mode: 'copy',
-    overwrite: true
-  ]
-
   input:
     path(genes_tpm_quantification)
     path(genes_counts_quantification)
@@ -233,20 +209,6 @@ process TAGADA_control_expression {
 }
 
 process TAGADA_control_annotation {
-
-  publishDir = [
-    path: params.output + '/control/annotation',
-    mode: 'copy',
-    overwrite: true,
-    saveAs: { filename ->
-      if (
-        filename.endsWith('.png') ||
-        filename.endsWith('.txt') ||
-        filename == 'Plots' ||
-        filename == 'Tables'
-      ) filename
-    }
-  ]
 
   input:
     path(reference_annotation)

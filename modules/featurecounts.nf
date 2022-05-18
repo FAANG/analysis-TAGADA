@@ -1,14 +1,5 @@
 process FEATURECOUNTS_control_exons {
 
-  label 'cpu_4'
-  label 'memory_4'
-
-  publishDir = [
-    path: params.output + '/control/exons',
-    mode: 'copy',
-    overwrite: true
-  ]
-
   input:
     path(bams)
     tuple path(annotation), val(type)

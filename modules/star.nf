@@ -1,14 +1,5 @@
 process STAR_index_genome {
 
-  label 'cpu_16'
-  label 'memory_64'
-
-  publishDir = [
-    path: params.output,
-    mode: 'copy',
-    overwrite: true
-  ]
-
   input:
     path(genome)
     path(annotation)
@@ -44,21 +35,6 @@ process STAR_index_genome {
 }
 
 process STAR_align_reads {
-
-  label 'cpu_16'
-  label 'memory_32'
-
-  publishDir = [
-    path: params.output,
-    mode: 'copy',
-    overwrite: true,
-    saveAs: { filename ->
-      if (filename.endsWith('.bam'))
-        'alignment/' + filename
-      else if (filename.endsWith('.splicing.tsv'))
-        'control/splicing/' + filename
-    }
-  ]
 
   input:
     tuple val(prefix), path(fastqs), path(index)

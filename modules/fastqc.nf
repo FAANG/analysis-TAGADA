@@ -1,11 +1,5 @@
 process FASTQC_control_reads {
 
-  publishDir = [
-    path: params.output + '/control/reads',
-    mode: 'copy',
-    overwrite: true
-  ]
-
   input:
     tuple val(prefix), path(fastq), val(suffix)
 

@@ -1,13 +1,5 @@
 process TMERGE_coalesce_transcripts {
 
-  label 'memory_16'
-
-  publishDir = [
-    path: params.output + '/annotation',
-    mode: 'copy',
-    overwrite: true
-  ]
-
   input:
     path(assemblies)
     path(annotation)

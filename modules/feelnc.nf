@@ -1,26 +1,5 @@
 process FEELNC_classify_transcripts {
 
-  label 'cpu_4'
-  label 'memory_24'
-
-  publishDir = [
-    path: params.output,
-    mode: 'copy',
-    overwrite: true,
-    saveAs: { filename ->
-      if (filename == 'novel.gtf')
-        'annotation/' + filename
-      else if (filename == 'lncRNA_classes.txt')
-        'annotation/lnc_classification/' + filename
-      else if (filename.endsWith('.gtf'))
-        'annotation/lnc_classification/' + filename
-      else if (filename == 'feelnc_classification_summary.txt')
-        'control/lnc/' + filename
-      else if (filename.endsWith('.feelncclassifier.log'))
-        'control/lnc/' + filename
-    }
-  ]
-
   input:
     path(genome, stageAs: 'genome.input.fa')
     path(reference_annotation, stageAs: 'reference.input.gtf')

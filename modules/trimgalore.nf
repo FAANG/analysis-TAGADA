@@ -1,8 +1,5 @@
 process TRIMGALORE_trim_adapters {
 
-  label 'cpu_16'
-  label 'memory_16'
-
   input:
     tuple val(prefix), path(fastqs)
 

@@ -1,14 +1,5 @@
 process SAMTOOLS_sort_reads {
 
-  label 'cpu_16'
-  label 'memory_16'
-
-  publishDir = [
-    path: params.output + '/alignment',
-    mode: 'copyNoFollow',
-    overwrite: false
-  ]
-
   input:
     tuple val(prefix), path(bam)
 
@@ -72,8 +63,6 @@ process SAMTOOLS_control_contigs {
 
 process SAMTOOLS_merge_reads {
 
-  cpus = { bams instanceof List ? Math.min(16, params.max_cpus) : 1 }
-
   input:
     tuple val(id), path(bams), val(length), val(direction)
 
@@ -82,15 +71,7 @@ process SAMTOOLS_merge_reads {
 
   shell:
     merged = id + '.bam'
-    if (bams instanceof List)
-      '''
-      samtools merge '!{merged}' !{bams} --threads !{task.cpus}
-      '''
-    else if (bams.getName() != merged)
-      '''
-      mv !{bams} '!{merged}'
-      '''
-    else
-      '''
-      '''
+    '''
+    samtools merge '!{merged}' !{bams} --threads !{task.cpus}
+    '''
 }

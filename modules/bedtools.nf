@@ -1,13 +1,5 @@
 process BEDTOOLS_compute_coverage {
 
-  label 'memory_4'
-
-  publishDir = [
-    path: params.output + '/coverage',
-    mode: 'copy',
-    overwrite: true
-  ]
-
   input:
     tuple val(prefix), path(bam), val(direction)
 
