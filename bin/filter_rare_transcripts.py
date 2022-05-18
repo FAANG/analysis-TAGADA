@@ -226,6 +226,11 @@ transcripts = transcripts.reset_index().groupby(
   ['file', 'transcript', 'chromosome', 'strand']
 )
 
+monoexonic_count = len(transcripts[transcripts['is_monoexonic'] == True].index)
+multiexonic_count = len(transcripts[transcripts['is_monoexonic'] == False].index)
+print('All monoexonic transcripts: ' + str(monoexonic_count))
+print('All multiexonic transcripts: ' + str(multiexonic_count))
+
 transcripts = transcripts[
   (
     (transcripts['is_monoexonic'] == True) &
@@ -238,7 +243,12 @@ transcripts = transcripts[
   )
 ]
 
-# Output filtered GTF
+monoexonic_count = len(transcripts[transcripts['is_monoexonic'] == True].index)
+multiexonic_count = len(transcripts[transcripts['is_monoexonic'] == False].index)
+print('Kept monoexonic transcripts: ' + str(monoexonic_count))
+print('Kept multiexonic transcripts: ' + str(multiexonic_count))
+
+# Output filtered GTFs
 os.makedirs(args.output, exist_ok = True)
 
 for gtf in args.inputs:

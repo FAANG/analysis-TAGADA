@@ -56,7 +56,8 @@ process TAGADA_filter_transcripts {
     path(assemblies)
 
   output:
-    path('filtered/*.gtf')
+    path('filtered_transcripts.txt')
+    path('filtered/*.gtf'), emit: results
 
   shell:
     min_transcript_occurrence =
@@ -82,7 +83,8 @@ process TAGADA_filter_transcripts {
       !{min_transcript_occurrence} \\
       !{min_monoexonic_occurrence} \\
       !{min_transcript_tpm} \\
-      !{min_monoexonic_tpm}
+      !{min_monoexonic_tpm} \\
+      > filtered_transcripts.txt
     '''
 }
 

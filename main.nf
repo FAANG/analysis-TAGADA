@@ -465,7 +465,7 @@ workflow {
 
       // one [assemblies] & annotation => annotation
       STRINGTIE_coalesce_transcripts(
-        TAGADA_filter_transcripts.out,
+        TAGADA_filter_transcripts.out.results,
         channel_reference_annotation
       )
 
@@ -477,7 +477,7 @@ workflow {
 
       // one [assemblies] & annotation => annotation
       TMERGE_coalesce_transcripts(
-        TAGADA_filter_transcripts.out,
+        TAGADA_filter_transcripts.out.results,
         channel_reference_annotation
       )
 
