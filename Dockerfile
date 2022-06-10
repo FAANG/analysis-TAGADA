@@ -20,9 +20,11 @@ RUN git clone --branch v2.1.7 --depth 1 https://github.com/gpertea/stringtie.git
 RUN git clone --branch v0.8 --depth 1 https://github.com/sdjebali/Scripts.git /usr/local/src/Scripts && \
     bash -c 'ln -s /usr/local/src/Scripts/* /usr/local/bin'
 
+ENV OCAMLRUNPARAM "l=1000000000000000000000000000000000000000k"
+
 RUN git clone --branch v1.3 --depth 1 https://github.com/sdjebali/Comptr.git /usr/local/src/Comptr && \
     cd /usr/local/src/Comptr && \
-    make && \
+    make comptrtmp && \
     bash -c 'ln -s /usr/local/src/Comptr/comptr /usr/local/bin'
 
 RUN git clone --branch v1.0 --depth 1 https://github.com/sdjebali/Overlap.git /usr/local/src/Overlap && \
