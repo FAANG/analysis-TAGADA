@@ -132,7 +132,7 @@ params.max_memory =
 
 params.max_time =
   params.containsKey('max-time') ?
-  params.'max-time' as nextflow.util.Duration : 18.h
+  params.'max-time' as nextflow.util.Duration : 24.h
 
 if (!params.output) {
   error += '\nNo --output provided\n'
