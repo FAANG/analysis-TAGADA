@@ -293,12 +293,12 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
     <tr>
       <td nowrap><strong><code>--max-memory</code></strong></td>
       <td nowrap><code>64GB</code></td>
-      <td>Maximum memory that can be used for each process. This is a limit, not the actual amount of alloted memory.</td>
+      <td>Maximum memory that can be used for each process. This is a limit, not the actual amount of allotted memory.</td>
       <td align=center>Optional</td>
     </tr>
     <tr>
       <td nowrap><strong><code>--max-time</code></strong></td>
-      <td nowrap><code>18h</code></td>
+      <td nowrap><code>24h</code></td>
       <td>Maximum time that can be spent on each process. This is a limit and has no effect on the duration of each process.</td>
       <td align=center>Optional</td>
     </tr>
@@ -307,7 +307,7 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
 
 ## Custom resources
 
-With large datasets, some [workflow processes](#workflow-and-results) may require more computing resources than the pipeline defaults. To customize the amount of resources alloted to specific processes, add a [process scope](https://www.nextflow.io/docs/edge/config.html#scope-process) to your configuration file. Resources provided in the configuration file override the [resources options](#resources-options).
+With large datasets, some [workflow processes](#workflow-and-results) may require more computing resources than the pipeline defaults. To customize the amount of resources allotted to specific processes, add a [process scope](https://www.nextflow.io/docs/edge/config.html#scope-process) to your configuration file. Resources provided in the configuration file override the [resources options](#resources-options).
 
 ### Example configuration
 
@@ -320,7 +320,7 @@ With large datasets, some [workflow processes](#workflow-and-results) may requir
       withName: TRIMGALORE_trim_adapters {
         cpus = 8
         memory = 18.GB
-        time = 20.h
+        time = 36.h
       }
 
       withName: STAR_align_reads {
