@@ -1,4 +1,4 @@
-# TAGADA: Transcripts And Genes Assembly, Deconvolution, Analysis
+# TAGADA: Transcript And Gene Assembly, Deconvolution, Analysis
 
 TAGADA is a Nextflow pipeline that processes RNA-Seq data. It parallelizes multiple tasks to control reads quality, align reads to a reference genome, assemble new transcripts to create a novel annotation, and quantify genes and transcripts.
 
