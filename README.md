@@ -23,6 +23,7 @@ TAGADA is a Nextflow pipeline that processes RNA-Seq data. It parallelizes multi
 - [Workflow and results](#workflow-and-results)
 - [Novel annotation](#novel-annotation)
 - [Funding](#funding)
+- [Citing](#citing)
 
 
 ## Dependencies
@@ -568,3 +569,9 @@ The novel annotation contains information from [StringTie](https://github.com/gp
 The GENE-SWitCH project has received funding from the European Union’s [Horizon 2020](https://ec.europa.eu/programmes/horizon2020/) research and innovation program under Grant Agreement No 817998.
 
 This repository reflects only the listed contributors views. Neither the European Commission nor its Agency REA are responsible for any use that may be made of the information it contains.
+
+## Citing
+
+If you use TAGADA in a publication, please cite [this](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10578202/pdf/lqad089.pdf):
+
+Kurylo C, Guyomar C, Foissac S, Djebali S. TAGADA: a scalable pipeline to improve genome annotations with RNA-seq data. NAR Genomics and Bioinformatics. 2023 Dec 1;5(4):lqad089.
