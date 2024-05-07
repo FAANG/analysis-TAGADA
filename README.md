@@ -126,7 +126,8 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
     <tr>
       <td nowrap><strong><code>--annotation</code></strong></td>
       <td nowrap><code>annotation.gtf</code></td>
-      <td>Input reference<br>annotation file or url.</td>
+      <td>Input reference<br>annotation file or url.
+        Be careful this file should contain both exon and transcript rows and should include gene_id and transcript_id in the 9th field.</td>
       <td align=center>Required</td>
     </tr>
     <tr>
