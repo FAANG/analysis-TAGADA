@@ -135,14 +135,18 @@ process TAGADA_cluster_expression {
       -p 0.1 \\
       -v \\
       -o reference_genes_TPM_log_pearson_correlation.tsv
+      
+    args_dendro=""
+    if [ "$(wc -l reference_genes_TPM_log_pearson_correlation.tsv)" -gt 2 ]; then
+        args_dendro=" --col_dendro --row_dendro"
+    fi
 
     ggheatmap.R \\
       -i reference_genes_TPM_log_pearson_correlation.tsv \\
       -d i \\
       --row_metadata metadata.tsv \\
       --col_metadata metadata.tsv \\
-      --col_dendro \\
-      --row_dendro \\
+      $args_dendro \\
       --rowSide_by '!{factors}' \\
       --matrix_legend_title \\
         'reference genes TPM pearson correlation\n(log10 pseudocount 0.1)' \\
