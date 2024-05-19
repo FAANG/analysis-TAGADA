@@ -118,7 +118,7 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
         Input <code>fastq</code> file(s) and/or <code>bam</code> file(s).<br><br>
         For single-end reads, your files must end with:<br><code>.fq[.gz]</code><br><br>
         For paired-end reads, your files must end with:<br><code>_[R]{1,2}.fq[.gz]</code><br><br>
-        <code>TAGADA</code>code> will automatically infer read size and strandedness of libraries, but all libraries must have the same<br><br>
+        <code>TAGADA</code>code> will automatically infer read size and strandedness of libraries, but all libraries must have the same, and also the same read length<br><br>
         For aligned reads, your files must end with:<br><code>.bam</code><br><br>
         If the provided path includes a wildcard character like <code>*</code>, you must enclose it with quotes to prevent Bash glob expansion, as per <a href="https://www.nextflow.io/docs/latest/cli.html#pipeline-parameters">Nextflow's requirements</a>.<br><br>
         If the files are numerous, you may provide a <code>.txt</code> sheet with one path or url per line.</td>
