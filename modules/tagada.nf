@@ -137,7 +137,8 @@ process TAGADA_cluster_expression {
       -o reference_genes_TPM_log_pearson_correlation.tsv
       
     args_dendro=""
-    if [ "$(wc -l reference_genes_TPM_log_pearson_correlation.tsv)" -gt 2 ]; then
+    n_samples=$(wc -l < "reference_genes_TPM_log_pearson_correlation.tsv")
+    if [ "$n_samples" -gt 2 ]; then
         args_dendro=" --col_dendro --row_dendro"
     fi
 
