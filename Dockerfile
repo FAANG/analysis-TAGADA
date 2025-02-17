@@ -17,7 +17,7 @@ ENV PATH /opt/conda/envs/tagada/bin:$PATH
 RUN git clone --branch v2.1.7 --depth 1 https://github.com/gpertea/stringtie.git /usr/local/src/StringTie && \
     bash -c 'ln -s /usr/local/src/StringTie/prepDE.py3 /usr/local/bin'
 
-RUN git clone --branch v0.8 --depth 1 https://github.com/sdjebali/Scripts.git /usr/local/src/Scripts && \
+RUN git clone --branch v0.10 --depth 1 https://github.com/sdjebali/Scripts.git /usr/local/src/Scripts && \
     bash -c 'ln -s /usr/local/src/Scripts/* /usr/local/bin'
 
 ENV OCAMLRUNPARAM "l=1000000000000000000000000000000000000000k"
