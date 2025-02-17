@@ -121,6 +121,10 @@ params.skip_lnc_detection =
   params.containsKey('skip-lnc-detection') ||
   params.containsKey('skip-feelnc') ?
   true : false
+  
+params.transcript_biotype_field =
+  params.containsKey('transcript_biotype_field') ?
+  params.'transcript_biotype_field' : 'transcript_biotype'
 
 params.max_cpus =
   params.containsKey('max-cpus') ?

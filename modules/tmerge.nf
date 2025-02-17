@@ -83,14 +83,14 @@ process TMERGE_coalesce_transcripts {
       }
       NR == FNR {
         match($9, /transcript_id "([^;]*)";*/, tId)
-        match($9, /transcript_biotype "([^;]*)";*/, biotype)
-        biotypes[tId[1]] = biotype[1]
+        match($9, /(!{params.transcript_biotype_field}) "([^;]*)";*/, biotype)
+        biotypes[tId[1]] = biotype[2]
         next
       }
       !/^#/ && $3 != "gene" {
         match($9, /transcript_id "([^;]*)";*/, tId)
         if (tId[1] in biotypes) {
-          print $0 " transcript_biotype \\""biotypes[tId[1]]"\\";"
+          print $0 " !{params.transcript_biotype_field} \\""biotypes[tId[1]]"\\";"
           next
         }
       }

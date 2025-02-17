@@ -18,7 +18,7 @@ process FEELNC_classify_transcripts {
     FEELnc_filter.pl \\
       --mRNAfile !{reference_annotation} \\
       --infile !{novel_annotation} \\
-      --biotype transcript_biotype=protein_coding \\
+      --biotype !{params.transcript_biotype_field}=protein_coding \\
       --proc !{task.cpus} \\
       !{params.feelnc_filter_args} \\
       > candidate_transcripts.gtf
@@ -27,7 +27,7 @@ process FEELNC_classify_transcripts {
       --genome !{genome} \\
       --mRNAfile !{reference_annotation} \\
       --infile candidate_transcripts.gtf \\
-      --biotype transcript_biotype=protein_coding \\
+      --biotype !{params.transcript_biotype_field}=protein_coding \\
       --numtx 5000,5000 \\
       --kmer 1,2,3,6,9,12 \\
       --outdir . \\
@@ -98,7 +98,7 @@ process FEELNC_classify_transcripts {
 
     # Filter coding transcripts for lnc-messenger interactions
     grep \\
-      -E '#|transcript_biotype "protein_coding"|feelnc_biotype "mRNA"' \\
+      -E '#|!{params.transcript_biotype_field} "protein_coding"|feelnc_biotype "mRNA"' \\
       updated.gtf \\
       > coding_transcripts.gtf
 
