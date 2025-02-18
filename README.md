@@ -98,10 +98,10 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
 <table>
   <thead>
     <tr>
-      <th width=222px>Option</th>
-      <th width=220px>Example</th>
-      <th width=215px>Description</th>
-      <th width=153px>Required</th>
+      <th width=250px>Option</th>
+      <th width=180px>Example</th>
+      <th width=190px>Description</th>
+      <th width=190px>Required</th>
     </tr>
   </thead>
   <tbody>
@@ -148,6 +148,12 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
       <td nowrap><code>metadata.tsv</code></td>
       <td>Input tabulated<br>metadata file or url.</td>
       <td align=center>Required if<br><code>--assemble-by</code><br>or<br><code>--quantify-by</code><br>are provided</td>
+    </tr>
+    <tr>
+      <td nowrap><strong><code>--transcript_biotype_field</code></strong></td>
+      <td nowrap><code>transcript_biotype</code></td>
+      <td>Tag read in the input annotation for transcript biotype </td>
+      <td align=center>Default to <code>transcript_biotype</code></td>
     </tr>
   </tbody>
 </table>
