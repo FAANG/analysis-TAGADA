@@ -39,7 +39,8 @@ params.keySet().collect({ param ->
     'skip-feelnc',
     'max-cpus',
     'max-memory',
-    'max-time'
+    'max-time',
+    'transcript_biotype_field'
   ].contains(param)
 }).each({ unknown ->
   error += '\nUnknown parameter provided: --' + unknown + '\n'
