@@ -30,7 +30,7 @@ TAGADA is a Nextflow pipeline that processes RNA-Seq data. It parallelizes multi
 
 To use this pipeline you will need:
 
-- [Nextflow](https://www.nextflow.io/docs/latest/getstarted.html) >= 21.04.1
+- [Nextflow](https://www.nextflow.io/docs/latest/getstarted.html) >= 21.04.1 and <= 24.04 
 - [Docker](https://docs.docker.com/engine/install/) >= 19.03.2 or [Singularity](https://sylabs.io/guides/3.5/user-guide/quick_start.html) >= 3.7.3
 
 
