@@ -273,6 +273,12 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
       <td align=center>Optional</td>
     </tr>
     <tr>
+      <td nowrap><strong><code>--skip-filtering</code></strong></td>
+      <td nowrap></td>
+      <td>Skip the assembly filtering step.</td>
+      <td align=center>Optional</td>
+    </tr>
+    <tr>
       <td nowrap><strong><code>--skip-lnc-detection</code></strong></td>
       <td nowrap></td>
       <td>Skip detection of long non-coding transcripts in the novel annotation with FEELnc.</td>

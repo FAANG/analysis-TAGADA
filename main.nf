@@ -35,6 +35,7 @@ params.keySet().collect({ param ->
     'feelnc-classifier-args',
     'feelnc-args',
     'skip-assembly',
+    'skip-filtering',
     'skip-lnc-detection',
     'skip-feelnc',
     'max-cpus',
@@ -118,6 +119,10 @@ params.skip_assembly =
   params.containsKey('skip-assembly') ?
   true : false
 
+params.skip_filtering =
+  params.containsKey('skip-filtering') ?
+  true : false
+
 params.skip_lnc_detection =
   params.containsKey('skip-lnc-detection') ||
   params.containsKey('skip-feelnc') ?
@@ -177,6 +182,15 @@ if (!['tmerge', 'stringtie'].contains(params.coalesce_transcripts_with)) {
 }
 
 if (error) exit(1, error)
+
+if (params.skip_filtering && (
+        params.min_transcript_tpm ||
+        params.min_monoexonic_occurrence ||
+        params.min_transcript_occurrence ||
+        params.min_monoexonic_tpm
+    )) {
+    log.warn "Ignoring filtering parameters because --skip_filtering has been set"
+}
 
 // INCLUDE WORKFLOWS -----------------------------------------------------------
 
@@ -461,16 +475,23 @@ workflow {
       }).combine(channel_reference_annotation)
     )
 
-    // one [assemblies] => [assemblies]
-    TAGADA_filter_transcripts(
-      STRINGTIE_assemble_transcripts.out.collect()
-    )
+    STRINGTIE_assemble_transcripts.out.view()
+    ch_assembly = STRINGTIE_assemble_transcripts.out.collect()
+    ch_assembly.view()
+  
+
+    if (!params.skip_filtering){
+      TAGADA_filter_transcripts(ch_assembly)
+      ch_filtered_assembly = TAGADA_filter_transcripts.out.results
+    } else {
+      ch_filtered_assembly = ch_assembly
+    }
 
     if (params.coalesce_transcripts_with == 'stringtie') {
 
       // one [assemblies] & annotation => annotation
       STRINGTIE_coalesce_transcripts(
-        TAGADA_filter_transcripts.out.results,
+        ch_filtered_assembly,
         channel_reference_annotation
       )
 
@@ -482,7 +503,7 @@ workflow {
 
       // one [assemblies] & annotation => annotation
       TMERGE_coalesce_transcripts(
-        TAGADA_filter_transcripts.out.results,
+        ch_filtered_assembly,
         channel_reference_annotation
       )
 
