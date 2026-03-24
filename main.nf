@@ -45,6 +45,25 @@ def validateConfig(cfg) {
     if (error) exit(1, error)
 }
 
+def printParamsSummary(cfg) {
+    println "\n================== Pipeline Parameters =================="
+    println String.format("%-30s | %s", "Parameter", "Value")
+    println "-----------------------------------------------"
+
+    cfg.each { key, value ->
+        def displayValue = value
+        if (value instanceof List) {
+            displayValue = value.join(', ')
+        } else if (value instanceof Boolean) {
+            displayValue = value ? "true" : "false"
+        } else if (value == null || value.toString().trim() == "") {
+            displayValue = "<empty>"
+        }
+        println String.format("%-30s | %s", key, displayValue)
+    }
+    println "===========================================================\n"
+}
+
 // INCLUDE WORKFLOWS -----------------------------------------------------------
 
 include { CREATE_CHANNELS } from './workflows/create_channels.nf'
@@ -145,6 +164,7 @@ workflow {
   ]
 
   validateConfig(cfg)
+  printParamsSummary(cfg)
     
   CREATE_CHANNELS(cfg)
 
