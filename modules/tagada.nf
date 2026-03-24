@@ -227,6 +227,7 @@ process TAGADA_control_annotation {
     path('Plots')
     path('Tables')
     path('*_expressed_*.txt')
+    path('string/novel_complete_comp_refinedclass_nbex_intermclass.tsv')
     path('{*.png,*_annotation.tsv}'), emit: reports
 
   shell:
