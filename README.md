@@ -30,7 +30,7 @@ TAGADA is a Nextflow pipeline that processes RNA-Seq data. It parallelizes multi
 
 To use this pipeline you will need:
 
-- [Nextflow](https://www.nextflow.io/docs/latest/getstarted.html) >= 21.04.1 and <= 24.04 
+- [Nextflow](https://www.nextflow.io/docs/latest/getstarted.html) >= 21.04.1
 - [Docker](https://docs.docker.com/engine/install/) >= 19.03.2 or [Singularity](https://sylabs.io/guides/3.5/user-guide/quick_start.html) >= 3.7.3
 
 
@@ -147,7 +147,7 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
       <td nowrap><strong><code>--metadata</code></strong></td>
       <td nowrap><code>metadata.tsv</code></td>
       <td>Input tabulated<br>metadata file or url.</td>
-      <td align=center>Required if<br><code>--assemble-by</code><br>or<br><code>--quantify-by</code><br>are provided</td>
+      <td align=center>Required if<br><code>--assemble_by</code><br>or<br><code>--quantify_by</code><br>are provided</td>
     </tr>
     <tr>
       <td nowrap><strong><code>--transcript_biotype_field</code></strong></td>
@@ -171,13 +171,13 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
   </thead>
   <tbody>
     <tr>
-      <td nowrap><strong><code>--assemble-by</code></strong></td>
+      <td nowrap><strong><code>--assemble_by</code></strong></td>
       <td nowrap><code>factor1,factor2,etc.</code></td>
       <td>Factor(s) defining groups in which transcripts are assembled. Aligned reads of identical factors are merged and each resulting merge group is processed individually. See the <a href="#merging-inputs">merging inputs</a> section for details.</td>
       <td align=center>Optional</td>
     </tr>
     <tr>
-      <td nowrap><strong><code>--quantify-by</code></strong></td>
+      <td nowrap><strong><code>--quantify_by</code></strong></td>
       <td nowrap><code>factor1,factor2,etc.</code></td>
       <td>Factor(s) defining groups in which transcripts are quantified. Aligned reads of identical factors are merged and each resulting merge group is processed individually. See the <a href="#merging-inputs">merging inputs</a> section for details.</td>
       <td align=center>Optional</td>
@@ -198,31 +198,31 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
   </thead>
   <tbody>
     <tr>
-      <td nowrap><strong><code>--min-transcript-occurrence</code></strong></td>
+      <td nowrap><strong><code>--min_transcript_occurrence</code></strong></td>
       <td nowrap><code>2</code></td>
       <td>After transcripts assembly, rare novel transcripts that appear in few assembly groups are removed from the final novel annotation. By default, if a transcript occurs in less than <code>2</code> assembly groups, it is removed. If there is only one assembly group, this option defaults to <code>1</code>.</td>
       <td align=center>Optional</td>
     </tr>
     <tr>
-      <td nowrap><strong><code>--min-monoexonic-occurrence</code></strong></td>
+      <td nowrap><strong><code>--min_monoexonic_occurrence</code></strong></td>
       <td nowrap><code>2</code></td>
-      <td>If specified, rare novel monoexonic transcripts are filtered according to the provided threshold. Otherwise, this option takes the value of<br><code>--min-transcript-occurrence</code>.</td>
+      <td>If specified, rare novel monoexonic transcripts are filtered according to the provided threshold. Otherwise, this option takes the value of<br><code>--min_transcript_occurrence</code>.</td>
       <td align=center>Optional</td>
     </tr>
     <tr>
-      <td nowrap><strong><code>--min-transcript-tpm</code></strong></td>
+      <td nowrap><strong><code>--min_transcript_tpm</code></strong></td>
       <td nowrap><code>0.1</code></td>
       <td>After transcripts assembly, novel transcripts with low TPM values in every assembly group are removed from the final novel annotation. By default, if a transcript's TPM value is lower than <code>0.1</code> in every assembly group, it is removed.</td>
       <td align=center>Optional</td>
     </tr>
     <tr>
-      <td nowrap><strong><code>--min-monoexonic-tpm</code></strong></td>
+      <td nowrap><strong><code>--min_monoexonic_tpm</code></strong></td>
       <td nowrap><code>1</code></td>
-      <td>If specified, novel monoexonic transcripts with low TPM values are filtered according to the provided threshold. Otherwise, this option takes the value of<br><code>--min-transcript-tpm * 10</code>.</td>
+      <td>If specified, novel monoexonic transcripts with low TPM values are filtered according to the provided threshold. Otherwise, this option takes the value of<br><code>--min_transcript_tpm * 10</code>.</td>
       <td align=center>Optional</td>
     </tr>
     <tr>
-      <td nowrap><strong><code>--coalesce-transcripts-with</code></strong></td>
+      <td nowrap><strong><code>--coalesce_transcripts_with</code></strong></td>
       <td nowrap><code>tmerge</code></td>
       <td>Tool used to coalesce transcripts assemblies into a non-redundant set of transcripts for the novel annotation. Can be <code>tmerge</code> or <code>stringtie</code>. Defaults to <code>tmerge</code>.</td>
       <td align=center>Optional</td>
@@ -234,19 +234,19 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
       <td align=center>Optional</td>
     </tr>
     <tr>
-      <td nowrap><strong><code>--feelnc-filter-args</code></strong></td>
+      <td nowrap><strong><code>--feelnc_filter_args</code></strong></td>
       <td nowrap><code>'--size 200'</code></td>
       <td>Custom arguments to pass to FEELnc's <a href="https://github.com/tderrien/FEELnc#1--feelnc_filterpl">filter</a> script when detecting long non-coding transcripts.</td>
       <td align=center>Optional</td>
     </tr>
     <tr>
-      <td nowrap><strong><code>--feelnc-codpot-args</code></strong></td>
+      <td nowrap><strong><code>--feelnc_codpot_args</code></strong></td>
       <td nowrap><code>'--mode shuffle'</code></td>
       <td>Custom arguments to pass to FEELnc's <a href="https://github.com/tderrien/FEELnc#2--feelnc_codpotpl">coding potential</a> script when detecting long non-coding transcripts.</td>
       <td align=center>Optional</td>
     </tr>
     <tr>
-      <td nowrap><strong><code>--feelnc-classifier-args</code></strong></td>
+      <td nowrap><strong><code>--feelnc_classifier-args</code></strong></td>
       <td nowrap><code>'--window 10000'</code></td>
       <td>Custom arguments to pass to FEELnc's <a href="https://github.com/tderrien/FEELnc#3--feelnc_classifierpl">classifier</a> script when detecting long non-coding transcripts.</td>
       <td align=center>Optional</td>
@@ -267,19 +267,19 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
   </thead>
   <tbody>
     <tr>
-      <td nowrap><strong><code>--skip-assembly</code></strong></td>
+      <td nowrap><strong><code>--skip_assembly</code></strong></td>
       <td nowrap></td>
       <td>Skip transcripts assembly with StringTie and skip all subsequent processes working with a novel annotation.</td>
       <td align=center>Optional</td>
     </tr>
     <tr>
-      <td nowrap><strong><code>--skip-filtering</code></strong></td>
+      <td nowrap><strong><code>--skip_filtering</code></strong></td>
       <td nowrap></td>
       <td>Skip the assembly filtering step.</td>
       <td align=center>Optional</td>
     </tr>
     <tr>
-      <td nowrap><strong><code>--skip-lnc-detection</code></strong></td>
+      <td nowrap><strong><code>--skip_lnc_detection</code></strong></td>
       <td nowrap></td>
       <td>Skip detection of long non-coding transcripts in the novel annotation with FEELnc.</td>
       <td align=center>Optional</td>
@@ -300,19 +300,19 @@ For more Nextflow options, see [Nextflow's documentation](https://www.nextflow.i
   </thead>
   <tbody>
     <tr>
-      <td nowrap><strong><code>--max-cpus</code></strong></td>
+      <td nowrap><strong><code>--max_cpus</code></strong></td>
       <td nowrap><code>16</code></td>
       <td>Maximum number of CPU cores that can be used for each process. This is a limit, not the actual number of requested CPU cores.</td>
       <td align=center>Optional</td>
     </tr>
     <tr>
-      <td nowrap><strong><code>--max-memory</code></strong></td>
+      <td nowrap><strong><code>--max_memory</code></strong></td>
       <td nowrap><code>64GB</code></td>
       <td>Maximum memory that can be used for each process. This is a limit, not the actual amount of allotted memory.</td>
       <td align=center>Optional</td>
     </tr>
     <tr>
-      <td nowrap><strong><code>--max-time</code></strong></td>
+      <td nowrap><strong><code>--max_time</code></strong></td>
       <td nowrap><code>24h</code></td>
       <td>Maximum time that can be spent on each process. This is a limit and has no effect on the duration of each process.</td>
       <td align=center>Optional</td>
@@ -374,11 +374,11 @@ Using `--metadata`, you may provide a file describing your inputs with tab-separ
 
 ## Merging inputs
 
-When using `--assemble-by` and/or `--quantify-by`, your inputs are merged into experiment groups that share common factors. With `--assemble-by`, transcripts assembly is done individually for each assembly group, and consensus transcripts are kept to generate a novel annotation. With `--quantify-by`, quantification values are given individually for each quantification group.
+When using `--assemble_by` and/or `--quantify_by`, your inputs are merged into experiment groups that share common factors. With `--assemble_by`, transcripts assembly is done individually for each assembly group, and consensus transcripts are kept to generate a novel annotation. With `--quantify_by`, quantification values are given individually for each quantification group.
 
 ### Merging inputs by a single factor
 
-    --assemble-by tissue --quantify-by stage
+    --assemble_by tissue --quantify_by stage
 
 <table>
   <thead align=center>
@@ -425,7 +425,7 @@ When using `--assemble-by` and/or `--quantify-by`, your inputs are merged into e
 
 ### Merging inputs by an intersection of factors
 
-    --assemble-by tissue,stage
+    --assemble_by tissue,stage
 
 <table>
   <thead align=center>
@@ -529,7 +529,7 @@ The novel annotation contains information from [StringTie](https://github.com/gp
 
 <br>
 
-    --coalesce-transcripts-with tmerge
+    --coalesce_transcripts_with tmerge
 
 - `gene_id`  
   All rows. The Tmerge `gene_id` starting with LOC.
@@ -554,7 +554,7 @@ The novel annotation contains information from [StringTie](https://github.com/gp
 
 <br>
 
-    --coalesce-transcripts-with stringtie
+    --coalesce_transcripts_with stringtie
 
 - `gene_id`  
   All rows. The StringTie `gene_id` starting with MSTRG.
