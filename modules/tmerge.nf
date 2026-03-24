@@ -3,6 +3,7 @@ process TMERGE_coalesce_transcripts {
   input:
     path(assemblies)
     path(annotation)
+    val(cfg)
 
    output:
     path('novel.gtf')
@@ -44,7 +45,7 @@ process TMERGE_coalesce_transcripts {
       results/all_exons_from_assemblies_and_ref_sorted.gtf \\
       --endFuzz 10000 \\
       --exonOverhangTolerance 10 \\
-      !{params.tmerge_args} \\
+      !{cfg.tmerge_args} \\
       > results/tmerged.gtf
 
     # Add gene ids
@@ -83,14 +84,14 @@ process TMERGE_coalesce_transcripts {
       }
       NR == FNR {
         match($9, /transcript_id "([^;]*)";*/, tId)
-        match($9, /(!{params.transcript_biotype_field}) "([^;]*)";*/, biotype)
+        match($9, /(!{cfg.transcript_biotype_field}) "([^;]*)";*/, biotype)
         biotypes[tId[1]] = biotype[2]
         next
       }
       !/^#/ && $3 != "gene" {
         match($9, /transcript_id "([^;]*)";*/, tId)
         if (tId[1] in biotypes) {
-          print $0 " !{params.transcript_biotype_field} \\""biotypes[tId[1]]"\\";"
+          print $0 " !{cfg.transcript_biotype_field} \\""biotypes[tId[1]]"\\";"
           next
         }
       }

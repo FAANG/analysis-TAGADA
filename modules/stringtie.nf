@@ -19,6 +19,7 @@ process STRINGTIE_coalesce_transcripts {
   input:
     path(assemblies)
     path(annotation)
+    val(cfg)
 
   output:
     path('novel.gtf')
@@ -54,14 +55,14 @@ process STRINGTIE_coalesce_transcripts {
       }
       NR == FNR {
         match($9, /transcript_id "([^;]*)";*/, tId)
-        match($9, /!{params.transcript_biotype_field} "([^;]*)";*/, biotype)
+        match($9, /!{cfg.transcript_biotype_field} "([^;]*)";*/, biotype)
         biotypes[tId[1]] = biotype[1]
         next
       }
       !/^#/ && $3 != "gene" {
         match($9, /transcript_id "([^;]*)";*/, tId)
         if (tId[1] in biotypes) {
-          print $0 " !{params.transcript_biotype_field} \\""biotypes[tId[1]]"\\";"
+          print $0 " !{cfg.transcript_biotype_field} \\""biotypes[tId[1]]"\\";"
           next
         }
       }

@@ -1,195 +1,48 @@
 #!/usr/bin/env nextflow
 
 nextflow.enable.dsl = 2
+import nextflow.util.MemoryUnit
+import nextflow.util.Duration
 
 // CHECK PARAMETERS ------------------------------------------------------------
 
-error = ''
+// Validation
+// ---------------------------
+def validateConfig(cfg) {
+    def error = ''
 
-// Nextflow duplicates parameters and replaces dashes
-// https://www.nextflow.io/docs/latest/cli.html#pipeline-parameters
-// Here we find duplicates and keep the first ones for the validity check
-params.keySet().collect({ param ->
-  [param.replaceAll('-', '').toLowerCase(), param]
-}).unique({ it -> it[0] }).collect({ it -> it[1] })
-// Now we can check the original parameters provided by the user
-.findAll({ param ->
-  ![
-    'output',
-    'reads',
-    'annotation',
-    'genome',
-    'index',
-    'metadata',
-    'assemble-by',
-    'quantify-by',
-    'merge',
-    'min-transcript-occurrence',
-    'min-monoexonic-occurrence',
-    'min-transcript-tpm',
-    'min-monoexonic-tpm',
-    'coalesce-transcripts-with',
-    'tmerge-args',
-    'feelnc-filter-args',
-    'feelnc-codpot-args',
-    'feelnc-classifier-args',
-    'feelnc-args',
-    'skip-assembly',
-    'skip-filtering',
-    'skip-lnc-detection',
-    'skip-feelnc',
-    'max-cpus',
-    'max-memory',
-    'max-time',
-    'transcript_biotype_field'
-  ].contains(param)
-}).each({ unknown ->
-  error += '\nUnknown parameter provided: --' + unknown + '\n'
-})
+    // Required inputs
+    if (!cfg.output)      error += '\nNo --output provided'
+    if (!cfg.reads)       error += '\nNo --reads provided'
+    if (!cfg.genome)      error += '\nNo --genome provided'
+    if (!cfg.annotation)  error += '\nNo --annotation provided'
 
-params.output =
-  params.containsKey('output') ?
-  params.output : ''
+    // Deprecated parameters
+    if (params.containsKey('merge'))       error += '\nReplace deprecated --merge with --assemble_by and --quantify_by'
+    if (params.containsKey('feelnc_args')) error += '\nReplace deprecated --feelnc_args with --feelnc_codpot_args'
 
-params.reads =
-  params.containsKey('reads') ?
-  params.reads : ''
+    // Logical conflicts
+    if (cfg.assemble_by && cfg.skip_assembly) {
+        error += '\nCannot use --assemble_by and --skip_assembly together'
+    }
 
-params.annotation =
-  params.containsKey('annotation') ?
-  params.annotation : ''
+    if ((cfg.assemble_by || cfg.quantify_by) && !cfg.metadata) {
+        error += '\nNo --metadata provided for --assemble_by or --quantify_by'
+    }
 
-params.genome =
-  params.containsKey('genome') ?
-  params.genome : ''
+    // Allowed values
+    if (!['tmerge', 'stringtie'].contains(cfg.coalesce_transcripts_with)) {
+        error += '\nInvalid --coalesce_transcripts_with must be "tmerge" or "stringtie"'
+    }
 
-params.index =
-  params.containsKey('index') ?
-  params.index : ''
+    // Warn about ignored parameters
+    if (cfg.skip_filtering &&
+        (cfg.min_transcript_tpm || cfg.min_monoexonic_occurrence ||
+        cfg.min_transcript_occurrence || cfg.min_monoexonic_tpm)) {
+        log.warn "Ignoring filtering parameters because --skip_filtering has been set"
+    }
 
-params.metadata =
-  params.containsKey('metadata') ?
-  params.metadata : ''
-
-params.assemble_by =
-  params.containsKey('assemble-by') ?
-  params.'assemble-by'.tokenize(',') : []
-
-params.quantify_by =
-  params.containsKey('quantify-by') ?
-  params.'quantify-by'.tokenize(',') : []
-
-params.min_transcript_occurrence =
-  params.containsKey('min-transcript-occurrence') ?
-  params.'min-transcript-occurrence' : ''
-
-params.min_monoexonic_occurrence =
-  params.containsKey('min-monoexonic-occurrence') ?
-  params.'min-monoexonic-occurrence' : ''
-
-params.min_transcript_tpm =
-  params.containsKey('min-transcript-tpm') ?
-  params.'min-transcript-tpm' : ''
-
-params.min_monoexonic_tpm =
-  params.containsKey('min-monoexonic-tpm') ?
-  params.'min-monoexonic-tpm' : ''
-
-params.coalesce_transcripts_with =
-  params.containsKey('coalesce-transcripts-with') ?
-  params.'coalesce-transcripts-with' : 'tmerge'
-
-params.tmerge_args =
-  params.containsKey('tmerge-args') ?
-  params.'tmerge-args' : ''
-
-params.feelnc_filter_args =
-  params.containsKey('feelnc-filter-args') ?
-  params.'feelnc-filter-args' : ''
-
-params.feelnc_codpot_args =
-  params.containsKey('feelnc-codpot-args') ?
-  params.'feelnc-codpot-args' : ''
-
-params.feelnc_classifier_args =
-  params.containsKey('feelnc-classifier-args') ?
-  params.'feelnc-classifier-args' : ''
-
-params.skip_assembly =
-  params.containsKey('skip-assembly') ?
-  true : false
-
-params.skip_filtering =
-  params.containsKey('skip-filtering') ?
-  true : false
-
-params.skip_lnc_detection =
-  params.containsKey('skip-lnc-detection') ||
-  params.containsKey('skip-feelnc') ?
-  true : false
-  
-params.transcript_biotype_field =
-  params.containsKey('transcript_biotype_field') ?
-  params.'transcript_biotype_field' : 'transcript_biotype'
-
-params.max_cpus =
-  params.containsKey('max-cpus') ?
-  params.'max-cpus' as int : 16
-
-params.max_memory =
-  params.containsKey('max-memory') ?
-  params.'max-memory' as nextflow.util.MemoryUnit : 64.GB
-
-params.max_time =
-  params.containsKey('max-time') ?
-  params.'max-time' as nextflow.util.Duration : 24.h
-
-if (!params.output) {
-  error += '\nNo --output provided\n'
-}
-
-if (!params.reads) {
-  error += '\nNo --reads provided\n'
-}
-
-if (!params.genome) {
-  error += '\nNo --genome provided\n'
-}
-
-if (!params.annotation) {
-  error += '\nNo --annotation provided\n'
-}
-
-if (params.containsKey('merge')) {
-  error += '\nReplace deprecated --merge with --assemble-by and --quantify-by\n'
-}
-
-if (params.containsKey('feelnc-args')) {
-  error += '\nReplace deprecated --feelnc-args with --feelnc-codpot-args\n'
-}
-
-if (params.assemble_by && params.skip_assembly) {
-  error += '\nCannot use --assemble-by and --skip-assembly together\n'
-}
-
-if ((params.assemble_by || params.quantify_by) && !params.metadata) {
-  error += '\nNo --metadata provided for --assemble-by or --quantify-by\n'
-}
-
-if (!['tmerge', 'stringtie'].contains(params.coalesce_transcripts_with)) {
-  error += '\nInvalid --coalesce-transcripts-with must be "tmerge" or ' +
-           '"stringtie"\n'
-}
-
-if (error) exit(1, error)
-
-if (params.skip_filtering && (
-        params.min_transcript_tpm ||
-        params.min_monoexonic_occurrence ||
-        params.min_transcript_occurrence ||
-        params.min_monoexonic_tpm
-    )) {
-    log.warn "Ignoring filtering parameters because --skip_filtering has been set"
+    if (error) exit(1, error)
 }
 
 // INCLUDE WORKFLOWS -----------------------------------------------------------
@@ -258,9 +111,42 @@ include {
 
 workflow {
 
-  // CREATE CHANNELS -----------------------------------------------------------
+  def cfg = [
+    output                     : params.get('output', ''),
+    reads                      : params.get('reads', ''),
+    genome                     : params.get('genome', ''),
+    annotation                 : params.get('annotation', ''),
+    index                      : params.get('index', ''),
+    metadata                   : params.get('metadata', ''),
 
-  CREATE_CHANNELS()
+    assemble_by                : (params.get('assemble_by', '')).split(',').collect{ s -> s.trim() }.findAll{ s -> s },
+    quantify_by                : (params.get('quantify_by', '')).split(',').collect{ s -> s.trim() }.findAll{ s -> s },
+
+    min_transcript_occurrence  : params.get('min_transcript_occurrence', ''),
+    min_monoexonic_occurrence  : params.get('min_monoexonic_occurrence', ''),
+    min_transcript_tpm         : params.get('min_transcript_tpm', ''),
+    min_monoexonic_tpm         : params.get('min_monoexonic_tpm', ''),
+
+    coalesce_transcripts_with  : params.get('coalesce_transcripts_with', 'tmerge'),
+    tmerge_args                : params.get('tmerge_args', ''),
+    feelnc_filter_args         : params.get('feelnc_filter_args', ''),
+    feelnc_codpot_args         : params.get('feelnc_codpot_args', ''),
+    feelnc_classifier_args     : params.get('feelnc_classifier_args', ''),
+
+    skip_assembly              : params.get('skip_assembly', false),
+    skip_filtering             : params.get('skip_filtering', false),
+    skip_lnc_detection         : params.get('skip_lnc_detection', false),
+
+    transcript_biotype_field   : params.get('transcript_biotype_field', 'transcript_biotype'),
+
+    max_cpus                   : params.get('max_cpus', 16) as int,
+    max_memory                 : params.get('max_memory', 64.GB) as MemoryUnit,
+    max_time                   : params.get('max_time', 24.h) as Duration
+  ]
+
+  validateConfig(cfg)
+    
+  CREATE_CHANNELS(cfg)
 
   // each [prefix, [fastqs]]
   channel_raw_reads =
@@ -293,7 +179,6 @@ workflow {
   // each [reports]
   channel_reports =
     Channel.empty()
-
   // SORT ALIGNED READS --------------------------------------------------------
 
   // each [prefix, bam] => [prefix, bam]
@@ -466,7 +351,7 @@ workflow {
 
   // ASSEMBLE TRANSCRIPTS ------------------------------------------------------
 
-  if (!params.skip_assembly) {
+  if (!cfg.skip_assembly) {
 
     // each [id, bam, direction, annotation] => assembly
     STRINGTIE_assemble_transcripts(
@@ -480,19 +365,20 @@ workflow {
     ch_assembly.view()
   
 
-    if (!params.skip_filtering){
-      TAGADA_filter_transcripts(ch_assembly)
+    if (!cfg.skip_filtering){
+      TAGADA_filter_transcripts(ch_assembly, cfg)
       ch_filtered_assembly = TAGADA_filter_transcripts.out.results
     } else {
       ch_filtered_assembly = ch_assembly
     }
 
-    if (params.coalesce_transcripts_with == 'stringtie') {
+    if (cfg.coalesce_transcripts_with == 'stringtie') {
 
       // one [assemblies] & annotation => annotation
       STRINGTIE_coalesce_transcripts(
         ch_filtered_assembly,
-        channel_reference_annotation
+        channel_reference_annotation,
+        cfg
       )
 
       // one annotation
@@ -504,7 +390,8 @@ workflow {
       // one [assemblies] & annotation => annotation
       TMERGE_coalesce_transcripts(
         ch_filtered_assembly,
-        channel_reference_annotation
+        channel_reference_annotation,
+        cfg
       )
 
       // one annotation
@@ -521,13 +408,14 @@ workflow {
 
   // DETECT LONG NON-CODING TRANSCRIPTS ----------------------------------------
 
-  if (!params.skip_lnc_detection && !params.skip_assembly) {
+  if (!cfg.skip_lnc_detection && !cfg.skip_assembly) {
 
     // one genome & reference_annotation & novel_annotation => [reports]
     FEELNC_classify_transcripts(
       channel_genome,
       channel_reference_annotation,
-      channel_novel_annotation
+      channel_novel_annotation,
+      cfg
     )
 
     // each [reports]
@@ -591,7 +479,7 @@ workflow {
 
   // CONTROL ANNOTATION --------------------------------------------------------
 
-  if (!params.skip_assembly) {
+  if (!cfg.skip_assembly) {
 
     // one reference_annotation & novel_annotation &
     // transcripts_tpm_quantification & genes_tpm_quantification => [reports]
@@ -639,6 +527,6 @@ workflow {
       projectDir + '/assets/multiqc/custom_images.tsv',
       checkIfExists: true
     ),
-    params.metadata ? Channel.fromPath(params.metadata) : []
+    cfg.metadata ? Channel.fromPath(cfg.metadata) : []
   )
 }

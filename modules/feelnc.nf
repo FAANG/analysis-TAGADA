@@ -4,6 +4,7 @@ process FEELNC_classify_transcripts {
     path(genome, stageAs: 'genome.input.fa')
     path(reference_annotation, stageAs: 'reference.input.gtf')
     path(novel_annotation, stageAs: 'novel.input.gtf')
+    val(cfg)
 
   output:
     path('novel.gtf')
@@ -18,23 +19,23 @@ process FEELNC_classify_transcripts {
     FEELnc_filter.pl \\
       --mRNAfile !{reference_annotation} \\
       --infile !{novel_annotation} \\
-      --biotype !{params.transcript_biotype_field}=protein_coding \\
+      --biotype !{cfg.transcript_biotype_field}=protein_coding \\
       --proc !{task.cpus} \\
-      !{params.feelnc_filter_args} \\
+      !{cfg.feelnc_filter_args} \\
       > candidate_transcripts.gtf
 
     FEELnc_codpot.pl \\
       --genome !{genome} \\
       --mRNAfile !{reference_annotation} \\
       --infile candidate_transcripts.gtf \\
-      --biotype !{params.transcript_biotype_field}=protein_coding \\
+      --biotype !{cfg.transcript_biotype_field}=protein_coding \\
       --numtx 5000,5000 \\
       --kmer 1,2,3,6,9,12 \\
       --outdir . \\
       --outname exons \\
       --mode shuffle \\
       --spethres 0.98,0.98 \\
-      !{params.feelnc_codpot_args}
+      !{cfg.feelnc_codpot_args}
 
     # Update annotation with new biotypes
     cp "$(readlink -m !{novel_annotation})" updated.gtf
@@ -98,14 +99,14 @@ process FEELNC_classify_transcripts {
 
     # Filter coding transcripts for lnc-messenger interactions
     grep \\
-      -E '#|!{params.transcript_biotype_field} "protein_coding"|feelnc_biotype "mRNA"' \\
+      -E '#|!{cfg.transcript_biotype_field} "protein_coding"|feelnc_biotype "mRNA"' \\
       updated.gtf \\
       > coding_transcripts.gtf
 
     FEELnc_classifier.pl \\
       --mrna coding_transcripts.gtf \\
       --lncrna exons.lncRNA.gtf \\
-      !{params.feelnc_classifier_args} \\
+      !{cfg.feelnc_classifier_args} \\
       > lncRNA_classes.txt
 
     mv updated.gtf novel.gtf

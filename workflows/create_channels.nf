@@ -46,6 +46,9 @@ def log_metadata_groups(channel_metadata, task) {
 
 workflow CREATE_CHANNELS {
 
+  take:
+    cfg
+
   emit:
 
     channel_raw_reads
@@ -59,14 +62,14 @@ workflow CREATE_CHANNELS {
   main:
 
     // SPLIT READS INTO R1 R2 SINGLE ALIGNED -----------------------------------
-
+    println(cfg.assemble_by)
     channel_reads =
       Channel.fromPath(
-        params.reads,
+        cfg.reads,
         checkIfExists: true
       )
 
-    if (params.reads.endsWith('.txt')) {
+    if (cfg.reads.endsWith('.txt')) {
       channel_reads = channel_reads.splitText().map({ line ->
         file(line.strip(), checkIfExists: true)
       })
@@ -179,7 +182,7 @@ workflow CREATE_CHANNELS {
 
     // CREATE METADATA CHANNEL -------------------------------------------------
 
-    if (!params.metadata) {
+    if (!cfg.metadata) {
 
       // each [prefix, [column: value, column: value]]
       channel_metadata =
@@ -195,7 +198,7 @@ workflow CREATE_CHANNELS {
       // each [prefix, [column: value, column: value]]
       channel_metadata =
         Channel.fromPath(
-          params.metadata,
+          cfg.metadata,
           checkIfExists: true
         ).splitCsv(header: true, sep: '\t').map({ row ->
           [
@@ -254,12 +257,11 @@ workflow CREATE_CHANNELS {
         channel_metadata.filter({ row -> row['columns'] })
 
       // CHECK MISSING METADATA COLUMNS ----------------------------------------
-
       channel_metadata.first().map({ row ->
         row['columns'].keySet().collect()
       }).map({ column_names ->
         (
-          params.assemble_by + params.quantify_by
+          cfg.assemble_by + cfg.quantify_by
         ).sort().unique().findAll({ factor ->
           !(factor in column_names)
         })
@@ -278,7 +280,7 @@ workflow CREATE_CHANNELS {
         [
           'prefix': row['prefix'],
           'empty': (
-            params.assemble_by + params.quantify_by
+            cfg.assemble_by + cfg.quantify_by
           ).sort().unique().findAll({ factor ->
             factor in row['columns'].keySet() && !row['columns'][factor]
           })
@@ -304,29 +306,29 @@ workflow CREATE_CHANNELS {
 
     // each [prefix, id, [column: value, column: value]]
     channel_assembly_metadata =
-      set_metadata_groups(channel_metadata, params.assemble_by)
+      set_metadata_groups(channel_metadata, cfg.assemble_by)
 
     log_metadata_groups(channel_assembly_metadata, 'assembly')
 
     // each [prefix, id, [column: value, column: value]]
     channel_quantification_metadata =
-      set_metadata_groups(channel_metadata, params.quantify_by)
+      set_metadata_groups(channel_metadata, cfg.quantify_by)
 
     log_metadata_groups(channel_quantification_metadata, 'quantification')
 
     // DECOMPRESS INDEX --------------------------------------------------------
 
-    if (params.index) {
+    if (cfg.index) {
 
       // one index
       channel_index =
         Channel.fromPath(
-          params.index,
+          cfg.index,
           type: 'dir',
           checkIfExists: true
         )
 
-      if (params.index.endsWith('.gz') || params.index.endsWith('.tar')) {
+      if (cfg.index.endsWith('.gz') || cfg.index.endsWith('.tar')) {
 
         // one index => index
         GZIP_decompress_index(channel_index)
@@ -348,11 +350,11 @@ workflow CREATE_CHANNELS {
     // one genome
     channel_genome =
       Channel.fromPath(
-        params.genome,
+        cfg.genome,
         checkIfExists: true
       )
 
-    if (params.genome.endsWith('.gz')) {
+    if (cfg.genome.endsWith('.gz')) {
 
       // one genome => genome
       GZIP_decompress_genome(channel_genome)
@@ -367,11 +369,11 @@ workflow CREATE_CHANNELS {
     // one annotation
     channel_reference_annotation =
       Channel.fromPath(
-        params.annotation,
+        cfg.annotation,
         checkIfExists: true
       )
 
-    if (params.annotation.endsWith('.gz')) {
+    if (cfg.annotation.endsWith('.gz')) {
 
       // one annotation => annotation
       GZIP_decompress_annotation(channel_reference_annotation)

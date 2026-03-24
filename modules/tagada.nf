@@ -54,6 +54,7 @@ process TAGADA_filter_transcripts {
 
   input:
     path(assemblies)
+    val(cfg)
 
   output:
     path('filtered_transcripts.txt')
@@ -61,20 +62,20 @@ process TAGADA_filter_transcripts {
 
   shell:
     min_transcript_occurrence =
-      params.min_transcript_occurrence ?
-      '--min-transcript-occurrence ' + params.min_transcript_occurrence : ''
+      cfg.min_transcript_occurrence ?
+      '--min-transcript-occurrence ' + cfg.min_transcript_occurrence : ''
 
     min_monoexonic_occurrence =
-      params.min_monoexonic_occurrence ?
-      '--min-monoexonic-occurrence ' + params.min_monoexonic_occurrence : ''
+      cfg.min_monoexonic_occurrence ?
+      '--min-monoexonic-occurrence ' + cfg.min_monoexonic_occurrence : ''
 
     min_transcript_tpm =
-      params.min_transcript_tpm ?
-      '--min-transcript-tpm ' + params.min_transcript_tpm : ''
+      cfg.min_transcript_tpm ?
+      '--min-transcript-tpm ' + cfg.min_transcript_tpm : ''
 
     min_monoexonic_tpm =
-      params.min_monoexonic_tpm ?
-      '--min-monoexonic-tpm ' + params.min_monoexonic_tpm : ''
+      cfg.min_monoexonic_tpm ?
+      '--min-monoexonic-tpm ' + cfg.min_monoexonic_tpm : ''
 
     '''
     filter_rare_transcripts.py \\
