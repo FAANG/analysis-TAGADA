@@ -1,14 +1,15 @@
-FROM nfcore/base:2.1
+FROM debian:bookworm
 
-RUN apt-get update && apt-get install libxt6 ocaml -y
+RUN apt-get update && apt-get install libxt6 ocaml curl bzip2 git python3 python3-setuptools make -y
 
-RUN conda update conda -n base -c defaults
+RUN curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
+ENV MAMBA_ROOT_PREFIX=/opt/mamba
+ENV PATH=/opt/mamba/bin:/bin
 
-RUN conda install mamba -n base -c conda-forge
 
 COPY environment.yml /
 
-RUN mamba env create -f /environment.yml && conda clean -a
+RUN micromamba create -y -f /environment.yml
 
 RUN rm /environment.yml
 
@@ -46,8 +47,9 @@ USER root
 
 RUN git clone --branch v1.0.2 --depth 1 https://github.com/cguyomar/multiqc_feelnc /usr/local/src/multiqc_feelnc && \
     cd /usr/local/src/multiqc_feelnc && \
-    python setup.py install
+    python3 setup.py install
+    
 
 RUN git clone --branch v0.1 --depth 1 https://github.com/cguyomar/custom_images_mqc_plugin /usr/local/src/multiqc_custom_images && \
     cd /usr/local/src/multiqc_custom_images && \
-    python setup.py install
+    python3 setup.py install
