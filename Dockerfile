@@ -1,6 +1,6 @@
 FROM debian:bookworm
 
-RUN apt-get update && apt-get install libxt6 ocaml curl bzip2 git python3 python3-setuptools ps make -y
+RUN apt-get update && apt-get install libxt6 ocaml curl bzip2 git python3 python3-setuptools procps make -y
 
 RUN curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
 ENV MAMBA_ROOT_PREFIX=/opt/mamba
