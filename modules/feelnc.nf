@@ -10,6 +10,7 @@ process FEELNC_classify_transcripts {
     path('novel.gtf')
     path('exons.*.gtf')
     path('*.{txt,log}'), emit: reports
+    path('*.png'), emit: plots
 
   shell:
     '''
