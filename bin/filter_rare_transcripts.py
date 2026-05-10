@@ -156,11 +156,15 @@ mono = transcripts[transcripts['splicing'].isna()][
   ['chromosome', 'strand', 'start', 'end']
 )
 
-mono['group'] = (
-  (mono['chromosome'] != mono['chromosome'].shift()) |
-  (mono['strand'] != mono['strand'].shift()) |
-  (mono['start'] > mono['end'].shift())
-).cumsum()
+previous_end_max = mono.set_index(['chromosome', 'strand'])['end'].groupby(
+  ['chromosome', 'strand'],
+  observed = True
+).shift().groupby(
+  ['chromosome', 'strand'],
+  observed = True
+).cummax().fillna(-1).to_numpy()
+
+mono['group'] = (mono['start'] > previous_end_max).cumsum()
 
 mono = mono.set_index(['chromosome', 'strand', 'group'])
 
